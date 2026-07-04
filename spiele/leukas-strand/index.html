@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>strand spiel</title>
+  </head>
+  <body>
+   <div id="laufanzeige">streke: 0</div>
+<div id="anzeige">score: 0</div>
+  <canvas id="spielfeld" width="1000" height="750"
+        style="background:#FFD500;display:block;margin:auto"></canvas>
+
+  </body>
+  <script>
+ const canvas = document.getElementById('spielfeld');
+  const ctx = canvas.getContext('2d');
+ const keys = {};
+    document.addEventListener('keydown', e => keys[e.code] = true);
+    document.addEventListener('keyup',   e => keys[e.code] = false);//tasten
+let wasserx = 0
+let wasserzufall = Math.floor(Math.random() * 1001);
+let wassercounter = 0
+let wasser2x = 0
+let wasser2zufall = Math.floor(Math.random() * 1001);
+let wasser2counter = 0
+let wasser3x = 0
+let wasser3zufall = Math.floor(Math.random() * 1001);
+let wasser3counter = 0
+let spielerx = 500
+   let zufalzahl= Math.floor(Math.random() * 1001);
+   let körner = [];
+let muscheln = [];
+let steine = [];
+let streke = 0;
+let zufall;
+let zufall_1_50 = Math.floor(Math.random() * 51);
+let score = 0
+muscheln.push({x: zufalzahl ,y: 0})
+zufalzahl= Math.floor(Math.random() * 1001);
+muscheln.push({x: zufalzahl ,y: 0})
+zufalzahl= Math.floor(Math.random() * 1001);
+muscheln.push({x: zufalzahl ,y: 0})
+zufalzahl= Math.floor(Math.random() * 1001);
+
+
+let läuft = true;
+function update(){
+if (!läuft) return;
+zufall_1_50 = Math.floor(Math.random() * 51);
+
+
+ctx.clearRect(0, 0, 1000, 750);//lehren
+
+if (keys['KeyA']){
+spielerx -= 4
+}
+if (keys['KeyD']){
+spielerx += 4
+}
+if(spielerx >= 1000){
+spielerx =1000;
+}
+if(spielerx <= 0){
+spielerx = 0;
+}
+zufall =Math.floor(Math.random() * 301);
+
+körner = körner.filter(k => k.y < 800);   körner.push({x:zufalzahl , y:0});//neu
+for(let k of körner){
+k.y = k.y+3;  //speet einstellen
+}
+zufalzahl= Math.floor(Math.random() * 1001);
+if (zufall == 1){
+muscheln.push({x: zufalzahl ,y: 0});
+
+}
+if (zufall == 20){
+steine.push({x:zufalzahl, y:0,r:zufall_1_50});
+
+}
+for(let m of muscheln){
+m.y += 3 ;                     //speet
+
+}
+for(let s of steine){
+s.y += 3;                       //speet
+}
+
+//_>_>_>_>_>_>_>_>_>_>_>_>_>_>_>_>_>_>_>_>_wasser_<_<_<_<_<_<_<_<_<_<_<_<_<_<_<_<_<_<_<_<_<_
+
+
+wassercounter += 1;
+if (wassercounter == 120){
+   wassercounter = 0;
+}
+if(wassercounter == 0){
+  if(wasserzufall >=  wasserx){
+    wasserx += 3;
+    wassercounter = -1;
+  }
+if(wasserzufall <= wasserx){
+    
+    wassercounter = 1000;
+   wasserzufall = Math.floor(Math.random() * 801);
+  }
+
+  
+}
+if (wassercounter >= 1000){
+wasserx -= 5
+
+
+if (wasserx <= 0){
+wassercounter = 0;
+}
+
+
+}
+
+
+
+
+
+wasser2counter += 1;
+if (wasser2counter == 120){
+   wasser2counter = 0;
+}
+if(wasser2counter == 0){
+  if(wasser2zufall >=  wasser2x){
+    wasser2x += 3;
+    wasser2counter = -1;
+  }
+if(wasser2zufall <= wasser2x){
+
+    wasser2counter = 1000;
+   wasser2zufall = Math.floor(Math.random() * 801);
+  }
+}
+if (wasser2counter >= 1000){
+wasser2x -= 5
+
+
+if (wasser2x <= 0){
+wasser2counter = 0;
+}
+
+
+}
+  
+
+
+
+wasser3counter += 1;
+if (wasser3counter == 120){
+   wasser3counter = 0;
+}
+if(wasser3counter == 0){
+  if(wasser3zufall >=  wasser3x){
+    wasser3x += 3;
+    wasser3counter = -1;
+  }
+if(wasser3zufall <= wasser3x){
+  
+    wasser3counter = 1000;
+   wasser3zufall = Math.floor(Math.random() * 801);
+  }
+
+  
+}
+if (wasser3counter >= 1000){
+wasser3x -= 5
+
+
+if (wasser3x <= 0){
+wasser3counter = -1;
+}
+
+
+}
+
+//kolision
+for (let m of muscheln) {
+        let dx = m.x - spielerx;
+        let dy = m.y - 750;
+        let abstand = Math.sqrt(dx*dx + dy*dy);
+        if (abstand < 60) { // 60 = radius muschel (30) + radius spieler (30)
+         muscheln = muscheln.filter(x => x !== m);
+  
+          score += 1
+        }
+}
+
+for (let s of steine){
+
+        let dx = s.x - spielerx;
+        let dy = s.y - 750;
+        let dr = s.r + 30;
+        let abstand = Math.sqrt(dx*dx + dy*dy);
+        if (abstand < dr) {
+         stop();
+  
+  
+       
+        }
+
+}
+
+
+if(wasser3x >= spielerx){
+stop()
+
+}
+
+
+   //zeichnen körner
+  for(let k of körner){
+ ctx.fillStyle = '#98893A';
+ctx.fillRect(k.x, k.y, 10, 10);
+
+}
+//zeichnen muschel
+for(let m of muscheln ){
+muschelzeichnen(m.x, m.y);
+}
+//zeichnen steine
+for(let s of steine){
+ctx.beginPath();
+    ctx.arc(s.x,s.y,s.r, 0, Math.PI * 2);
+ctx.fillStyle = 'grey';
+ctx.fill();
+
+
+}
+
+//zeichnen spieler
+ctx.beginPath();
+    ctx.arc(spielerx, 750, 30, 0, Math.PI * 2);
+ctx.fillStyle = '#2FA272';
+ctx.fill();
+streke += 1;
+//zeichnen wasser
+
+ctx.fillStyle = 'blue';
+ctx.fillRect(0, 500, wasserx,250);
+ctx.fillStyle = 'blue';
+ctx.fillRect(0, 0, wasser2x,250);
+ctx.fillStyle = 'blue';
+ctx.fillRect(0, 250, wasser3x,250);
+
+
+
+
+ document.getElementById('laufanzeige').textContent = "streke: " + streke;
+ document.getElementById('anzeige').textContent = "score: " + score;
+
+ requestAnimationFrame(update);
+
+}
+function muschelzeichnen(x, y) {
+    // halb kreis (schale)
+    ctx.beginPath();
+    ctx.arc(x, y, 30, Math.PI, 0, false);
+    ctx.fillStyle = '#F5CBA7';
+    ctx.fill();
+    ctx.strokeStyle = '#C39A6B';
+    ctx.stroke();
+
+    // streifen
+    ctx.strokeStyle = '#C39A6B';
+    ctx.lineWidth = 1;
+    for (let i = 0; i <= 6; i++) {
+        let winkel = Math.PI + (i * Math.PI / 6);
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x + Math.cos(winkel) * 30, y + Math.sin(winkel) * 30);
+        ctx.stroke();
+    }
+}
+function stop() {
+    läuft = false;
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.fillRect(0, 0, 1000, 750);
+    ctx.fillStyle = 'white';
+    ctx.font = '60px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('GAME OVER', 500, 375);
+    ctx.font = '30px sans-serif';
+    ctx.fillText('score: ' + score, 500, 430);
+}
+update();
+  </script>
+</html>
