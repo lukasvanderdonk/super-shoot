@@ -10,16 +10,30 @@
 // ── PC STANDALONE: AndroidBridge-Polyfill (localStorage-basiert) ──────────
 if (!window.AndroidBridge) {
   const _GK = 'superShoot_gems';
-  // Immer 100 Gems beim Start (wird überschrieben falls ein Spielstand geladen wird)
-  localStorage.setItem(_GK, '100');
+  // Startguthaben nur beim allerersten Start – danach bleiben verdiente/ausgegebene Gems erhalten
+  if (localStorage.getItem(_GK) === null) localStorage.setItem(_GK, '100');
+  // WICHTIG: kein storeSaveCode/deleteSlotCode im PC-Polyfill!
+  // Sonst nimmt autoSave() den Android-Zweig und speichert unter einem Key,
+  // den _slotData() nie liest → Spielstände wären nach Reload immer leer.
   window.AndroidBridge = {
     getGems()      { return parseInt(localStorage.getItem(_GK) || '100', 10); },
     addGems(n)     { localStorage.setItem(_GK, String(this.getGems() + Math.max(0, n))); },
     spendGems(n)   { const g = this.getGems(); if (g < n) return false; localStorage.setItem(_GK, String(g - n)); return true; },
-    storeSaveCode(slot, code)  { localStorage.setItem('superShoot_code_' + slot, code); },
-    deleteSlotCode(slot)       { localStorage.removeItem('superShoot_code_' + slot); },
     returnToCafe() { /* PC: nichts tun */ }
   };
+  // Migration: alte PC-Spielstände, die fälschlich als Code unter superShoot_code_N lagen
+  for (let i = 0; i < 3; i++) {
+    try {
+      const code = localStorage.getItem('superShoot_code_' + i);
+      if (code && !localStorage.getItem('ballBlastSave_v5_slot' + i)) {
+        const dot = code.lastIndexOf('.');
+        const json = atob(dot === -1 ? code : code.substring(0, dot));
+        JSON.parse(json); // validieren, wirft bei kaputten Daten
+        localStorage.setItem('ballBlastSave_v5_slot' + i, json);
+      }
+      localStorage.removeItem('superShoot_code_' + i);
+    } catch(e) {}
+  }
 }
 </script>
 <style>
@@ -1134,9 +1148,10 @@ function switchSlot(slot) {
         ? data.eq.items.filter(x=>EQUIP_TYPES.find(t=>t.id===x.id)&&typeof x.value==='number').slice(0,equipSlotCount).map(x=>({id:x.id,value:x.value,goldenSlots:x.goldenSlots||0,stacks:x.stacks||[]}))
         : [];
     }
-    if (data.sa) SA.loadData(data.sa);
-    if (data.dr) DRONE.loadData(data.dr);
-    if (data.selAb) selectAbility(data.selAb);
+    // Immer laden (auch null = Reset), damit kein Zustand vom vorherigen Slot übrig bleibt
+    SA.loadData(data.sa || null);
+    DRONE.loadData(data.dr || null);
+    selectAbility(data.selAb || 'bomb', true);
   } else {
     // Leeren Slot = Neues Spiel
     coins = 0; WEAPONS.forEach((w,i)=>{ w.owned=(i===0); w.upgLevel=0; }); selectedWeapon=WEAPONS[0];
@@ -1144,7 +1159,7 @@ function switchSlot(slot) {
     equipSlotCount=0; equippedItems=[];
     SA.loadData(null);
     DRONE.loadData(null);
-    selectAbility('bomb');
+    selectAbility('bomb', true);
   }
   updateCoinDisplay(); renderShop(); renderUpgrades(); renderEquipment('start');
   SA.renderUI(); DRONE.renderUI();
@@ -1155,10 +1170,11 @@ function deleteSlot(slot, e) {
   if (e) e.stopPropagation();
   _bridgeDelete(slot);
   if (slot === currentSlot) {
-    // Reset auf leeren Zustand
+    // Reset auf leeren Zustand (inkl. Super-Fähigkeiten)
     coins=0; WEAPONS.forEach((w,i)=>{ w.owned=(i===0); w.upgLevel=0; }); selectedWeapon=WEAPONS[0];
     Object.keys(upgrades).forEach(k=>{ upgrades[k].level=0; });
     equipSlotCount=0; equippedItems=[];
+    SA.loadData(null); DRONE.loadData(null); selectAbility('bomb', true);
     updateCoinDisplay(); renderShop(); renderUpgrades(); renderEquipment('start');
   }
   renderSlotGrid();
@@ -1223,7 +1239,7 @@ function autoLoad() {
 }
 
 // ─── ABILITY SELECTION ───────────────────────────────────────────────────────
-function selectAbility(type) {
+function selectAbility(type, skipSave) {
   selectedAbility = type;
   ['Start','Wave'].forEach(s => {
     const bBtn = document.getElementById('absBomb' +s);
@@ -1235,7 +1251,7 @@ function selectAbility(type) {
   const showSA = type === 'bomb', showDR = type === 'drone';
   ['saUI','saUIwb'].forEach(id => { const el=document.getElementById(id); if(el) el.style.display=showSA?'':'none'; });
   ['drUI','drUIwb'].forEach(id => { const el=document.getElementById(id); if(el) el.style.display=showDR?'':'none'; });
-  autoSave();
+  if (!skipSave) autoSave();
 }
 
 // ─── SAVE / LOAD (HMAC-SHA-256, für Cheat-Codes behalten) ────────────────────
@@ -1257,6 +1273,9 @@ async function createSave() {
     wu: WEAPONS.filter(x=>x.upgLevel>0).reduce((a,x)=>{ a[x.id]=x.upgLevel; return a; },{}),
     eq: { slots: equipSlotCount, items: equippedItems.map(i=>({ id:i.id, value:i.value, goldenSlots:i.goldenSlots||0, stacks:i.stacks||[] })) },
     u: { lives: upgrades.lives.level, startWave: upgrades.startWave.level, breakTime: upgrades.breakTime.level },
+    sa: SA.getData(),
+    dr: DRONE.getData(),
+    selAb: selectedAbility,
     v: 5
   });
   const sig = await _hmacHex(payload);
@@ -1352,8 +1371,12 @@ async function loadSave() {
       : [];
   }
   if (data.sa) SA.loadData(data.sa);
+  if (data.dr) DRONE.loadData(data.dr);
+  if (data.selAb) selectAbility(data.selAb, true);
   updateCoinDisplay(); renderShop(); renderUpgrades(); renderEquipment('start');
+  SA.renderUI(); DRONE.renderUI();
   document.getElementById('codeInput').value = '';
+  autoSave();
   showSaveMsg(`✅ Spielstand geladen! 🪙 ${coins} Münzen.`,'ok');
 }
 
@@ -1915,7 +1938,7 @@ const SA = (() => {
   // ── Persistence ───────────────────────────────────────────────────────────
   function getData() { return { unlocked:_unlocked, anim:_selAnim, upgRad:_upgRad, upgCD:_upgCD }; }
   function loadData(d) {
-    if (!d) return;
+    if (!d) { _unlocked=false; _selAnim=0; _upgRad=0; _upgCD=0; renderUI(); return; }
     _unlocked = !!d.unlocked;
     _selAnim  = Math.max(0, Math.min(2, d.anim  || 0));
     _upgRad   = Math.max(0, Math.min(3, d.upgRad || 0));
@@ -2275,9 +2298,10 @@ const SA = (() => {
         }
       }
     });
-    // Destroy wallBoxes in radius
+    // Destroy wallBoxes in radius (nicht die versteckten Boss-Arena-Wände)
     for(let i=wallBoxes.length-1;i>=0;i--){
       const wb=wallBoxes[i];
+      if(wb.disabled) continue;
       const cx=(wb.minX+wb.maxX)/2, cz=(wb.minZ+wb.maxZ)/2;
       if(Math.sqrt((cx-tx)**2+(cz-tz)**2)<radius*0.9){
         scene.remove(wb.mesh); wallBoxes.splice(i,1);
@@ -2570,7 +2594,7 @@ const DRONE = (() => {
     const dir=new THREE.Vector3(Math.sin(_droneYaw)*cosP, -sinP, Math.cos(_droneYaw)*cosP);
     const origin=_droneGrp.position.clone();
     const ray=new THREE.Raycaster(origin,dir.clone().normalize());
-    const wallMeshes=wallBoxes.map(wb=>wb.mesh).filter(Boolean);
+    const wallMeshes=wallBoxes.filter(wb=>!wb.disabled).map(wb=>wb.mesh).filter(Boolean);
     const wHits=ray.intersectObjects(wallMeshes,false);
     const wDist=wHits.length>0?wHits[0].distance:Infinity;
     const rHits=[];
@@ -2594,6 +2618,7 @@ const DRONE = (() => {
           // Destroy nearby wallBoxes
           for(let i=wallBoxes.length-1;i>=0;i--){
             const wb=wallBoxes[i];
+            if(wb.disabled) continue;
             const cx=(wb.minX+wb.maxX)/2, cz=(wb.minZ+wb.maxZ)/2;
             if(Math.sqrt((cx-hp.x)**2+(cz-hp.z)**2)<aoeR){
               scene.remove(wb.mesh); wallBoxes.splice(i,1);
@@ -2841,7 +2866,8 @@ function setupBossArena(def) {
 
   // ── Hide all normal world geometry ──────────────────────────────────────────
   bossHiddenObjects = [];
-  wallBoxes.forEach(wb => { if(wb.mesh){ wb.mesh.visible=false; bossHiddenObjects.push(wb.mesh); } });
+  // disabled = Wand ist während des Boss-Kampfs unsichtbar UND ohne Kollision
+  wallBoxes.forEach(wb => { if(wb.mesh){ wb.mesh.visible=false; bossHiddenObjects.push(wb.mesh); } wb.disabled = true; });
   if(gridHelper){ gridHelper.visible=false; bossHiddenObjects.push(gridHelper); }
   // Change background + fog to boss theme
   const bgC={fire:0x0d0000,ice:0x000e1a,storm:0x070700,void:0x040008,cyber:0x000e10};
@@ -2929,6 +2955,7 @@ function clearBossArena() {
   // Restore hidden world objects
   bossHiddenObjects.forEach(o=>{ if(o) o.visible=true; });
   bossHiddenObjects=[];
+  wallBoxes.forEach(wb=>{ wb.disabled = false; });
   // Restore background + fog
   if(scene.background) scene.background.setHex(0x0a0a1a);
   if(scene.fog){ scene.fog.color.setHex(0x0a0a1a); scene.fog.near=50; scene.fog.far=110; }
@@ -3313,6 +3340,7 @@ let particles = [];
 let ladders = [];
 let coinPickups = [];
 let lastTime = 0;
+let _loopStarted = false; // gameLoop darf nur einmal gestartet werden (plant sich selbst neu)
 const WORLD = 55;
 const GRAVITY = -22;
 const JUMP_FORCE = 8;
@@ -4000,6 +4028,7 @@ function spawnRobot() {
 // ─── COLLISION / PHYSICS ──────────────────────────────────────────────────────
 function bulletHitsWall(pos) {
   for (let wb of wallBoxes) {
+    if (wb.disabled) continue;
     if (pos.x > wb.minX && pos.x < wb.maxX &&
         pos.y > wb.minY && pos.y < wb.maxY &&
         pos.z > wb.minZ && pos.z < wb.maxZ) return true;
@@ -4010,6 +4039,7 @@ function bulletHitsWall(pos) {
 function playerHitsWall(nx, nz) {
   const footY = playerPos.y - PLAYER_EYE;
   for (let wb of wallBoxes) {
+    if (wb.disabled) continue;
     if (footY >= wb.maxY) continue;
     const cx = Math.max(wb.minX, Math.min(nx, wb.maxX));
     const cz = Math.max(wb.minZ, Math.min(nz, wb.maxZ));
@@ -4023,6 +4053,7 @@ function getWallTopAt(px, pz, maxHeight) {
   let topY = 0;
   const footY = playerPos.y - PLAYER_EYE;
   for (let wb of wallBoxes) {
+    if (wb.disabled) continue;
     const margin = PLAYER_R * 0.8;
     if (px > wb.minX - margin && px < wb.maxX + margin &&
         pz > wb.minZ - margin && pz < wb.maxZ + margin &&
@@ -4115,7 +4146,7 @@ function tryAttack() {
     const raycaster = new THREE.Raycaster(camera.position.clone(), dir.clone());
 
     // Find closest wall along this ray first
-    const wallMeshList = wallBoxes.map(wb => wb.mesh).filter(Boolean);
+    const wallMeshList = wallBoxes.filter(wb => !wb.disabled).map(wb => wb.mesh).filter(Boolean);
     const wallRayHits = raycaster.intersectObjects(wallMeshList, false);
     const wallDist = wallRayHits.length > 0 ? wallRayHits[0].distance : Infinity;
 
@@ -4214,6 +4245,9 @@ function damageRobot(robot, dmg) {
 function updateRobots(dt, now) {
   robots.forEach(robot => {
     if (!robot.alive) return;
+    // Synchronisierte Dummy-Roboter (nach Host-Wechsel) haben keine KI-Daten
+    // (speed/weapon/shootRate) → nicht simulieren, sonst entstehen NaN-Positionen
+    if (robot.synced) return;
     const rp = robot.group.position;
     const dx = playerPos.x - rp.x;
     const dz = playerPos.z - rp.z;
@@ -4238,6 +4272,7 @@ function updateRobots(dt, now) {
 
       let blocked = false;
       for (let wb of wallBoxes) {
+        if (wb.disabled) continue;
         const cx = Math.max(wb.minX, Math.min(nx, wb.maxX));
         const cz = Math.max(wb.minZ, Math.min(nz, wb.maxZ));
         const ex = nx-cx, ez = nz-cz;
@@ -4249,6 +4284,7 @@ function updateRobots(dt, now) {
         let nxOnly = rp.x + mx, nzOnly = rp.z;
         let blockX = false;
         for (let wb of wallBoxes) {
+          if (wb.disabled) continue;
           const cx = Math.max(wb.minX, Math.min(nxOnly, wb.maxX));
           const cz2 = Math.max(wb.minZ, Math.min(nzOnly, wb.maxZ));
           if (Math.sqrt((nxOnly-cx)**2+(nzOnly-cz2)**2)<0.45) { blockX=true; break; }
@@ -4258,6 +4294,7 @@ function updateRobots(dt, now) {
         let nzOnly2 = rp.z + mz, nxOnly2 = rp.x;
         let blockZ = false;
         for (let wb of wallBoxes) {
+          if (wb.disabled) continue;
           const cx = Math.max(wb.minX, Math.min(nxOnly2, wb.maxX));
           const cz2 = Math.max(wb.minZ, Math.min(nzOnly2, wb.maxZ));
           if (Math.sqrt((nxOnly2-cx)**2+(nzOnly2-cz2)**2)<0.45) { blockZ=true; break; }
@@ -4462,6 +4499,7 @@ function updatePlayer(dt) {
     for (let iter = 0; iter < 4; iter++) {
       let pushed = false;
       for (let wb of wallBoxes) {
+        if (wb.disabled) continue;
         // Skip if player is above the block top (with small epsilon for float safety)
         if (footY >= wb.maxY - 0.02) continue;
         // Skip if player head is at or below the block bottom (block is above player)
@@ -4589,6 +4627,7 @@ function updateMinimap() {
 
   ctx.fillStyle = '#1a3050';
   wallBoxes.forEach(wb => {
+    if (wb.disabled) return;
     const [x1,y1] = toMM(wb.minX, wb.minZ);
     const w = (wb.maxX-wb.minX)*MM_SCALE;
     const h = (wb.maxZ-wb.minZ)*MM_SCALE;
@@ -4650,7 +4689,7 @@ function updateGhostBlock() {
   const { ray, dir } = getBuildRay();
 
   // Collect targets: world walls + user blocks + floor plane
-  const targets = wallBoxes.map(wb => wb.mesh).filter(Boolean);
+  const targets = wallBoxes.filter(wb => !wb.disabled).map(wb => wb.mesh).filter(Boolean);
   placedBlocks.forEach(pb => targets.push(pb.mesh));
   if (floorMesh) targets.push(floorMesh);
 
@@ -4680,6 +4719,7 @@ function updateGhostBlock() {
         // Check if this cell is occupied by a wall
         let occupied = false;
         for (const wb of wallBoxes) {
+          if (wb.disabled) continue;
           if (testX > wb.minX && testX < wb.maxX &&
               footY + 0.1 > wb.minY && footY < wb.maxY &&
               testZ > wb.minZ && testZ < wb.maxZ) {
@@ -4914,7 +4954,7 @@ function startGame() {
 
   updateViewmodelWeapon();
   showWaveBreak(true);
-  requestAnimationFrame(gameLoop);
+  if (!_loopStarted) { _loopStarted = true; requestAnimationFrame(gameLoop); }
 }
 
 function showWaveBreak(isFirst=false) {
@@ -5025,6 +5065,7 @@ function endWave() {
 
 function endGame(won) {
   phase = 'result';
+  autoSave(); // Münzen/Kills der letzten Welle nicht verlieren
   document.getElementById('hud').style.display = 'none';
   document.getElementById('crosshair').style.display = 'none';
   document.getElementById('escBtn').style.display = 'none';
@@ -5067,6 +5108,9 @@ async function togglePauseSave() {
     wu: WEAPONS.filter(x=>x.upgLevel>0).reduce((a,x)=>{ a[x.id]=x.upgLevel; return a; },{}),
     eq: { slots: equipSlotCount, items: equippedItems.map(i=>({ id:i.id, value:i.value, goldenSlots:i.goldenSlots||0, stacks:i.stacks||[] })) },
     u: { lives: upgrades.lives.level, startWave: upgrades.startWave.level, breakTime: upgrades.breakTime.level },
+    sa: SA.getData(),
+    dr: DRONE.getData(),
+    selAb: selectedAbility,
     v: 5
   });
   const sig = await _hmacHex(payload);
@@ -5088,6 +5132,8 @@ function copyPauseCode() {
 function showStart() {
   document.getElementById('pauseMenu').style.display = 'none';
   phase = 'start';
+  // Laufenden Rundenpausen-Countdown stoppen, sonst startet die Welle hinter dem Menü
+  if (waveBreakInterval) { clearInterval(waveBreakInterval); waveBreakInterval = null; }
   document.getElementById('resultScreen').style.display = 'none';
   document.getElementById('waveBreak').style.display = 'none';
   document.getElementById('escBtn').style.display = 'none';
@@ -5663,7 +5709,9 @@ function returnToCafe() {
 
 // ─── MOBILE TOUCH CONTROLS ───────────────────────────────────────────────────
 (function() {
-  const isMob = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+  // Nur echte Touch-Geräte (Handy/Tablet): primärer Zeiger ist grob und kann nicht hovern.
+  // Touch-Laptops (z.B. Surface mit Maus/Trackpad) bekommen die normale PC-Steuerung.
+  const isMob = window.matchMedia('(hover: none) and (pointer: coarse)').matches;
   if (!isMob) return;
 
   // Show controls whenever playing starts
