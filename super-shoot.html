@@ -4294,6 +4294,14 @@ function updateRobots(dt, now) {
         mesh: bMesh, vel: shootDir.clone().multiplyScalar(20),
         damage: dmgAmt, life: 3.0
       });
+      // MP: Host sendet Roboter-Kugeln an Non-Hosts
+      if (isMultiplayer && mpIsHost && socket) {
+        socket.emit('robotBullet', {
+          ox: rp.x, oy: shootOriginY, oz: rp.z,
+          vx: shootDir.x * 20, vy: shootDir.y * 20, vz: shootDir.z * 20,
+          dmg: dmgAmt
+        });
+      }
     }
   });
 }
@@ -4326,15 +4334,15 @@ function updateEnemyBullets(dt) {
       scene.remove(b.mesh);
       enemyBullets.splice(i,1);
       updateHud();
-      if (playerHp <= 0) onPlayerDeath();
+      if (playerHp <= 0 && !isMultiplayer) onPlayerDeath();
     }
   }
 }
 
 function onPlayerDeath() {
+  if (phase !== 'playing') return; // verhindert Doppel-Aufruf
   // 1v1 MP: Tod = Niederlage, Gegner gewinnt
   if (gameMode === '1v1' && isMultiplayer) {
-    if (socket) socket.emit('playerHit', 9999); // Server: dieser Spieler tot
     endGame(false);
     return;
   }
