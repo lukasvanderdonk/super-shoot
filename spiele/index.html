@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lukas' Spiele</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: #1a1a2e;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      font-family: Arial, sans-serif;
+      color: white;
+      padding: 40px 16px;
+    }
+    h1 {
+      font-size: 3rem;
+      color: #e94560;
+      margin-bottom: 12px;
+      letter-spacing: 2px;
+      text-align: center;
+    }
+    .intro {
+      font-size: 1.1rem;
+      color: #aaa;
+      margin-bottom: 48px;
+      text-align: center;
+    }
+    .cards {
+      display: flex;
+      gap: 32px;
+      flex-wrap: wrap;
+      justify-content: center;
+      max-width: 1100px;
+    }
+    .card {
+      background: #16213e;
+      border: 2px solid #e94560;
+      border-radius: 12px;
+      padding: 32px 40px;
+      text-align: center;
+      text-decoration: none;
+      color: white;
+      transition: background 0.2s, transform 0.15s;
+      width: 280px;
+    }
+    .card:hover {
+      background: #e94560;
+      transform: translateY(-4px);
+    }
+    .card-icon {
+      font-size: 3rem;
+      margin-bottom: 12px;
+    }
+    .card-title {
+      font-size: 1.3rem;
+      font-weight: bold;
+      margin-bottom: 8px;
+    }
+    .card-sub {
+      font-size: 0.9rem;
+      color: #ccc;
+      line-height: 1.4;
+    }
+    .card-keys {
+      margin-top: 14px;
+      font-size: 0.8rem;
+      color: #888;
+    }
+    .card:hover .card-sub,
+    .card:hover .card-keys {
+      color: #fff;
+    }
+    .back {
+      margin-top: 48px;
+      color: #aaa;
+      text-decoration: none;
+      font-size: 0.95rem;
+      border-bottom: 1px dotted #aaa;
+    }
+    .back:hover { color: #e94560; border-color: #e94560; }
+  </style>
+</head>
+<body>
+  <h1>🎮 Lukas' Spiele</h1>
+  <p class="intro">Wähle ein Spiel und leg los!</p>
+  <div class="cards">
+    <a class="card" href="/spiele/labyrinth/">
+      <div class="card-icon">🧩</div>
+      <div class="card-title">2D Labyrinth</div>
+      <div class="card-sub">Finde den Weg durch das Labyrinth bis zum Ausgang!</div>
+      <div class="card-keys">Steuerung: Pfeiltasten</div>
+    </a>
+    <a class="card" href="/spiele/strand/">
+      <div class="card-icon">🏖️</div>
+      <div class="card-title">Strandspiel</div>
+      <div class="card-sub">Sammle Muscheln, weiche den Steinen aus und pass auf die Wellen auf!</div>
+      <div class="card-keys">Steuerung: A / D</div>
+    </a>
+    <a class="card" href="/spiele/rpg/">
+      <div class="card-icon">⚔️</div>
+      <div class="card-title">Shadow Quest</div>
+      <div class="card-sub">Ein großes RPG-Abenteuer mit Quests, Kämpfen, Inventar und Skills.</div>
+      <div class="card-keys">Steuerung: WASD + Maus</div>
+    </a>
+    <a class="card" href="/">
+      <div class="card-icon">🔫</div>
+      <div class="card-title">Super Shoot</div>
+      <div class="card-sub">Der 3D-Multiplayer-Shooter — spiele mit deinen Freunden zusammen!</div>
+      <div class="card-keys">Steuerung: WASD + Maus</div>
+    </a>
+  </div>
+</body>
+</html>

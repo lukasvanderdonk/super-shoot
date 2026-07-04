@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8"> <!-- Setzt die Zeichenkodierung auf UTF-8 -->
+  <title>2D Labyrinth</title> <!-- Titel des Browser-Tabs -->
+  <style>
+    body {
+      background-color: #1a1a2e; /* Setzt den Hintergrund der Seite auf dunkelblau */
+      display: flex; /* Aktiviert Flexbox für die body-Ausrichtung */
+      flex-direction: column; /* Ordnet Kindelemente untereinander an */
+      align-items: center; /* Zentriert Elemente horizontal */
+      justify-content: center; /* Zentriert Elemente vertikal */
+      height: 100vh; /* Setzt die Höhe auf die gesamte Viewport-Höhe */
+      margin: 0; /* Entfernt den Standard-Außenabstand */
+      font-family: Arial, sans-serif; /* Setzt die Schriftart */
+      color: white; /* Setzt die Textfarbe auf weiß */
+    }
+    h1 {
+      margin-bottom: 10px; /* Abstand unter der Überschrift */
+      font-size: 2rem; /* Schriftgröße der Überschrift */
+      color: #e94560; /* Setzt die Überschriftenfarbe auf rot */
+    }
+    canvas {
+      border: 3px solid #e94560; /* Roter Rahmen um das Spielfeld */
+      border-radius: 4px; /* Leicht abgerundete Ecken */
+    }
+    #info {
+      margin-top: 10px; /* Abstand über dem Info-Text */
+      font-size: 0.9rem; /* Kleinere Schriftgröße für den Hinweis */
+      color: #aaa; /* Grauer Text */
+    }
+    #win-msg {
+      display: none; /* Gewinn-Nachricht zunächst versteckt */
+      margin-top: 15px; /* Abstand über der Gewinn-Nachricht */
+      font-size: 1.5rem; /* Größere Schriftgröße */
+      color: #0f3460; /* Dunkelblaue Textfarbe */
+      background: #e94560; /* Roter Hintergrund */
+      padding: 10px 24px; /* Innenabstand */
+      border-radius: 8px; /* Abgerundete Ecken */
+    }
+    button {
+      margin-top: 12px; /* Abstand über dem Button */
+      padding: 8px 20px; /* Innenabstand des Buttons */
+      background: #e94560; /* Roter Button-Hintergrund */
+      color: white; /* Weiße Schrift auf dem Button */
+      border: none; /* Kein Rahmen */
+      border-radius: 6px; /* Abgerundete Ecken */
+      font-size: 1rem; /* Schriftgröße */
+      cursor: pointer; /* Zeiger-Cursor beim Hover */
+    }
+    button:hover {
+      background: #c73652; /* Dunkleres Rot beim Hover */
+    }
+  </style>
+</head>
+<body>
+  <h1>2D Labyrinth</h1> <!-- Überschrift der Seite -->
+  <canvas id="canvas"></canvas> <!-- Das Spielfeld-Canvas-Element -->
+  <div id="info">Pfeiltasten zum Bewegen &nbsp;|&nbsp; Finde den Ausgang!</div> <!-- Steuerungshinweis -->
+  <div id="win-msg">Gewonnen! Du hast den Ausgang gefunden!</div> <!-- Gewinn-Nachricht -->
+  <button onclick="newGame()">Neues Spiel</button> <!-- Button zum Neustarten -->
+
+  <script>
+    const canvas = document.getElementById('canvas'); // Holt das Canvas-Element aus dem DOM
+    const ctx = canvas.getContext('2d'); // Erstellt den 2D-Zeichenkontext
+
+    const COLS = 21; // Anzahl der Spalten des Labyrinths (ungerade für korrekte Wände)
+    const ROWS = 21; // Anzahl der Zeilen des Labyrinths (ungerade für korrekte Wände)
+    const CELL = 28; // Pixelgröße einer einzelnen Zelle
+
+    canvas.width = COLS * CELL; // Setzt die Canvas-Breite basierend auf Spalten und Zellgröße
+    canvas.height = ROWS * CELL; // Setzt die Canvas-Höhe basierend auf Zeilen und Zellgröße
+
+    let grid = []; // Array das das Labyrinth-Gitter speichert (0 = Weg, 1 = Wand)
+    let player = { x: 1, y: 1 }; // Startposition des Spielers (Spalte, Zeile)
+    let won = false; // Merker ob der Spieler gewonnen hat
+
+    // Erstellt ein neues Labyrinth und startet das Spiel
+    function newGame() {
+      won = false; // Setzt den Gewinn-Status zurück
+      document.getElementById('win-msg').style.display = 'none'; // Versteckt die Gewinn-Nachricht
+      generateMaze(); // Generiert ein neues Labyrinth
+      player = { x: 1, y: 1 }; // Setzt die Spielerposition zurück auf den Start
+      draw(); // Zeichnet das Labyrinth neu
+    }
+
+    // Generiert das Labyrinth mit dem Recursive-Backtracking-Algorithmus
+    function generateMaze() {
+      grid = []; // Leert das Gitter-Array
+      for (let r = 0; r < ROWS; r++) { // Schleife über alle Zeilen
+        grid[r] = []; // Erstellt eine neue Zeile im Gitter
+        for (let c = 0; c < COLS; c++) { // Schleife über alle Spalten
+          grid[r][c] = 1; // Setzt jede Zelle initial als Wand (1)
+        }
+      }
+
+      // Rekursive Tiefensuche zur Labyrintherstellung
+      function carve(r, c) {
+        const directions = [[0,2],[2,0],[0,-2],[-2,0]]; // Die vier möglichen Richtungen (je 2 Schritte)
+        shuffle(directions); // Mischt die Richtungen zufällig
+        for (const [dr, dc] of directions) { // Geht jede Richtung durch
+          const nr = r + dr; // Berechnet die neue Zeile
+          const nc = c + dc; // Berechnet die neue Spalte
+          if (nr > 0 && nr < ROWS - 1 && nc > 0 && nc < COLS - 1 && grid[nr][nc] === 1) { // Prüft ob die neue Zelle gültig und noch eine Wand ist
+            grid[r + dr/2][c + dc/2] = 0; // Entfernt die Wand zwischen aktueller und neuer Zelle
+            grid[nr][nc] = 0; // Setzt die neue Zelle als Weg (0)
+            carve(nr, nc); // Rekursiver Aufruf von der neuen Zelle aus
+          }
+        }
+      }
+
+      grid[1][1] = 0; // Setzt die Startzelle als Weg
+      carve(1, 1); // Startet den Labyrinthalgorithmus von der Startzelle
+      grid[ROWS - 2][COLS - 2] = 0; // Stellt sicher dass das Ziel ein Weg ist
+    }
+
+    // Mischt ein Array zufällig (Fisher-Yates-Algorithmus)
+    function shuffle(arr) {
+      for (let i = arr.length - 1; i > 0; i--) { // Geht das Array von hinten durch
+        const j = Math.floor(Math.random() * (i + 1)); // Wählt einen zufälligen Index
+        [arr[i], arr[j]] = [arr[j], arr[i]]; // Tauscht die beiden Elemente
+      }
+    }
+
+    // Zeichnet das gesamte Labyrinth auf das Canvas
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height); // Löscht das gesamte Canvas
+
+      for (let r = 0; r < ROWS; r++) { // Schleife über alle Zeilen
+        for (let c = 0; c < COLS; c++) { // Schleife über alle Spalten
+          if (grid[r][c] === 1) { // Prüft ob die Zelle eine Wand ist
+            ctx.fillStyle = '#16213e'; // Setzt die Wandfarbe auf dunkelblau
+          } else if (r === ROWS - 2 && c === COLS - 2) { // Prüft ob die Zelle das Ziel ist
+            ctx.fillStyle = '#0f3460'; // Setzt die Zielfarbe auf mittelblau
+          } else {
+            ctx.fillStyle = '#e0e0e0'; // Setzt die Wegfarbe auf hellgrau
+          }
+          ctx.fillRect(c * CELL, r * CELL, CELL, CELL); // Zeichnet die Zelle als Rechteck
+        }
+      }
+
+      // Zeichnet das Ziel-Symbol (Stern / Flagge)
+      const gx = (COLS - 2) * CELL + CELL / 2; // Berechnet die X-Mitte des Ziels
+      const gy = (ROWS - 2) * CELL + CELL / 2; // Berechnet die Y-Mitte des Ziels
+      ctx.fillStyle = '#e94560'; // Setzt die Farbe des Zielsymbols auf rot
+      ctx.font = `${CELL - 4}px Arial`; // Setzt die Schriftgröße für das Symbol
+      ctx.textAlign = 'center'; // Zentriert den Text horizontal
+      ctx.textBaseline = 'middle'; // Zentriert den Text vertikal
+      ctx.fillText('★', gx, gy); // Zeichnet einen Stern als Zielmarkierung
+
+      // Zeichnet den Spieler als farbigen Kreis
+      const px = player.x * CELL + CELL / 2; // Berechnet die X-Position des Spielers in Pixeln
+      const py = player.y * CELL + CELL / 2; // Berechnet die Y-Position des Spielers in Pixeln
+      ctx.beginPath(); // Beginnt einen neuen Zeichenpfad
+      ctx.arc(px, py, CELL / 2 - 4, 0, Math.PI * 2); // Zeichnet einen Kreis für den Spieler
+      ctx.fillStyle = '#e94560'; // Setzt die Spielerfarbe auf rot
+      ctx.fill(); // Füllt den Kreis mit der Farbe
+      ctx.strokeStyle = '#fff'; // Setzt den Rahmen des Spielers auf weiß
+      ctx.lineWidth = 2; // Setzt die Rahmenbreite auf 2 Pixel
+      ctx.stroke(); // Zeichnet den Rahmen des Kreises
+    }
+
+    // Reagiert auf Tastatureingaben für die Spielerbewegung
+    document.addEventListener('keydown', function(e) {
+      if (won) return; // Stoppt die Bewegung wenn bereits gewonnen wurde
+
+      let nr = player.y; // Merkt sich die aktuelle Zeile als neue Zeile
+      let nc = player.x; // Merkt sich die aktuelle Spalte als neue Spalte
+
+      if (e.key === 'ArrowUp')    nr--; // Bewegt den Spieler eine Zeile nach oben
+      if (e.key === 'ArrowDown')  nr++; // Bewegt den Spieler eine Zeile nach unten
+      if (e.key === 'ArrowLeft')  nc--; // Bewegt den Spieler eine Spalte nach links
+      if (e.key === 'ArrowRight') nc++; // Bewegt den Spieler eine Spalte nach rechts
+
+      if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS && grid[nr][nc] === 0) { // Prüft ob das Zielfeld ein gültiger Weg ist
+        player.y = nr; // Aktualisiert die Spielerzeile
+        player.x = nc; // Aktualisiert die Spielerspalte
+      }
+
+      if (player.y === ROWS - 2 && player.x === COLS - 2) { // Prüft ob der Spieler das Ziel erreicht hat
+        won = true; // Setzt den Gewinn-Status auf wahr
+        document.getElementById('win-msg').style.display = 'block'; // Zeigt die Gewinn-Nachricht an
+      }
+
+      draw(); // Zeichnet das Labyrinth nach der Bewegung neu
+    });
+
+    newGame(); // Startet das Spiel beim ersten Laden der Seite
+  </script>
+</body>
+</html>
