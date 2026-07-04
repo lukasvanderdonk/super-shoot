@@ -162,7 +162,8 @@ canvas#gameCanvas{width:100%;height:100%;display:block}
 <div class="desc">Ultrakritisch & superschnell. Immer im Schatten.</div>
 </div>
 </div>
-<button id="start-btn" class="btn" onclick="startGame()">Abenteuer beginnen!</button>
+<button id="continue-btn" class="btn" onclick="startGame()" style="display:none">💾 Weiterspielen</button>
+<button id="start-btn" class="btn" onclick="startGame(true)">Abenteuer beginnen!</button>
 </div>
 
 <div id="game-container" style="display:none">
@@ -361,7 +362,8 @@ const SKILL_DATA = {
 'Schnittangriff':{icon:'🌀',dmg:1.4,cost:10,type:'stam',cd:2,desc:'Blitzschneller Doppelangriff',multi:2},
 'Rauchbombe':{icon:'💨',dmg:0,cost:15,type:'mp',cd:6,desc:'Unsichtbar für 5s + nächster Angriff x3',buff:'smokeScreen'},
 'Klingenregen':{icon:'🔪',dmg:0.5,cost:25,type:'stam',cd:8,desc:'8 Klingen treffen alle Gegner',aoe:true,multi:8},
-'Todeshieb':{icon:'💀',dmg:5.0,cost:60,type:'mp',cd:20,desc:'Sofort-Kill wenn Gegner < 25% HP'}
+'Todeshieb':{icon:'💀',dmg:5.0,cost:60,type:'mp',cd:20,desc:'Sofort-Kill wenn Gegner < 25% HP'},
+'Feueratem':{icon:'🐲',dmg:2.5,cost:40,type:'stam',cd:12,desc:'Feuerkegel verbrennt alle Gegner',aoe:true}
 };
 const ENEMIES = [
 {name:'Slime',icon:'🟢',hp:15,atk:2,def:1,xp:15,gold:5,level:1},
@@ -904,11 +906,11 @@ const ITEMS = [
 {id:314,name:'Zeit-Stiefel',icon:'🕰️',type:'boots',rarity:'legendary',desc:'Teleportiert 2 Felder vorwärts',stats:{def:14,spd:25,mp:40},set:'time',price:800},
 {id:315,name:'Zeit-Kristall-Ring',icon:'💎',type:'accessory',rarity:'legendary',desc:'+20% zu allen Stats',stats:{atk:8,def:8,spd:8,crit:8,hp:40,mp:40},set:'time',price:1500},
 // Gift-Set (IDs 346-350) — Poison/Nature set
-{id:346,name:'Gift-Krone',icon:'☠️',type:'helmet',rarity:'epic',desc:'Alle Angriffe vergiften (3 Stacks)',stats:{def:14,atk:8,crit:6},set:'poison',price:700},
-{id:347,name:'Gift-Rüstung',icon:'🧪',type:'armor',rarity:'epic',desc:'Gift-Aura verletzt Nahkampf-Angreifer',stats:{def:24,hp:60,atk:6},set:'poison',price:900},
-{id:348,name:'Gift-Hose',icon:'🦠',type:'pants',rarity:'epic',desc:'Schnellere Bewegung im Gif-Modus',stats:{def:18,spd:12,hp:40},set:'poison',price:700},
-{id:349,name:'Gift-Stiefel',icon:'💚',type:'boots',rarity:'epic',desc:'Hinterlässt Giftspur',stats:{def:14,spd:10,hp:30},set:'poison',price:650},
-{id:350,name:'Gift-Ring',icon:'💀',type:'accessory',rarity:'epic',desc:'+30% Gift-Schaden, immun gegen eigenes Gift',stats:{atk:10,crit:8,mp:20},set:'poison',price:750}
+{id:353,name:'Gift-Krone',icon:'☠️',type:'helmet',rarity:'epic',desc:'Alle Angriffe vergiften (3 Stacks)',stats:{def:14,atk:8,crit:6},set:'poison',price:700},
+{id:354,name:'Gift-Rüstung',icon:'🧪',type:'armor',rarity:'epic',desc:'Gift-Aura verletzt Nahkampf-Angreifer',stats:{def:24,hp:60,atk:6},set:'poison',price:900},
+{id:355,name:'Gift-Hose',icon:'🦠',type:'pants',rarity:'epic',desc:'Schnellere Bewegung im Gif-Modus',stats:{def:18,spd:12,hp:40},set:'poison',price:700},
+{id:356,name:'Gift-Stiefel',icon:'💚',type:'boots',rarity:'epic',desc:'Hinterlässt Giftspur',stats:{def:14,spd:10,hp:30},set:'poison',price:650},
+{id:357,name:'Gift-Ring',icon:'💀',type:'accessory',rarity:'epic',desc:'+30% Gift-Schaden, immun gegen eigenes Gift',stats:{atk:10,crit:8,mp:20},set:'poison',price:750}
 ];
 const CRAFTING = [
 {name:'Eisenschwert',result:5,ingredients:[{id:19,qty:3},{id:18,qty:1}]},
@@ -1031,11 +1033,11 @@ const CRAFTING = [
 {name:'Krieger-Seele',result:344,ingredients:[{id:261,qty:2},{id:262,qty:1},{id:21,qty:10},{id:265,qty:3}]},
 {name:'Götter-Amulett',result:345,ingredients:[{id:261,qty:3},{id:262,qty:3},{id:260,qty:3},{id:259,qty:3}]},
 // Poison-Set recipes
-{name:'Gift-Krone',result:346,ingredients:[{id:23,qty:5},{id:265,qty:3},{id:19,qty:4}]},
-{name:'Gift-Rüstung',result:347,ingredients:[{id:23,qty:6},{id:265,qty:4},{id:19,qty:6}]},
-{name:'Gift-Hose',result:348,ingredients:[{id:23,qty:4},{id:265,qty:3},{id:19,qty:4}]},
-{name:'Gift-Stiefel',result:349,ingredients:[{id:23,qty:3},{id:265,qty:2},{id:19,qty:3}]},
-{name:'Gift-Ring',result:350,ingredients:[{id:23,qty:4},{id:265,qty:3},{id:263,qty:2}]},
+{name:'Gift-Krone',result:353,ingredients:[{id:23,qty:5},{id:265,qty:3},{id:19,qty:4}]},
+{name:'Gift-Rüstung',result:354,ingredients:[{id:23,qty:6},{id:265,qty:4},{id:19,qty:6}]},
+{name:'Gift-Hose',result:355,ingredients:[{id:23,qty:4},{id:265,qty:3},{id:19,qty:4}]},
+{name:'Gift-Stiefel',result:356,ingredients:[{id:23,qty:3},{id:265,qty:2},{id:19,qty:3}]},
+{name:'Gift-Ring',result:357,ingredients:[{id:23,qty:4},{id:265,qty:3},{id:263,qty:2}]},
 // Troll & Phantom Material-Rezepte
 {name:'Troll-Rüstung',result:351,ingredients:[{id:349,qty:3},{id:19,qty:8},{id:21,qty:2}]},
 {name:'Phantom-Klinge',result:352,ingredients:[{id:350,qty:2},{id:149,qty:3},{id:153,qty:2}]}
@@ -2077,6 +2079,8 @@ mctx.fillStyle='#44ff44';mctx.fillRect(p.x*scale-2,p.y*scale-2,4,4);
 // ===== GAME LOGIC =====
 const keys={};
 document.addEventListener('keydown',e=>{
+if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA')return; // nicht beim Tippen in Eingabefeldern (z.B. Name)
+if(e.ctrlKey||e.metaKey)return; // Browser-Shortcuts (Strg+R usw.) nicht blockieren
 keys[e.key.toLowerCase()]=true;
 if(['1','2','3','4','5','6'].includes(e.key))useSkill(parseInt(e.key)-1);
 if(e.key.toLowerCase()==='e')interact();
@@ -2470,7 +2474,8 @@ return true;
 // Particles
 G.particles=G.particles.filter(pt=>{pt.life-=dt;pt.x+=pt.dx*dt;pt.y+=pt.dy*dt;return pt.life>0;});
 // Auto-save
-if(G.settings.autoSave&&Math.floor(G.gameTime)%60===0&&G.gameTime>1)saveGame(true);
+G.autoSaveTimer=(G.autoSaveTimer||0)+dt;
+if(G.settings.autoSave&&G.autoSaveTimer>=60){G.autoSaveTimer=0;saveGame(true);}
 // XP boost timer
 if(G.xpBoostTimer>0){G.xpBoostTimer-=dt;if(G.xpBoostTimer<=0){G.xpMultiplier=1;addLog('⭐ XP-Booster abgelaufen.','log-system');}}
 // Time stop timer
@@ -3399,7 +3404,7 @@ const bonusOptions=[
 {label:`+${10+lvl} MaxMP`,icon:'💙',apply:p=>{p.maxMp+=10+lvl;p.mp=Math.min(p.maxMp,p.mp+(10+lvl));}},
 {label:`+${Math.floor(lvl/2)} KRIT%`,icon:'💥',apply:p=>{p.crit=(p.crit||0)+Math.floor(lvl/2);}},
 {label:'+5 StatPunkte',icon:'⭐',apply:p=>{p.statPoints+=5;}},
-{label:'Alle Skills +1 Level',icon:'🔥',apply:p=>{G.skillLevels=G.skillLevels.map(l=>Math.min(l+1,5));}},
+{label:'Alle Skills +1 Level',icon:'🔥',apply:p=>{p.skillLevels=p.skillLevels.map(l=>Math.min(l+1,5));}},
 ];
 // Pick 3 unique random options
 const shuffled=[...bonusOptions].sort(()=>Math.random()-0.5).slice(0,3);
@@ -3413,10 +3418,11 @@ btn.style.cssText='padding:12px 10px;background:#1a1a3a;border:1px solid #ffaa00
 btn.innerHTML=`<div style="font-size:22px">${opt.icon}</div><div style="margin-top:4px">${opt.label}</div>`;
 btn.onmouseenter=()=>btn.style.background='#2a2a5a';
 btn.onmouseleave=()=>btn.style.background='#1a1a3a';
-btn.onclick=()=>{opt.apply(G.player);popup.remove();G.paused=false;addLog(`🌟 Bonus gewählt: ${opt.icon} ${opt.label}!`,'log-skill');spawnParticles(G.player.x,G.player.y,'⭐',12);};
+btn.onclick=()=>{popup.remove();G.paused=false;opt.apply(G.player);addLog(`🌟 Bonus gewählt: ${opt.icon} ${opt.label}!`,'log-skill');spawnParticles(G.player.x,G.player.y,'⭐',12);};
 container.appendChild(btn);
 }
 document.body.appendChild(popup);
+}
 
 function recalcStats(){
 const p=G.player;
@@ -5258,11 +5264,12 @@ document.querySelectorAll('.class-card').forEach(c=>c.classList.remove('selected
 document.querySelector(`[data-class="${cls}"]`).classList.add('selected');
 }
 
-function startGame(){
+function startGame(fresh){
 const name=document.getElementById('name-input').value.trim()||'Held';
 document.getElementById('title-screen').style.display='none';
 document.getElementById('game-container').style.display='flex';
 resizeCanvas();
+if(fresh)localStorage.removeItem(G.saveSlot); // Neues Spiel: alten Spielstand verwerfen
 const loaded=loadGame();
 if(!loaded){
 G.player=createPlayer(name,selectedClass);
@@ -5335,6 +5342,17 @@ requestAnimationFrame(gameLoop);
 }
 requestAnimationFrame(gameLoop);
 selectClass('warrior');
+
+// Weiterspielen-Button anzeigen wenn ein Spielstand existiert
+(function(){
+try{
+const raw=localStorage.getItem(G.saveSlot);
+if(!raw)return;
+const data=JSON.parse(raw);
+const btn=document.getElementById('continue-btn');
+if(btn&&data.player){btn.style.display='inline-block';btn.textContent=`💾 Weiterspielen: ${data.player.name} (${data.player.className} Lv.${data.player.level}, Ebene ${data.floor})`;}
+}catch(e){}
+})();
 
 // Show leaderboard on title screen
 (function(){

@@ -1,14 +1,52 @@
 <!DOCTYPE html>
-<html>
+<html lang="de">
   <head>
-    <title>strand spiel</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Strandspiel</title>
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body {
+        background-color: #1a1a2e;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        min-height: 100vh;
+        font-family: Arial, sans-serif;
+        color: white;
+        padding: 16px;
+      }
+      h1 { color: #e94560; margin-bottom: 8px; font-size: 1.6rem; }
+      #hud {
+        display: flex;
+        gap: 24px;
+        margin-bottom: 8px;
+        font-size: 1rem;
+      }
+      #hud span b { color: #e94560; }
+      canvas {
+        background: #FFD500;
+        display: block;
+        max-width: 95vw;
+        height: auto;
+        border: 3px solid #e94560;
+        border-radius: 4px;
+      }
+      #info { margin-top: 8px; font-size: 0.85rem; color: #aaa; }
+      .back-link { margin-top: 10px; color: #aaa; font-size: 0.85rem; text-decoration: none; }
+      .back-link:hover { color: #e94560; }
+    </style>
   </head>
   <body>
-    <div id="laufanzeige">streke: 0</div>
-    <div id="anzeige">score: 0</div>
-    <canvas id="spielfeld" width="1000" height="750"
-        style="background:#FFD500;display:block;margin:auto"></canvas>
-  </body>
+    <h1>🏖️ Strandspiel</h1>
+    <div id="hud">
+      <span id="anzeige">Muscheln: <b>0</b></span>
+      <span id="laufanzeige">Strecke: <b>0</b></span>
+      <span id="rekord">Rekord: <b>0</b></span>
+    </div>
+    <canvas id="spielfeld" width="1000" height="750"></canvas>
+    <div id="info">A / D oder Pfeiltasten zum Laufen — sammle Muscheln 🐚, weiche Steinen aus! Die Wellen spülen Muscheln weg. Auf dem Handy: linke / rechte Bildhälfte antippen und halten.</div>
+    <a class="back-link" href="/spiele/">← Alle Spiele</a>
   <script>
 const canvas = document.getElementById('spielfeld');
 const ctx = canvas.getContext('2d');
@@ -16,30 +54,50 @@ const keys = {};
 document.addEventListener('keydown', e => keys[e.code] = true);
 document.addEventListener('keyup',   e => keys[e.code] = false);
 
+// touch-steuerung: linke hälfte = links laufen, rechte hälfte = rechts laufen
+let touchRichtung = 0;
+canvas.addEventListener('touchstart', e => {
+    e.preventDefault();
+    const rect = canvas.getBoundingClientRect();
+    touchRichtung = (e.touches[0].clientX - rect.left < rect.width / 2) ? -1 : 1;
+});
+canvas.addEventListener('touchend', e => { e.preventDefault(); touchRichtung = 0; });
+
 // jede welle hat: x, ziel, counter, countermax, reinspeed, rausspeed, y, höhe
-let wellen = [
-    { x: 0, ziel: Math.floor(Math.random() * 601) + 200, counter: 0, countermax: 110, reinspeed: 3,  rausspeed: 6,  y: 480, hoehe: 1000 },
-    { x: 0, ziel: Math.floor(Math.random() * 601) + 200, counter: 40, countermax: 160, reinspeed: 2, rausspeed: 4,  y: 0,   hoehe: 1000 },
-    { x: 0, ziel: Math.floor(Math.random() * 601) + 200, counter: 80, countermax: 90,  reinspeed: 5, rausspeed: 8,  y: 700, hoehe: 1000 },
-];
+let wellen, spielerx, körner, muscheln, steine, streke, score, läuft, speedBonus;
+let zufalzahl, zufall, zufall_1_50;
+let rekord = Number(localStorage.getItem('strand-rekord') || 0);
+document.querySelector('#rekord b').textContent = rekord;
 
-let spielerx = 500;
-let zufalzahl = Math.floor(Math.random() * 1001);
-let körner = [];
-let muscheln = [];
-let steine = [];
-let streke = 0;
-let zufall;
-let zufall_1_50 = Math.floor(Math.random() * 51);
-let score = 0;
-let läuft = true;
+function neustart() {
+    wellen = [
+        { x: 0, ziel: Math.floor(Math.random() * 601) + 200, counter: 0, countermax: 110, reinspeed: 3,  rausspeed: 6,  y: 480, hoehe: 1000 },
+        { x: 0, ziel: Math.floor(Math.random() * 601) + 200, counter: 40, countermax: 160, reinspeed: 2, rausspeed: 4,  y: 0,   hoehe: 1000 },
+        { x: 0, ziel: Math.floor(Math.random() * 601) + 200, counter: 80, countermax: 90,  reinspeed: 5, rausspeed: 8,  y: 700, hoehe: 1000 },
+    ];
+    spielerx = 500;
+    zufalzahl = Math.floor(Math.random() * 1001);
+    körner = [];
+    muscheln = [];
+    steine = [];
+    streke = 0;
+    score = 0;
+    speedBonus = 0; // wird mit der zeit größer -> alles fällt schneller
+    läuft = true;
 
-muscheln.push({x: zufalzahl, y: 0});
-zufalzahl = Math.floor(Math.random() * 1001);
-muscheln.push({x: zufalzahl, y: 0});
-zufalzahl = Math.floor(Math.random() * 1001);
-muscheln.push({x: zufalzahl, y: 0});
-zufalzahl = Math.floor(Math.random() * 1001);
+    muscheln.push({x: zufalzahl, y: 0});
+    zufalzahl = Math.floor(Math.random() * 1001);
+    muscheln.push({x: zufalzahl, y: 0});
+    zufalzahl = Math.floor(Math.random() * 1001);
+    muscheln.push({x: zufalzahl, y: 0});
+    zufalzahl = Math.floor(Math.random() * 1001);
+
+    update();
+}
+
+// neustart mit leertaste oder klick/tipp nach game over
+document.addEventListener('keydown', e => { if (!läuft && e.code === 'Space') neustart(); });
+canvas.addEventListener('pointerdown', () => { if (!läuft) neustart(); });
 
 function welleUpdate(w) {
     w.counter += 1;
@@ -67,32 +125,51 @@ function welleUpdate(w) {
     }
 }
 
+// prüft ob ein punkt gerade von einer welle bedeckt ist
+function inWelle(x, y) {
+    for (let w of wellen) {
+        if (x <= w.x && y >= w.y && y <= w.y + w.hoehe) return true;
+    }
+    return false;
+}
+
 function update() {
     if (!läuft) return;
 
     zufall_1_50 = Math.floor(Math.random() * 51);
     ctx.clearRect(0, 0, 1000, 750);
 
-    if (keys['KeyA']) spielerx -= 4;
-    if (keys['KeyD']) spielerx += 4;
+    if (keys['KeyA'] || keys['ArrowLeft']  || touchRichtung === -1) spielerx -= 4;
+    if (keys['KeyD'] || keys['ArrowRight'] || touchRichtung === 1)  spielerx += 4;
     if (spielerx >= 1000) spielerx = 1000;
     if (spielerx <= 0) spielerx = 0;
 
     zufall = Math.floor(Math.random() * 301);
 
+    // je weiter man kommt, desto schneller fällt alles (max +3)
+    speedBonus = Math.min(3, streke / 2000);
+    const fallspeed = 3 + speedBonus;
+
     körner = körner.filter(k => k.y < 800);
     körner.push({x: zufalzahl, y: 0});
-    for (let k of körner) k.y += 3;
+    for (let k of körner) k.y += fallspeed;
     zufalzahl = Math.floor(Math.random() * 1001);
 
-    if (zufall == 1) muscheln.push({x: zufalzahl, y: 0});
+    if (zufall <= 2) muscheln.push({x: zufalzahl, y: 0}); // etwas öfter, weil wellen muscheln wegspülen
     if (zufall == 20) steine.push({x: zufalzahl, y: 0, r: zufall_1_50});
 
-    for (let m of muscheln) m.y += 3;
-    for (let s of steine) s.y += 3;
+    for (let m of muscheln) m.y += fallspeed;
+    for (let s of steine) s.y += fallspeed;
+
+    // muscheln und steine die unten raus sind entfernen
+    muscheln = muscheln.filter(m => m.y < 800);
+    steine = steine.filter(s => s.y < 800 + s.r);
 
     // jede welle unabhängig updaten
     for (let w of wellen) welleUpdate(w);
+
+    // wellen spülen muscheln weg
+    muscheln = muscheln.filter(m => !inWelle(m.x, m.y));
 
     // kollision muscheln
     for (let m of muscheln) {
@@ -106,11 +183,12 @@ function update() {
     }
 
     // kollision steine
+    let getroffen = false;
     for (let s of steine) {
         let dx = s.x - spielerx;
         let dy = s.y - 750;
         let abstand = Math.sqrt(dx*dx + dy*dy);
-        if (abstand < s.r + 30) stop();
+        if (abstand < s.r + 30) getroffen = true;
     }
 
     // zeichnen körner
@@ -144,8 +222,11 @@ function update() {
         ctx.fillRect(0, w.y, w.x, w.hoehe);
     }
 
-    document.getElementById('laufanzeige').textContent = "streke: " + streke;
-    document.getElementById('anzeige').textContent = "score: " + score;
+    document.querySelector('#laufanzeige b').textContent = streke;
+    document.querySelector('#anzeige b').textContent = score;
+
+    // erst alles zeichnen, dann game over anzeigen (sonst wird es übermalt)
+    if (getroffen) { stop(); return; }
 
     requestAnimationFrame(update);
 }
@@ -171,16 +252,28 @@ function muschelzeichnen(x, y) {
 
 function stop() {
     läuft = false;
+
+    // rekord speichern
+    if (score > rekord) {
+        rekord = score;
+        localStorage.setItem('strand-rekord', rekord);
+        document.querySelector('#rekord b').textContent = rekord;
+    }
+
     ctx.fillStyle = 'rgba(0,0,0,0.5)';
     ctx.fillRect(0, 0, 1000, 750);
     ctx.fillStyle = 'white';
     ctx.font = '60px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('GAME OVER', 500, 375);
+    ctx.fillText('GAME OVER', 500, 340);
     ctx.font = '30px sans-serif';
-    ctx.fillText('score: ' + score, 500, 430);
+    ctx.fillText('Muscheln: ' + score + '   |   Strecke: ' + streke, 500, 400);
+    ctx.fillText('Rekord: ' + rekord, 500, 445);
+    ctx.font = '24px sans-serif';
+    ctx.fillText('Leertaste oder Tippen für ein neues Spiel', 500, 510);
+    ctx.textAlign = 'start';
 }
 
-update();
+neustart();
   </script>
 </html>

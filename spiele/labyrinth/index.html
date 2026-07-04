@@ -2,6 +2,7 @@
 <html lang="de">
 <head>
   <meta charset="UTF-8"> <!-- Setzt die Zeichenkodierung auf UTF-8 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"> <!-- Sorgt für richtige Darstellung auf Handys -->
   <title>2D Labyrinth</title> <!-- Titel des Browser-Tabs -->
   <style>
     body {
@@ -51,14 +52,53 @@
     button:hover {
       background: #c73652; /* Dunkleres Rot beim Hover */
     }
+    canvas {
+      max-width: 95vw; /* Canvas passt sich schmalen Bildschirmen an */
+      height: auto; /* Höhe wird passend mitskaliert */
+    }
+    #stats {
+      margin-top: 8px; /* Abstand über der Statistik-Zeile */
+      font-size: 0.95rem; /* Schriftgröße der Statistik */
+      color: #e0e0e0; /* Helle Textfarbe */
+    }
+    #touch-pad {
+      display: none; /* D-Pad standardmäßig versteckt (nur für Touch-Geräte) */
+      grid-template-columns: repeat(3, 56px); /* 3 Spalten für das Steuerkreuz */
+      gap: 6px; /* Abstand zwischen den Tasten */
+      margin-top: 14px; /* Abstand über dem Steuerkreuz */
+    }
+    #touch-pad button {
+      margin: 0; /* Überschreibt den Standard-Button-Abstand */
+      height: 52px; /* Feste Höhe der Steuertasten */
+      font-size: 1.4rem; /* Große Pfeilsymbole */
+      touch-action: manipulation; /* Verhindert Zoom bei Doppeltipp */
+    }
+    @media (pointer: coarse) {
+      #touch-pad { display: grid; } /* D-Pad nur auf Touch-Geräten anzeigen */
+      #info { display: none; } /* Tastatur-Hinweis auf Touch-Geräten verstecken */
+    }
+    .back-link {
+      margin-top: 16px; /* Abstand über dem Link */
+      color: #aaa; /* Grauer Text */
+      font-size: 0.85rem; /* Kleine Schrift */
+      text-decoration: none; /* Keine Unterstreichung */
+    }
+    .back-link:hover { color: #e94560; } /* Rot beim Hover */
   </style>
 </head>
 <body>
   <h1>2D Labyrinth</h1> <!-- Überschrift der Seite -->
   <canvas id="canvas"></canvas> <!-- Das Spielfeld-Canvas-Element -->
+  <div id="stats">Schritte: <span id="steps">0</span> &nbsp;|&nbsp; Zeit: <span id="time">0</span>s</div> <!-- Schritte und Zeit -->
   <div id="info">Pfeiltasten zum Bewegen &nbsp;|&nbsp; Finde den Ausgang!</div> <!-- Steuerungshinweis -->
   <div id="win-msg">Gewonnen! Du hast den Ausgang gefunden!</div> <!-- Gewinn-Nachricht -->
+  <div id="touch-pad"> <!-- Steuerkreuz für Handys und Tablets -->
+    <span></span><button data-key="ArrowUp">▲</button><span></span>
+    <button data-key="ArrowLeft">◀</button><span></span><button data-key="ArrowRight">▶</button>
+    <span></span><button data-key="ArrowDown">▼</button><span></span>
+  </div>
   <button onclick="newGame()">Neues Spiel</button> <!-- Button zum Neustarten -->
+  <a class="back-link" href="/spiele/">← Alle Spiele</a> <!-- Link zurück zur Spiele-Übersicht -->
 
   <script>
     const canvas = document.getElementById('canvas'); // Holt das Canvas-Element aus dem DOM
@@ -74,14 +114,28 @@
     let grid = []; // Array das das Labyrinth-Gitter speichert (0 = Weg, 1 = Wand)
     let player = { x: 1, y: 1 }; // Startposition des Spielers (Spalte, Zeile)
     let won = false; // Merker ob der Spieler gewonnen hat
+    let steps = 0; // Zählt die Schritte des Spielers
+    let startTime = null; // Zeitpunkt des ersten Schritts (Timer startet erst bei Bewegung)
+    let timerInterval = null; // Merker für den laufenden Timer
 
     // Erstellt ein neues Labyrinth und startet das Spiel
     function newGame() {
       won = false; // Setzt den Gewinn-Status zurück
+      steps = 0; // Setzt den Schrittzähler zurück
+      startTime = null; // Setzt den Timer zurück
+      clearInterval(timerInterval); // Stoppt einen eventuell laufenden Timer
+      document.getElementById('steps').textContent = '0'; // Zeigt 0 Schritte an
+      document.getElementById('time').textContent = '0'; // Zeigt 0 Sekunden an
       document.getElementById('win-msg').style.display = 'none'; // Versteckt die Gewinn-Nachricht
       generateMaze(); // Generiert ein neues Labyrinth
       player = { x: 1, y: 1 }; // Setzt die Spielerposition zurück auf den Start
       draw(); // Zeichnet das Labyrinth neu
+    }
+
+    // Aktualisiert die Zeitanzeige (läuft jede Sekunde)
+    function updateTimer() {
+      const sec = Math.floor((Date.now() - startTime) / 1000); // Berechnet die vergangenen Sekunden
+      document.getElementById('time').textContent = sec; // Schreibt die Sekunden in die Anzeige
     }
 
     // Generiert das Labyrinth mit dem Recursive-Backtracking-Algorithmus
@@ -160,29 +214,52 @@
       ctx.stroke(); // Zeichnet den Rahmen des Kreises
     }
 
-    // Reagiert auf Tastatureingaben für die Spielerbewegung
-    document.addEventListener('keydown', function(e) {
+    // Bewegt den Spieler in die Richtung der gedrückten Taste
+    function move(key) {
       if (won) return; // Stoppt die Bewegung wenn bereits gewonnen wurde
 
       let nr = player.y; // Merkt sich die aktuelle Zeile als neue Zeile
       let nc = player.x; // Merkt sich die aktuelle Spalte als neue Spalte
 
-      if (e.key === 'ArrowUp')    nr--; // Bewegt den Spieler eine Zeile nach oben
-      if (e.key === 'ArrowDown')  nr++; // Bewegt den Spieler eine Zeile nach unten
-      if (e.key === 'ArrowLeft')  nc--; // Bewegt den Spieler eine Spalte nach links
-      if (e.key === 'ArrowRight') nc++; // Bewegt den Spieler eine Spalte nach rechts
+      if (key === 'ArrowUp')    nr--; // Bewegt den Spieler eine Zeile nach oben
+      if (key === 'ArrowDown')  nr++; // Bewegt den Spieler eine Zeile nach unten
+      if (key === 'ArrowLeft')  nc--; // Bewegt den Spieler eine Spalte nach links
+      if (key === 'ArrowRight') nc++; // Bewegt den Spieler eine Spalte nach rechts
 
       if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS && grid[nr][nc] === 0) { // Prüft ob das Zielfeld ein gültiger Weg ist
+        if (startTime === null) { // Prüft ob das der erste Schritt ist
+          startTime = Date.now(); // Startet den Timer beim ersten Schritt
+          timerInterval = setInterval(updateTimer, 250); // Aktualisiert die Zeitanzeige regelmäßig
+        }
         player.y = nr; // Aktualisiert die Spielerzeile
         player.x = nc; // Aktualisiert die Spielerspalte
+        steps++; // Zählt den Schritt
+        document.getElementById('steps').textContent = steps; // Aktualisiert die Schritt-Anzeige
       }
 
       if (player.y === ROWS - 2 && player.x === COLS - 2) { // Prüft ob der Spieler das Ziel erreicht hat
         won = true; // Setzt den Gewinn-Status auf wahr
+        clearInterval(timerInterval); // Stoppt den Timer
+        updateTimer(); // Aktualisiert die Zeitanzeige ein letztes Mal
+        const sec = document.getElementById('time').textContent; // Liest die Endzeit aus
+        document.getElementById('win-msg').textContent = `Gewonnen! ${steps} Schritte in ${sec} Sekunden!`; // Zeigt Schritte und Zeit im Gewinn-Text
         document.getElementById('win-msg').style.display = 'block'; // Zeigt die Gewinn-Nachricht an
       }
 
       draw(); // Zeichnet das Labyrinth nach der Bewegung neu
+    }
+
+    // Reagiert auf Tastatureingaben für die Spielerbewegung
+    document.addEventListener('keydown', function(e) {
+      if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) { // Prüft ob eine Pfeiltaste gedrückt wurde
+        e.preventDefault(); // Verhindert dass die Seite mitscrollt
+        move(e.key); // Führt die Bewegung aus
+      }
+    });
+
+    // Reagiert auf das Steuerkreuz für Touch-Geräte
+    document.querySelectorAll('#touch-pad button').forEach(btn => { // Geht alle D-Pad-Tasten durch
+      btn.addEventListener('click', () => move(btn.dataset.key)); // Bewegt den Spieler beim Antippen
     });
 
     newGame(); // Startet das Spiel beim ersten Laden der Seite
