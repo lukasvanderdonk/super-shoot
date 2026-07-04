@@ -5250,7 +5250,8 @@ window.addEventListener('resize', () => {
 function connectToServer() {
   const name = (document.getElementById('playerNameInput').value.trim() || 'Spieler').slice(0,16);
   const raw  = document.getElementById('serverIpInput').value.trim() || 'localhost:3000';
-  const url  = raw.startsWith('http') ? raw : `http://${raw}`;
+  const isLocal = raw.includes('localhost') || raw.includes('127.0.0.1');
+  const url  = raw.startsWith('http') ? raw : (isLocal ? `http://${raw}` : `https://${raw}`);
   const msg  = document.getElementById('connectMsg');
   msg.className = ''; msg.textContent = '⏳ Lade Verbindungs-Bibliothek…';
 
