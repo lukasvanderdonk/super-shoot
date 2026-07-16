@@ -41,7 +41,7 @@ app.get('/', (req, res) => {
 // Zugang nur mit dem geheimen Code. Nachrichten überleben einen Neustart
 // (Datei), aber kein Re-Deploy — für die Schnitzeljagd reicht das.
 const fs = require('fs');
-const CHAT_CODE = 'hallo'; // Vergleich immer kleingeschrieben
+const CHAT_CODE = 'code'; // Vergleich immer kleingeschrieben
 const CHAT_FILE = path.join(__dirname, '.geheim-chat.json'); // Punkt-Datei: wird von express.static nicht ausgeliefert
 let chatNachrichten = [];
 try { chatNachrichten = JSON.parse(fs.readFileSync(CHAT_FILE, 'utf8')); } catch (e) {}
