@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Geheimer Chat — Lukas' Spiele</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: #1a1a2e;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      font-family: Arial, sans-serif;
+      color: white;
+      padding: 24px 12px;
+    }
+    h1 {
+      color: #e94560;
+      font-size: 2rem;
+      margin-bottom: 6px;
+      letter-spacing: 2px;
+      text-align: center;
+    }
+    .intro {
+      color: #aaa;
+      font-size: 0.95rem;
+      margin-bottom: 24px;
+      text-align: center;
+      max-width: 640px;
+      line-height: 1.4;
+    }
+    .box {
+      background: #16213e;
+      border: 2px solid #e94560;
+      border-radius: 12px;
+      width: 100%;
+      max-width: 560px;
+      padding: 24px;
+    }
+    /* ── Code-Schleuse ── */
+    #gate { text-align: center; }
+    #gate .lock { font-size: 3.5rem; margin-bottom: 12px; }
+    #gate p { color: #ccc; margin-bottom: 16px; }
+    #gate input {
+      width: 100%;
+      background: #0d0d17;
+      border: 2px solid #444;
+      border-radius: 8px;
+      color: white;
+      font-size: 1.1rem;
+      padding: 12px 14px;
+      text-align: center;
+      outline: none;
+      margin-bottom: 12px;
+    }
+    #gate input:focus { border-color: #e94560; }
+    #gate button {
+      background: #e94560;
+      border: none;
+      border-radius: 8px;
+      color: white;
+      font-size: 1.05rem;
+      font-weight: bold;
+      padding: 12px 30px;
+      cursor: pointer;
+    }
+    #gate button:hover { background: #ff5c77; }
+    #gate .fehler {
+      color: #ff5c77;
+      font-weight: bold;
+      margin-top: 12px;
+      min-height: 1.2em;
+    }
+    .shake { animation: shake 0.35s; }
+    @keyframes shake {
+      0%,100% { transform: translateX(0); }
+      25% { transform: translateX(-8px); }
+      75% { transform: translateX(8px); }
+    }
+    /* ── Chat ── */
+    #chat { display: none; }
+    #messages {
+      background: #0d0d17;
+      border-radius: 8px;
+      padding: 12px;
+      min-height: 260px;
+      margin-bottom: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+    .msg {
+      background: #16213e;
+      border-left: 3px solid #e94560;
+      border-radius: 6px;
+      padding: 7px 10px;
+      font-size: 0.95rem;
+      line-height: 1.35;
+      word-break: break-word;
+    }
+    .msg .wer { color: #e94560; font-weight: bold; }
+    .msg .wann { color: #666; font-size: 0.75rem; float: right; }
+    .leer { color: #666; text-align: center; padding: 20px 0; }
+    .row { display: flex; gap: 8px; margin-bottom: 10px; }
+    .row input {
+      background: #0d0d17;
+      border: 2px solid #444;
+      border-radius: 8px;
+      color: white;
+      font-size: 1rem;
+      padding: 10px 12px;
+      outline: none;
+    }
+    .row input:focus { border-color: #e94560; }
+    #name { width: 140px; }
+    #text { flex: 1; }
+    .row button {
+      background: #e94560;
+      border: none;
+      border-radius: 8px;
+      color: white;
+      font-size: 1rem;
+      font-weight: bold;
+      padding: 10px 20px;
+      cursor: pointer;
+    }
+    .row button:hover { background: #ff5c77; }
+    .hint { color: #666; font-size: 0.8rem; text-align: center; }
+    .back {
+      margin-top: 22px;
+      color: #aaa;
+      text-decoration: none;
+      font-size: 0.95rem;
+      border-bottom: 1px dotted #aaa;
+    }
+    .back:hover { color: #e94560; border-color: #e94560; }
+  </style>
+</head>
+<body>
+  <h1>🕵️ Geheimer Chat</h1>
+  <p class="intro">Schnitzeljagd-Station! Nur wer den geheimen Code kennt, kommt in den Chat.</p>
+
+  <div class="box" id="gate">
+    <div class="lock">🔒</div>
+    <p>Gib den geheimen Code ein:</p>
+    <input id="codefeld" type="text" autocomplete="off" autocapitalize="none" placeholder="Geheimer Code…">
+    <button id="codeknopf">Aufschließen</button>
+    <div class="fehler" id="codefehler"></div>
+  </div>
+
+  <div class="box" id="chat">
+    <div id="messages"><div class="leer">Noch keine Nachrichten — schreib die erste!</div></div>
+    <div class="row">
+      <input id="name" type="text" maxlength="16" placeholder="Dein Name">
+      <input id="text" type="text" maxlength="200" placeholder="Deine Nachricht…">
+      <button id="senden">➤</button>
+    </div>
+    <div class="hint">Es werden immer die letzten 8 Nachrichten angezeigt.</div>
+  </div>
+
+  <a class="back" href="/spiele/">← zurück zu Lukas' Spielen</a>
+
+  <script>
+    const gate = document.getElementById('gate');
+    const chat = document.getElementById('chat');
+    const codefeld = document.getElementById('codefeld');
+    const codefehler = document.getElementById('codefehler');
+    const messages = document.getElementById('messages');
+    const nameFeld = document.getElementById('name');
+    const textFeld = document.getElementById('text');
+    let code = '';
+    let pollTimer = null;
+
+    nameFeld.value = localStorage.getItem('geheimchat-name') || '';
+
+    function zeigeNachrichten(liste) {
+      messages.innerHTML = '';
+      if (!liste.length) {
+        messages.innerHTML = '<div class="leer">Noch keine Nachrichten — schreib die erste!</div>';
+        return;
+      }
+      for (const m of liste) {
+        const div = document.createElement('div');
+        div.className = 'msg';
+        const wer = document.createElement('span');
+        wer.className = 'wer';
+        wer.textContent = m.name + ': ';
+        const wann = document.createElement('span');
+        wann.className = 'wann';
+        wann.textContent = new Date(m.zeit).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+        div.appendChild(wann);
+        div.appendChild(wer);
+        div.appendChild(document.createTextNode(m.text));
+        messages.appendChild(div);
+      }
+    }
+
+    async function laden() {
+      try {
+        const r = await fetch('/api/geheim-chat?code=' + encodeURIComponent(code));
+        if (!r.ok) return;
+        zeigeNachrichten(await r.json());
+      } catch (e) { /* Netzwerkfehler: beim nächsten Poll erneut versuchen */ }
+    }
+
+    async function aufschliessen() {
+      const versuch = codefeld.value;
+      const r = await fetch('/api/geheim-chat?code=' + encodeURIComponent(versuch));
+      if (r.ok) {
+        code = versuch;
+        gate.style.display = 'none';
+        chat.style.display = 'block';
+        zeigeNachrichten(await r.json());
+        pollTimer = setInterval(laden, 3000);
+        (nameFeld.value ? textFeld : nameFeld).focus();
+      } else {
+        codefehler.textContent = 'Falscher Code! Versuch es nochmal.';
+        gate.classList.remove('shake');
+        void gate.offsetWidth;
+        gate.classList.add('shake');
+        codefeld.select();
+      }
+    }
+    document.getElementById('codeknopf').addEventListener('click', aufschliessen);
+    codefeld.addEventListener('keydown', e => { if (e.key === 'Enter') aufschliessen(); });
+
+    async function senden() {
+      const text = textFeld.value.trim();
+      const name = nameFeld.value.trim() || 'Anonym';
+      if (!text) return;
+      localStorage.setItem('geheimchat-name', name);
+      textFeld.value = '';
+      try {
+        const r = await fetch('/api/geheim-chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code, name, text })
+        });
+        if (r.ok) zeigeNachrichten(await r.json());
+      } catch (e) {}
+      textFeld.focus();
+    }
+    document.getElementById('senden').addEventListener('click', senden);
+    textFeld.addEventListener('keydown', e => { if (e.key === 'Enter') senden(); });
+  </script>
+</body>
+</html>

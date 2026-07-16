@@ -37,6 +37,39 @@ app.get('/', (req, res) => {
   res.status(404).send('Spieldatei nicht gefunden. Lege super-shoot.html in diesen Ordner.');
 });
 
+// ─── Geheim-Chat (Schnitzeljagd) ────────────────────────────────────────────
+// Zugang nur mit dem geheimen Code. Nachrichten überleben einen Neustart
+// (Datei), aber kein Re-Deploy — für die Schnitzeljagd reicht das.
+const fs = require('fs');
+const CHAT_CODE = 'hallo'; // Vergleich immer kleingeschrieben
+const CHAT_FILE = path.join(__dirname, '.geheim-chat.json'); // Punkt-Datei: wird von express.static nicht ausgeliefert
+let chatNachrichten = [];
+try { chatNachrichten = JSON.parse(fs.readFileSync(CHAT_FILE, 'utf8')); } catch (e) {}
+
+function chatCodeOk(code) {
+  return String(code || '').trim().toLowerCase() === CHAT_CODE;
+}
+
+app.get('/api/geheim-chat', (req, res) => {
+  if (!chatCodeOk(req.query.code)) return res.status(403).json({ fehler: 'Falscher Code!' });
+  res.json(chatNachrichten.slice(-8));
+});
+
+app.post('/api/geheim-chat', express.json(), (req, res) => {
+  const { code, name, text } = req.body || {};
+  if (!chatCodeOk(code)) return res.status(403).json({ fehler: 'Falscher Code!' });
+  const nachricht = {
+    name: String(name || 'Anonym').slice(0, 16).trim() || 'Anonym',
+    text: String(text || '').slice(0, 200).trim(),
+    zeit: Date.now(),
+  };
+  if (!nachricht.text) return res.status(400).json({ fehler: 'Leere Nachricht' });
+  chatNachrichten.push(nachricht);
+  if (chatNachrichten.length > 100) chatNachrichten = chatNachrichten.slice(-100);
+  try { fs.writeFileSync(CHAT_FILE, JSON.stringify(chatNachrichten)); } catch (e) {}
+  res.json(chatNachrichten.slice(-8));
+});
+
 // ─── Helfer: neuen Host vergeben ────────────────────────────────────────────
 function assignNewHost() {
   const ids = Object.keys(players);
