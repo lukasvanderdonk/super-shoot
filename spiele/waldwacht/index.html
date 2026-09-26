@@ -148,7 +148,7 @@ input[type="range"]{flex:1 1 140px;accent-color:var(--accent);min-width:0;}
 <div id="keys" hidden>
   <b>PC-Modus</b><br>
   WASD laufen · Shift rennen · Pfeiltasten / rechte Maus umsehen · Q / E drehen<br>
-  Linke Maus benutzen · Mausrad oder 1–0 Hotbar · ^ Hotbar-Seite · R nachladen<br>
+  Linke Maus benutzen / Block setzen · <b>X Block abbauen</b> · Mausrad oder 1–0 Hotbar · ^ Hotbar-Seite · R nachladen<br>
   <b>Menüs:</b> nach unten schauen, Fadenkreuz auf ein Feld, linke Maus<br>
   Tab / Shift+Tab Menü-Kategorie · Bild↑/↓ blättern · Esc Pause · F essen · G trinken · H Medipack<br>
   Leertaste Jetpack / Leiter / Gleiter · Strg schleichen · B Pferd · V Fackel links · T Zauber wechseln
@@ -157,7 +157,7 @@ input[type="range"]{flex:1 1 140px;accent-color:var(--accent);min-width:0;}
 <div id="menu">
   <div id="card">
     <h1>WALD<br>WACHT</h1>
-    <p id="tagline">Sammeln, graben, jagen, angeln, craften, bauen und überleben — nur mit deinen Händen</p>
+    <p id="tagline">Eine riesige Welt aus Blöcken: alles abbauen, alles bauen, im Dunkeln überleben — nur mit deinen Händen</p>
 
     <div class="block">
       <div class="block-title">Spiel</div>
@@ -222,6 +222,8 @@ input[type="range"]{flex:1 1 140px;accent-color:var(--accent);min-width:0;}
       <div class="block-title">Steuerung in VR (nur Hände)</div>
       <ul>
         <li><b>Laufen:</b> linke Hand zeigen und pinchen. <b>Drehen:</b> Pfeile an der Hotbar oder offene linke Hand wischen.</li>
+        <li><b>Abbauen:</b> rechts pinchen und halten — oder mit Werkzeug oder Faust in den Block schlagen. Jeder Block geht kaputt, auch der Boden.</li>
+        <li><b>Bauen:</b> Block in der Hotbar wählen, hinzeigen, pinchen. Pinch halten setzt mehrere Blöcke hintereinander.</li>
         <li><b>Benutzen:</b> rechts pinchen — oder echt zuschlagen, werfen, den Bogen spannen, die Angel auswerfen.</li>
         <li><b>Körper:</b> über die Schulter greifen = Fernwaffe, Hüfte = Werkzeug, Hand zum Mund = essen, Handfläche hoch = Handmenü.</li>
         <li><b>Bewegen:</b> Leitern hochklettern, Jetpack mit der Faust nach unten, beim Fallen Arme ausbreiten = gleiten, schwimmen, reiten.</li>
@@ -232,8 +234,10 @@ input[type="range"]{flex:1 1 140px;accent-color:var(--accent);min-width:0;}
     <div class="block">
       <div class="block-title">Was dich erwartet</div>
       <ul>
-        <li><b>50 Aufgaben</b>, 52 Erfolge, Tagesaufgaben, 10 Skills, Ränge bis Mythos und ein großes Bestiarium.</li>
-        <li><b>Welt:</b> Wald, Pilzwald, Lavafeld, Wüste mit Tempel, Schnee, Strand, 5 Höhlen mit Schatzkammer, Banditenlager, vergrabene Schätze.</li>
+        <li><b>Blockwelt:</b> fast 1 km groß, zehnmal so groß wie früher. 35 Blockarten, Erze tief im Stein (Kohle, Eisen, Gold, Kristall, Rubin, Smaragd), Grundgestein ganz unten.</li>
+        <li><b>Monster im Dunkeln:</b> keine Wellen mehr. Nachts, in Höhlen und unter Dächern kommen manchmal Monster. Fackeln und Leuchtblöcke halten sie fern.</li>
+        <li><b>Aufgaben</b>, Erfolge, Tagesaufgaben, 10 Skills, Ränge bis Mythos und ein großes Bestiarium.</li>
+        <li><b>Welt:</b> Wald, Pilzwälder, Lavafelder, Wüste mit Tempel, Berge mit Schnee, Seen, über 40 Höhlen, Ruinen, Banditenlager, vergrabene Schätze.</li>
         <li><b>Tiere:</b> Hasen, Rehe, Hühner, Wölfe, Bären, Schafe, Kühe, Pferde zum Reiten, Füchse, Enten, Frösche, Eulen, Schildkröten, Pinguine.</li>
         <li><b>Gegner:</b> 26 Arten mit Zombies, Hexen, Spinnen, Bombern und Bossen wie Königsspinne, Waldriese, Seeungeheuer und Drache.</li>
         <li><b>Bauen &amp; Zaubern:</b> Wachturm, Teleporter, Boot, Brücke, Ofen, Amboss, Zaubertisch, Braustand, 4 Zauber, Tränke, Jetpack, Gleiter.</li>
@@ -248,17 +252,19 @@ input[type="range"]{flex:1 1 140px;accent-color:var(--accent);min-width:0;}
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
-/* Waldwacht VR — Landschaft, Biome, Höhlen, Tempel, Ruinen und Rohstoffe */
+/* Waldwacht VR — Blockwelt: Gelände aus Blöcken, Biome, Höhlen, Tempel, Ruinen und Rohstoffe.
+   Jeder Block (1 m) lässt sich abbauen und neu setzen. Die Welt wird in Stücken (Chunks) um den
+   Spieler herum erzeugt und gezeichnet; gespeichert werden nur die Änderungen. */
 (function(){
 "use strict";
 
 var BL = window.BL = window.BL || {};
 
-var SIZE = 150;
-var SEG = 140;
+var FIELD_R = 480;          // Radius der Welt (zehnmal so groß wie früher)
 var WATER_Y = -1.15;
-var FIELD_R = 48;
-var SNOW_Y = 3.4;
+var SNOW_Y = 13;
+var MIN_Y = -40, H = 96, MAX_Y = MIN_Y + H;   // Blockebenen von -40 bis 55
+var CH = 32, CS = 5;        // Chunk-Breite 32 Blöcke
 var DEFAULT_SEED = 9182734;
 
 var SEED = DEFAULT_SEED;
@@ -276,24 +282,16 @@ function makeRandom(seed){
 }
 var rand = makeRandom(SEED);
 
-/* Die Standardwelt bleibt unverändert, andere Seeds verschieben Gelände und Höhlen */
 var PH = SEED === DEFAULT_SEED ? { x: 0, z: 0 } : { x: (SEED % 997) * 0.61, z: (Math.floor(SEED / 997) % 991) * 0.47 };
 var ROT = SEED === DEFAULT_SEED ? 0 : (SEED % 628) / 100;
+var SEED_H = Math.imul(SEED | 0, 0x9E3779B1) | 0;
 
-/* ------------------------------------------------------------ Grundhöhe */
-
-function baseHeight(x, z){
-  var d = Math.hypot(x, z);
-  var sx = x + PH.x, sz = z + PH.z;
-  var h = 2.40 * Math.sin(sx * 0.072) * Math.cos(sz * 0.065)
-        + 1.50 * Math.sin((sx + sz) * 0.041)
-        + 0.85 * Math.cos(sx * 0.13 + sz * 0.088)
-        + 0.32 * Math.sin(sx * 0.30) * Math.cos(sz * 0.26);
-  var edge = Math.max(0, d - 45);
-  h += edge * edge * 0.05;
-  var flat = Math.min(1, Math.max(0, (d - 3.5) / 9));
-  h *= 0.30 + 0.70 * flat;
-  return h;
+function ihash(a, b, c){
+  var h = Math.imul(a | 0, 0x27d4eb2d) ^ Math.imul(b | 0, 0x165667b1) ^ Math.imul(c | 0, 0x1b873593) ^ SEED_H;
+  h = Math.imul(h ^ (h >>> 15), 0x85ebca6b);
+  h = Math.imul(h ^ (h >>> 13), 0xc2b2ae35);
+  h ^= h >>> 16;
+  return (h >>> 0) / 4294967296;
 }
 
 function smoothstep(t){
@@ -301,31 +299,162 @@ function smoothstep(t){
   return t * t * (3 - 2 * t);
 }
 
+function vnoise(x, z, salt){
+  var ix = Math.floor(x), iz = Math.floor(z), fx = x - ix, fz = z - iz;
+  var ux = fx * fx * (3 - 2 * fx), uz = fz * fz * (3 - 2 * fz);
+  var a = ihash(ix, iz, salt), b = ihash(ix + 1, iz, salt), c = ihash(ix, iz + 1, salt), d = ihash(ix + 1, iz + 1, salt);
+  return a + (b - a) * ux + (c - a) * uz + (a - b - c + d) * ux * uz;
+}
+function fbm(x, z, salt){ return vnoise(x, z, salt) * 0.55 + vnoise(x * 2.03, z * 2.03, salt + 7) * 0.3 + vnoise(x * 4.1, z * 4.1, salt + 13) * 0.15; }
+
+/* ------------------------------------------------------------ Grundhöhe */
+
+/* Nahe beim Start wie die alte Welt, weiter draußen große Ebenen, Seen und Berge */
+function baseHeight(x, z){
+  var d = Math.hypot(x, z);
+  var sx = x + PH.x, sz = z + PH.z;
+  var h = 2.40 * Math.sin(sx * 0.072) * Math.cos(sz * 0.065)
+        + 1.50 * Math.sin((sx + sz) * 0.041)
+        + 0.85 * Math.cos(sx * 0.13 + sz * 0.088)
+        + 0.32 * Math.sin(sx * 0.30) * Math.cos(sz * 0.26);
+  var far = smoothstep((d - 40) / 80);
+  if (far > 0){
+    var lowland = (fbm(sx / 170, sz / 170, 1) - 0.5) * 12;
+    var m = Math.max(0, fbm(sx / 130 + 40, sz / 130 - 17, 2) - 0.52) / 0.3;
+    h += far * (lowland + m * m * 26);
+  }
+  var edge = Math.max(0, d - (FIELD_R - 25));
+  h += edge * edge * 0.05;
+  var flat = Math.min(1, Math.max(0, (d - 3.5) / 9));
+  h *= 0.30 + 0.70 * flat;
+  return h;
+}
+
+function clampTop(t){ return Math.max(MIN_Y + 3, Math.min(MAX_Y - 3, t)); }
+/* Natürliche Oberkante einer Blocksäule: alle Ebenen darunter sind fest */
+function natTop(ix, iz){ return clampTop(Math.round(baseHeight(ix + 0.5, iz + 0.5))); }
+
+function slopeAt(x, z){
+  var e = 1.2;
+  var dx = baseHeight(x + e, z) - baseHeight(x - e, z);
+  var dz = baseHeight(x, z + e) - baseHeight(x, z - e);
+  return Math.hypot(dx, dz) / (2 * e);
+}
+
+function desertness(x, z){
+  var sx = x + PH.x * 0.5, sz = z + PH.z * 0.5;
+  return Math.sin(sx * 0.034 + 1.1) * Math.cos(sz * 0.039 - 0.4) + Math.sin((sx - sz) * 0.02) * 0.35;
+}
+
+/* ------------------------------------------------------------ Blockarten */
+
+var VOX = [], VT = {};
+function defVox(id, name, o){ o.id = id; o.name = name; VOX[id] = o; VT[name] = id; }
+defVox(0,  'luft',        { label: 'Luft' });
+defVox(1,  'gras',        { c: 0x7a5534, top: 0x5f9e46, drop: 'erde', hard: 2, tool: 'schaufel', label: 'Gras' });
+defVox(2,  'erde',        { c: 0x7a5534, drop: 'erde', hard: 2, tool: 'schaufel', label: 'Erde' });
+defVox(3,  'stein',       { c: 0x8b8f95, drop: 'stein', hard: 5, tool: 'spitzhacke', label: 'Stein' });
+defVox(4,  'sand',        { c: 0xdcc796, drop: 'sand', hard: 2, tool: 'schaufel', label: 'Sand' });
+defVox(5,  'schnee',      { c: 0xc9d3de, top: 0xf2f6fc, drop: 'schnee', hard: 2, tool: 'schaufel', label: 'Schnee' });
+defVox(6,  'grundgestein',{ c: 0x34343a, hard: Infinity, label: 'Grundgestein' });
+defVox(7,  'kohleerz',    { c: 0x404148, drop: 'kohle', hard: 6, tool: 'spitzhacke', need: 'spitzhacke', xp: 2, ore: true, label: 'Kohle' });
+defVox(8,  'eisenerz',    { c: 0xb89a80, drop: 'eisen', hard: 7, tool: 'spitzhacke', need: 'spitzhacke', xp: 2, ore: true, label: 'Eisenerz' });
+defVox(9,  'kupfererz',   { c: 0xcc7440, drop: 'kupfer', hard: 7, tool: 'spitzhacke', need: 'spitzhacke', xp: 2, ore: true, label: 'Kupfererz' });
+defVox(10, 'golderz',     { c: 0xeac13a, drop: 'gold', hard: 9, tool: 'spitzhacke', need: 'spitzhacke', xp: 5, ore: true, label: 'Golderz' });
+defVox(11, 'kristallerz', { c: 0x5ad8ea, glow: true, drop: 'kristall', hard: 7, tool: 'spitzhacke', need: 'spitzhacke', xp: 4, ore: true, label: 'Kristall' });
+defVox(12, 'rubinerz',    { c: 0xd8284a, glow: true, drop: 'rubin', hard: 10, tool: 'spitzhacke', need: 'spitzhacke', xp: 10, ore: true, label: 'Rubin' });
+defVox(13, 'smaragderz',  { c: 0x2fd07a, glow: true, drop: 'smaragd', hard: 10, tool: 'spitzhacke', need: 'spitzhacke', xp: 8, ore: true, label: 'Smaragd' });
+defVox(14, 'obsidian',    { c: 0x30243f, drop: 'obsidian', hard: 16, tool: 'spitzhacke', need: 'spitzhacke', label: 'Obsidian' });
+defVox(15, 'basalt',      { c: 0x3d3533, drop: 'stein', hard: 5, tool: 'spitzhacke', label: 'Basalt' });
+defVox(16, 'lava',        { c: 0xff6a1a, glow: true, hard: 1, label: 'Lava' });
+defVox(17, 'myzel',       { c: 0x7a5534, top: 0x7c6cb0, drop: 'erde', hard: 2, tool: 'schaufel', label: 'Pilzboden' });
+defVox(18, 'eis',         { c: 0xbfe6fa, drop: 'eis', hard: 3, tool: 'spitzhacke', label: 'Eis' });
+defVox(19, 'sandstein',   { c: 0xd9b778, drop: 'sandstein', hard: 4, tool: 'spitzhacke', label: 'Sandstein' });
+defVox(20, 'steinziegel', { c: 0x9b958a, drop: 'steinziegel', hard: 6, tool: 'spitzhacke', label: 'Steinziegel' });
+defVox(21, 'moosziegel',  { c: 0x71885a, drop: 'steinziegel', hard: 6, tool: 'spitzhacke', label: 'Moosziegel' });
+defVox(22, 'stamm',       { c: 0x6b4a2f, top: 0xb08a5a, drop: 'holz', hard: 4, tool: 'axt', label: 'Holzstamm' });
+defVox(23, 'bretter',     { c: 0xb8864e, drop: 'bretter', hard: 3, tool: 'axt', label: 'Bretter' });
+defVox(24, 'ziegel',      { c: 0xb5523a, drop: 'ziegel', hard: 6, tool: 'spitzhacke', label: 'Ziegel' });
+defVox(25, 'glas',        { c: 0xd8f0ff, trans: true, drop: 'glas', hard: 1, label: 'Glas' });
+defVox(26, 'laub',        { c: 0x3f8f45, drop: 'laub', hard: 1, label: 'Laub' });
+defVox(27, 'goldblock',   { c: 0xf2c33c, drop: 'goldblock', hard: 8, tool: 'spitzhacke', label: 'Goldblock' });
+defVox(28, 'leuchtblock', { c: 0xffe08a, glow: true, light: true, drop: 'leuchtblock', hard: 2, label: 'Leuchtblock' });
+defVox(29, 'steinblock',  { c: 0x7c7f86, drop: 'stein', hard: 5, tool: 'spitzhacke', label: 'Pflasterstein' });
+defVox(30, 'rotblock',    { c: 0xd2433f, drop: 'rotblock', hard: 3, label: 'Rot' });
+defVox(31, 'blaublock',   { c: 0x3f6fd8, drop: 'blaublock', hard: 3, label: 'Blau' });
+defVox(32, 'gruenblock',  { c: 0x4fae4a, drop: 'gruenblock', hard: 3, label: 'Grün' });
+defVox(33, 'gelbblock',   { c: 0xf2d23c, drop: 'gelbblock', hard: 3, label: 'Gelb' });
+defVox(34, 'weissblock',  { c: 0xeef0f4, drop: 'weissblock', hard: 3, label: 'Weiß' });
+defVox(35, 'schwarzblock',{ c: 0x2a2a30, drop: 'schwarzblock', hard: 3, label: 'Schwarz' });
+
+var AIR = 0, GRAS = 1, ERDE = 2, STEIN = 3, SAND = 4, SCHNEE = 5, BEDROCK = 6, OBSIDIAN = 14, BASALT = 15, LAVA = 16,
+    MYZEL = 17, SANDSTEIN = 19, STEINZIEGEL = 20, MOOSZIEGEL = 21, GOLDBLOCK = 27, LEUCHT = 28;
+
+var TRANS = new Uint8Array(256), GLOW = new Uint8Array(256);
+var COLR = new Float32Array(256), COLG = new Float32Array(256), COLB = new Float32Array(256);
+var TOPR = new Float32Array(256), TOPG = new Float32Array(256), TOPB = new Float32Array(256);
+VOX.forEach(function(v){
+  if (!v.id) return;
+  TRANS[v.id] = v.trans ? 1 : 0;
+  GLOW[v.id] = v.glow ? 1 : 0;
+  var c = v.c, t = v.top !== undefined ? v.top : v.c;
+  COLR[v.id] = (c >> 16 & 255); COLG[v.id] = (c >> 8 & 255); COLB[v.id] = (c & 255);
+  TOPR[v.id] = (t >> 16 & 255); TOPG[v.id] = (t >> 8 & 255); TOPB[v.id] = (t & 255);
+});
+
+/* Erze stecken im Stein; welche, hängt vom Ort ab — so kostet die Erzeugung kaum Zeit */
+function oreAt(x, y, z){
+  if (y > 24) return 0;
+  var cl = ihash(x >> 1, y >> 1, (z >> 1) + 7777);
+  if (cl > 0.072) return 0;
+  if (ihash(x, y, z + 31) > 0.62) return 0;
+  if (cl < 0.030) return 7;
+  if (cl < 0.041) return y < 10 ? 9 : 7;
+  if (cl < 0.052) return y < 8 ? 8 : 0;
+  if (cl < 0.058) return y < -6 ? 10 : 0;
+  if (cl < 0.064) return y < -3 ? 11 : 0;
+  if (cl < 0.068) return y < -18 ? 12 : 0;
+  return y < -14 ? 13 : 0;
+}
+
 /* ------------------------------------------------------------ Höhlen */
 
 var caves = [];
+var CAVE_CELL = 48;
+var caveGrid = new Map();
+var EMPTY = [];
+function gridKey(gx, gz){ return (gx + 512) * 1024 + (gz + 512); }
+function registerCave(c){
+  var R = Math.max(c.r, Math.hypot(c.mouth.x - c.x, c.mouth.z - c.z)) + 18;
+  for (var gx = Math.floor((c.x - R) / CAVE_CELL); gx <= Math.floor((c.x + R) / CAVE_CELL); gx++){
+    for (var gz = Math.floor((c.z - R) / CAVE_CELL); gz <= Math.floor((c.z + R) / CAVE_CELL); gz++){
+      var k = gridKey(gx, gz), list = caveGrid.get(k);
+      if (!list){ list = []; caveGrid.set(k, list); }
+      list.push(c);
+    }
+  }
+}
+function cavesNear(x, z){ return caveGrid.get(gridKey(Math.floor(x / CAVE_CELL), Math.floor(z / CAVE_CELL))) || EMPTY; }
 
-function buildCaveData(){
-  var spots = [
-    { a: 0.6, d: 22, r: 8 }, { a: 2.3, d: 30, r: 10.5 }, { a: 3.8, d: 19, r: 8 }, { a: 5.2, d: 33, r: 10.5 },
-    { a: 1.45, d: 38, r: 11, deep: true }
-  ];
-  spots.forEach(function(s, i){
-    var plan = planCave(s, i);
-    var surface = baseHeight(plan.x, plan.z);
-    caves.push({
-      id: i, x: plan.x, z: plan.z, r: s.r, floorY: surface - (s.r * 0.62 + (s.deep ? 4.5 : 2.2)), deep: !!s.deep,
-      mouth: { x: plan.x + Math.cos(plan.m) * plan.md, z: plan.z + Math.sin(plan.m) * plan.md },
-      inner: { x: plan.x + Math.cos(plan.m) * (s.r * 0.78), z: plan.z + Math.sin(plan.m) * (s.r * 0.78) }
-    });
-  });
+function addCave(x, z, r, deep, m, md){
+  var surface = baseHeight(x, z);
+  var c = {
+    id: caves.length, x: x, z: z, r: r, deep: !!deep,
+    floorY: Math.max(MIN_Y + 4, Math.round(surface - (r * 0.62 + (deep ? 4.5 : 2.2)))),
+    mouth: { x: x + Math.cos(m) * md, z: z + Math.sin(m) * md },
+    inner: { x: x + Math.cos(m) * (r * 0.78), z: z + Math.sin(m) * (r * 0.78) }
+  };
+  c.mouthTop = natTop(Math.floor(c.mouth.x), Math.floor(c.mouth.z));
+  caves.push(c);
+  registerCave(c);
+  return c;
 }
 
 /* Eingang auf trockenem Land, innerhalb der Welt und nicht durch andere Höhlen */
 function caveEntranceOk(cx, cz, r, m, md){
   var mx = cx + Math.cos(m) * md, mz = cz + Math.sin(m) * md;
   var md0 = Math.hypot(mx, mz);
-  if (md0 > FIELD_R - 7 || md0 < 9) return false;
+  if (md0 > FIELD_R - 30 || md0 < 9) return false;
   for (var t = 0; t <= 1.0001; t += 0.08){
     var x = mx + (cx + Math.cos(m) * r * 0.78 - mx) * t, z = mz + (cz + Math.sin(m) * r * 0.78 - mz) * t;
     for (var side = -1; side <= 1; side++){
@@ -360,133 +489,52 @@ function planCave(s, i){
     }
    }
   }
-  /* Notfall: ganze Welt absuchen, möglichst nah am Wunschplatz */
-  var best = null, bestCost = Infinity;
-  var lens = [md, md * 0.8, md * 0.65];
-  for (var d2 = 12; d2 <= 42; d2 += 3){
-    for (var a2 = 0; a2 < Math.PI * 2; a2 += 0.15){
-      var x2 = Math.cos(a2) * d2, z2 = Math.sin(a2) * d2;
-      if (nearEntrance(x2, z2, s.r * 0.9) || caves.some(function(c){ return Math.hypot(c.x - x2, c.z - z2) < c.r + s.r + 3; })) continue;
-      var cost = Math.hypot(x2 - Math.cos(s.a + ROT) * s.d, z2 - Math.sin(s.a + ROT) * s.d);
-      if (cost >= bestCost) continue;
-      search: for (var li = 0; li < lens.length; li++){
-        for (var m2 = 0; m2 < Math.PI * 2; m2 += Math.PI / 8){
-          if (caveEntranceOk(x2, z2, s.r, m2, lens[li])){ best = { x: x2, z: z2, m: m2, md: lens[li] }; bestCost = cost; break search; }
-        }
-      }
-    }
-  }
-  if (best) return best;
   var a0 = s.a + ROT;
   return { x: Math.cos(a0) * s.d, z: Math.sin(a0) * s.d, m: a0 + Math.PI, md: Math.min(md, s.d - 10) };
 }
 
-var craters = [];
-
-/* Besondere Gebiete: ein Pilzwald und ein Lavafeld mit Lavabecken */
-var zones = { pilz: null, lava: null };
-var lavaPools = [];
-
-function inZone(name, x, z){
-  var zn = zones[name];
-  return !!zn && Math.hypot(x - zn.x, z - zn.z) < zn.r;
-}
-
-function isLava(x, z){
-  for (var i = 0; i < lavaPools.length; i++){
-    var lp = lavaPools[i];
-    if (Math.hypot(x - lp.x, z - lp.z) < lp.r * 0.92) return true;
-  }
-  return false;
-}
-
-function planZones(){
-  var zr = makeRandom(SEED * 7 + 13);
-  function ok(x, z, margin){
-    if (Math.hypot(x, z) < 14 || Math.hypot(x, z) > FIELD_R - 8) return false;
-    for (var i = 0; i < caves.length; i++) if (Math.hypot(x - caves[i].x, z - caves[i].z) < caves[i].r + margin) return false;
-    if (nearEntrance(x, z, margin)) return false;
-    return baseHeight(x, z) > WATER_Y + 0.8;
-  }
-  var t, x, z;
-  for (t = 0; t < 400 && !zones.pilz; t++){
-    var a = zr() * Math.PI * 2, d = 16 + zr() * 26;
-    x = Math.cos(a) * d; z = Math.sin(a) * d;
-    if (!ok(x, z, 8) || desertness(x, z) > 0.2 || baseHeight(x, z) > SNOW_Y - 1) continue;
-    zones.pilz = { x: x, z: z, r: 8 };
-  }
-  for (t = 0; t < 400 && !zones.lava; t++){
-    var a2 = zr() * Math.PI * 2, d2 = 18 + zr() * 24;
-    x = Math.cos(a2) * d2; z = Math.sin(a2) * d2;
-    if (!ok(x, z, 7)) continue;
-    if (zones.pilz && Math.hypot(x - zones.pilz.x, z - zones.pilz.z) < 22) continue;
-    if (baseHeight(x, z) > SNOW_Y - 0.5) continue;
-    zones.lava = { x: x, z: z, r: 6.5 };
-  }
-  if (zones.lava){
-    for (var k = 0; k < 3; k++){
-      var pa = k * 2.1 + zr(), pd = 1.6 + zr() * 2.2;
-      var px = zones.lava.x + Math.cos(pa) * pd, pz = zones.lava.z + Math.sin(pa) * pd;
-      lavaPools.push({ x: px, z: pz, r: 1.0 + zr() * 0.6, y: baseHeight(px, pz) - 0.28 });
+function buildCaveData(){
+  [{ a: 0.6, d: 22, r: 8 }, { a: 2.3, d: 30, r: 10.5 }, { a: 3.8, d: 19, r: 8 }, { a: 5.2, d: 33, r: 10.5 },
+   { a: 1.45, d: 38, r: 11, deep: true }].forEach(function(s, i){
+    var plan = planCave(s, i);
+    addCave(plan.x, plan.z, s.r, s.deep, plan.m, plan.md);
+  });
+  /* Die Spinnenhöhle ist die größte der nahen Höhlen */
+  var spider = caves.filter(function(c){ return !c.deep; }).sort(function(a, b){ return b.r - a.r; })[0];
+  if (spider) spider.spider = true;
+  /* Weiter draußen: viele weitere Höhlen, manche davon tief */
+  var cr = makeRandom(SEED * 3 + 11);
+  var STEP = 68;
+  for (var gx = -FIELD_R; gx <= FIELD_R; gx += STEP){
+    for (var gz = -FIELD_R; gz <= FIELD_R; gz += STEP){
+      var roll = cr(), jx = cr(), jz = cr(), rr = cr(), dr = cr(), ma = cr();
+      if (roll > 0.58) continue;
+      var x = gx + (jx - 0.5) * STEP * 0.7, z = gz + (jz - 0.5) * STEP * 0.7;
+      var d = Math.hypot(x, z);
+      if (d < 62 || d > FIELD_R - 45) continue;
+      var deep = dr < 0.15;
+      var r = deep ? 10.5 + rr * 1.5 : 7 + rr * 4.5;
+      if (baseHeight(x, z) < WATER_Y + 1.5) continue;
+      if (caves.some(function(c){ return Math.hypot(c.x - x, c.z - z) < c.r + r + 12; })) continue;
+      var md = r + (deep ? 18 : 15);
+      var found = null;
+      for (var k = 0; k < 12 && found === null; k++){
+        var m = ma * Math.PI * 2 + k * Math.PI / 6;
+        if (caveEntranceOk(x, z, r, m, md)) found = m;
+      }
+      if (found !== null) addCave(x, z, r, deep, found, md);
     }
   }
 }
-
-function height(x, z){
-  var h = baseHeight(x, z);
-  for (var lp = 0; lp < lavaPools.length; lp++){
-    var pool = lavaPools[lp];
-    var pdist = Math.hypot(x - pool.x, z - pool.z);
-    if (pdist < pool.r * 1.25){
-      var pb = smoothstep((pdist - pool.r * 0.8) / (pool.r * 0.45));
-      h = Math.min(h, pool.y + (h - pool.y) * pb);
-    }
-  }
-  for (var i = 0; i < caves.length; i++){
-    var c = caves[i];
-    var ax = c.mouth.x, az = c.mouth.z;
-    var vx = c.inner.x - ax, vz = c.inner.z - az;
-    var t = ((x - ax) * vx + (z - az) * vz) / (vx*vx + vz*vz);
-    if (t < 0 || t > 1.25) continue;
-    var tc = Math.min(1, t);
-    var dist = Math.hypot(x - (ax + vx * tc), z - (az + vz * tc));
-    if (dist > 3.4) continue;
-    var rampY = baseHeight(ax, az) + (c.floorY - baseHeight(ax, az)) * smoothstep(tc);
-    var blend = 1 - smoothstep(dist / 3.4);
-    h = Math.min(h, h + (rampY - h) * blend);
-  }
-  for (var k = 0; k < craters.length; k++){
-    var cr = craters[k];
-    var cd = Math.hypot(x - cr.x, z - cr.z);
-    if (cd < cr.r) h -= Math.cos((cd / cr.r) * Math.PI * 0.5) * cr.depth;
-  }
-  return h;
-}
-
-/* Rampe vom Eingang zur Kammer: Abstand zur Mittellinie */
-function trenchInfo(x, z){
-  for (var i = 0; i < caves.length; i++){
-    var c = caves[i];
-    var ax = c.mouth.x, az = c.mouth.z;
-    var vx = c.inner.x - ax, vz = c.inner.z - az;
-    var t = ((x - ax) * vx + (z - az) * vz) / (vx*vx + vz*vz);
-    if (t < -0.05 || t > 1.15) continue;
-    var tc = Math.min(1, Math.max(0, t));
-    var dist = Math.hypot(x - (ax + vx * tc), z - (az + vz * tc));
-    if (dist < 3.4) return { cave: c, t: t, dist: dist };
-  }
-  return null;
-}
-
-function inTrench(x, z){ return !!trenchInfo(x, z); }
 
 /* Wer weit über dem Höhlenboden steht, läuft oben auf dem Gelände — nicht in der Höhle.
    refY ist die aktuelle Fußhöhe; ohne refY gilt die Draufsicht. */
 var CAVE_HEADROOM = 3.2;
 
 function caveAt(x, z, refY){
-  for (var i = 0; i < caves.length; i++){
-    var c = caves[i];
+  var list = cavesNear(x, z);
+  for (var i = 0; i < list.length; i++){
+    var c = list[i];
     if (Math.hypot(x - c.x, z - c.z) < c.r * 0.86){
       if (refY !== undefined && refY > c.floorY + CAVE_HEADROOM) return null;
       return c;
@@ -494,221 +542,243 @@ function caveAt(x, z, refY){
   }
   return null;
 }
-
-function floorAt(x, z, refY){
-  var c = caveAt(x, z, refY);
-  return c ? c.floorY : height(x, z);
-}
-
-function canStand(x, z, refY){
-  var c = caveAt(x, z, refY);
-  if (!c) return true;
-  if (Math.hypot(x - c.x, z - c.z) < c.r * 0.82) return true;
-  var tr = trenchInfo(x, z);
-  return !!(tr && tr.cave === c && tr.dist < 2.4);
-}
-
 function insideCave(x, z, refY){ return !!caveAt(x, z, refY); }
 
-/* Wasser steht nur, wo das natürliche Gelände tief liegt — Rampen und Krater bleiben trocken */
-function isDry(x, z, refY){
-  if (insideCave(x, z, refY) || inTrench(x, z)) return true;
-  return baseHeight(x, z) >= WATER_Y + 0.15 || height(x, z) >= WATER_Y + 0.15;
+/* Rampe vom Eingang zur Kammer: Bodenhöhe der Rinne an dieser Stelle oder null */
+function trenchLevel(c, px, pz){
+  var ax = c.mouth.x, az = c.mouth.z;
+  var vx = c.inner.x - ax, vz = c.inner.z - az;
+  var t = ((px - ax) * vx + (pz - az) * vz) / (vx * vx + vz * vz);
+  if (t < -0.05 || t > 1.15) return null;
+  var tc = Math.min(1, Math.max(0, t));
+  var dist = Math.hypot(px - (ax + vx * tc), pz - (az + vz * tc));
+  if (dist >= 3.4) return null;
+  var ramp = Math.round(c.mouthTop + (c.floorY - c.mouthTop) * smoothstep(tc));
+  return dist < 2.2 ? ramp : ramp + Math.ceil((dist - 2.2) * 2.5);
 }
 
-/* ------------------------------------------------------------ Biome */
+function trenchInfo(x, z){
+  var list = cavesNear(x, z);
+  for (var i = 0; i < list.length; i++){
+    var c = list[i];
+    var ax = c.mouth.x, az = c.mouth.z;
+    var vx = c.inner.x - ax, vz = c.inner.z - az;
+    var t = ((x - ax) * vx + (z - az) * vz) / (vx * vx + vz * vz);
+    if (t < -0.05 || t > 1.15) continue;
+    var tc = Math.min(1, Math.max(0, t));
+    var dist = Math.hypot(x - (ax + vx * tc), z - (az + vz * tc));
+    if (dist < 3.4) return { cave: c, t: t, dist: dist };
+  }
+  return null;
+}
+function inTrench(x, z){ return !!trenchInfo(x, z); }
 
-function desertness(x, z){
-  var sx = x + PH.x * 0.5, sz = z + PH.z * 0.5;
-  return Math.sin(sx * 0.034 + 1.1) * Math.cos(sz * 0.039 - 0.4) + Math.sin((sx - sz) * 0.02) * 0.35;
+/* Freiraum um Eingang und Rampe; margin für große Bauwerke */
+function nearEntrance(x, z, margin){
+  var extra = margin || 0;
+  var list = caves.length > 12 ? cavesNear(x, z) : caves;
+  for (var i = 0; i < list.length; i++){
+    var c = list[i];
+    var ax = c.mouth.x, az = c.mouth.z;
+    var vx = c.inner.x - ax, vz = c.inner.z - az;
+    var t = Math.min(1.15, Math.max(0, ((x - ax) * vx + (z - az) * vz) / (vx * vx + vz * vz)));
+    if (Math.hypot(x - (ax + vx * t), z - (az + vz * t)) < 3.6 + extra) return true;
+    if (Math.hypot(x - ax, z - az) < 5 + extra) return true;
+  }
+  return false;
 }
 
-function biomeAt(x, z, refY){
-  if (insideCave(x, z, refY)) return 'hoehle';
-  if (inZone('lava', x, z)) return 'lava';
-  if (inZone('pilz', x, z)) return 'pilzwald';
-  var y = height(x, z);
-  if (y > SNOW_Y) return 'schnee';
-  if (desertness(x, z) > 0.55 && y > WATER_Y + 0.4) return 'wueste';
-  if (y < WATER_Y + 0.45) return 'strand';
-  return 'wald';
+/* ------------------------------------------------------------ Besondere Gebiete */
+
+var zones = { pilz: null, lava: null };
+var zoneList = [];
+var lavaPools = [];
+
+function inZone(name, x, z){
+  for (var i = 0; i < zoneList.length; i++){
+    var zn = zoneList[i];
+    if (zn.name === name && Math.hypot(x - zn.x, z - zn.z) < zn.r) return true;
+  }
+  return false;
+}
+function nearZone(x, z, margin){
+  var m = margin || 0;
+  for (var i = 0; i < zoneList.length; i++){
+    var zn = zoneList[i];
+    if (Math.hypot(x - zn.x, z - zn.z) < zn.r + m) return true;
+  }
+  return false;
+}
+function isLava(x, z){
+  for (var i = 0; i < lavaPools.length; i++){
+    var lp = lavaPools[i];
+    if (Math.abs(x - lp.x) < lp.r && Math.abs(z - lp.z) < lp.r && Math.hypot(x - lp.x, z - lp.z) < lp.r * 0.92) return true;
+  }
+  return false;
 }
 
-function buildCaves(scene){
-  var rock = new THREE.MeshPhongMaterial({ color: 0x4a4540, flatShading: true, shininess: 2, side: THREE.BackSide });
-  var deepRock = new THREE.MeshPhongMaterial({ color: 0x3a3450, flatShading: true, shininess: 2, side: THREE.BackSide });
-  var floorMat = new THREE.MeshPhongMaterial({ color: 0x554d44, flatShading: true, shininess: 2 });
-  caves.forEach(function(c){
-    var dome = new THREE.Mesh(new THREE.SphereGeometry(c.r, 18, 14), c.deep ? deepRock : rock);
-    dome.position.set(c.x, c.floorY, c.z);
-    dome.scale.y = 0.6;
-    scene.add(dome);
-    var floor = new THREE.Mesh(new THREE.CircleGeometry(c.r * 0.95, 24), floorMat);
-    floor.rotation.x = -Math.PI / 2;
-    floor.position.set(c.x, c.floorY + 0.02, c.z);
-    scene.add(floor);
-    for (var i = 0; i < 7; i++){
-      var a = rand() * Math.PI * 2, d = rand() * c.r * 0.7;
-      var blob = new THREE.Mesh(new THREE.IcosahedronGeometry(0.4 + rand() * 0.8, 0), floorMat);
-      blob.position.set(c.x + Math.cos(a) * d, c.floorY + 0.2, c.z + Math.sin(a) * d);
-      blob.rotation.set(rand(), rand(), rand());
-      scene.add(blob);
-    }
-  });
-}
-
-/* Leuchtende Kristallgruppen als Höhlenschmuck */
-var grottoMesh = null;
-function buildGrottos(scene){
-  var geo = new THREE.OctahedronGeometry(0.3, 0);
-  var mat = new THREE.MeshPhongMaterial({ color: 0x9a7bff, emissive: 0x3a2a8a, flatShading: true, shininess: 80 });
-  grottoMesh = new THREE.InstancedMesh(geo, mat, 160);
-  var m = new THREE.Matrix4(), p = new THREE.Vector3(), q = new THREE.Quaternion(), s = new THREE.Vector3(), e = new THREE.Euler();
-  var n = 0;
-  caves.forEach(function(c){
-    var clusters = c.deep ? 9 : 5;
-    for (var k = 0; k < clusters; k++){
-      var a = rand() * Math.PI * 2, d = c.r * (0.7 + rand() * 0.12);
-      var cx = c.x + Math.cos(a) * d, cz = c.z + Math.sin(a) * d;
-      for (var j = 0; j < 4 && n < 160; j++){
-        p.set(cx + (rand() - 0.5) * 0.8, c.floorY + 0.2 + rand() * 0.4, cz + (rand() - 0.5) * 0.8);
-        e.set((rand() - 0.5) * 0.8, rand() * 3, (rand() - 0.5) * 0.8);
-        q.setFromEuler(e);
-        var sc = 0.6 + rand() * 1.1;
-        s.set(sc * 0.6, sc * 1.6, sc * 0.6);
-        m.compose(p, q, s);
-        grottoMesh.setMatrixAt(n++, m);
+function planZones(){
+  var zr = makeRandom(SEED * 7 + 13);
+  function ok(x, z, margin){
+    var d = Math.hypot(x, z);
+    if (d < 14 || d > FIELD_R - 30) return false;
+    for (var i = 0; i < caves.length; i++) if (Math.hypot(x - caves[i].x, z - caves[i].z) < caves[i].r + margin) return false;
+    if (nearEntrance(x, z, margin)) return false;
+    var h = baseHeight(x, z);
+    return h > WATER_Y + 0.8 && h < SNOW_Y - 1;
+  }
+  function addZone(name, x, z, r){
+    var zn = { name: name, x: x, z: z, r: r };
+    zoneList.push(zn);
+    if (!zones[name]) zones[name] = zn;
+    if (name === 'lava'){
+      var n = 3 + Math.floor(zr() * 2);
+      for (var k = 0; k < n; k++){
+        var pa = k * (6.28 / n) + zr(), pd = 1.6 + zr() * (r - 3.5);
+        lavaPools.push({ x: x + Math.cos(pa) * pd, z: z + Math.sin(pa) * pd, r: 1.0 + zr() * 0.7, zone: zn });
       }
     }
-  });
-  grottoMesh.count = n;
-  scene.add(grottoMesh);
+  }
+  var t, x, z;
+  for (t = 0; t < 400 && !zones.pilz; t++){
+    var a = zr() * Math.PI * 2, d = 16 + zr() * 26;
+    x = Math.cos(a) * d; z = Math.sin(a) * d;
+    if (!ok(x, z, 8) || desertness(x, z) > 0.2) continue;
+    addZone('pilz', x, z, 8);
+  }
+  for (t = 0; t < 400 && !zones.lava; t++){
+    var a2 = zr() * Math.PI * 2, d2 = 18 + zr() * 24;
+    x = Math.cos(a2) * d2; z = Math.sin(a2) * d2;
+    if (!ok(x, z, 7)) continue;
+    if (zones.pilz && Math.hypot(x - zones.pilz.x, z - zones.pilz.z) < 22) continue;
+    addZone('lava', x, z, 6.5);
+  }
+  /* weitere Pilzwälder und Lavafelder draußen in der großen Welt */
+  var extra = 0;
+  for (t = 0; t < 1500 && extra < 8; t++){
+    var a3 = zr() * Math.PI * 2, d3 = 90 + zr() * (FIELD_R - 130);
+    x = Math.cos(a3) * d3; z = Math.sin(a3) * d3;
+    var name = extra % 2 ? 'lava' : 'pilz';
+    var r = name === 'pilz' ? 10 + zr() * 5 : 7 + zr() * 3;
+    if (!ok(x, z, r + 4)) continue;
+    if (zoneList.some(function(o){ return Math.hypot(o.x - x, o.z - z) < o.r + r + 60; })) continue;
+    if (name === 'pilz' && desertness(x, z) > 0.2) continue;
+    addZone(name, x, z, r);
+    extra++;
+  }
 }
 
-/* ------------------------------------------------------------ Hindernisse, Ruinen, Tempel, Nester */
+/* ------------------------------------------------------------ Bauwerke als Blöcke */
 
 var obstacles = [];
 var ruins = [];
 var chestSpots = [];
 var nestSpots = [];
 var templeSpot = null;
+var stamps = new Map();
 
-function addObstacle(x, z, r){ obstacles.push({ x: x, z: z, r: r, y: height(x, z) }); }
+function ckey(cx, cz){ return (cx + 1024) * 4096 + (cz + 1024); }
 
-function buildRuins(scene){
-  var stone = new THREE.MeshPhongMaterial({ color: 0x9b958a, flatShading: true, shininess: 4 });
-  var moss = new THREE.MeshPhongMaterial({ color: 0x6f8a4f, flatShading: true, shininess: 2 });
+function stamp(ix, iy, iz, t){
+  if (iy <= MIN_Y || iy >= MAX_Y) return;
+  var k = ckey(ix >> CS, iz >> CS), arr = stamps.get(k);
+  if (!arr){ arr = []; stamps.set(k, arr); }
+  arr.push(ix, iy, iz, t);
+}
+/* Säule von der natürlichen Oberkante bis einschließlich Ebene toLevel füllen */
+function fillTo(ix, iz, toLevel, t){
+  for (var L = natTop(ix, iz); L <= toLevel; L++) stamp(ix, L, iz, t);
+}
+
+function addObstacle(x, z, r){ obstacles.push({ x: x, z: z, r: r, y: natTop(Math.floor(x), Math.floor(z)) }); }
+
+function okBuildSpot(x, z, margin){
+  return !insideCave(x, z) && !nearEntrance(x, z, margin) && baseHeight(x, z) > WATER_Y + 0.6 &&
+         !nearZone(x, z, margin + 1) && slopeAt(x, z) < 0.6 && baseHeight(x, z) < SNOW_Y + 4;
+}
+
+function buildRuin(cx, cz, rng){
+  var ix = Math.floor(cx), iz = Math.floor(cz), T0 = natTop(ix, iz);
+  var dx, dz;
+  for (dx = -1; dx <= 1; dx++) for (dz = -1; dz <= 1; dz++) fillTo(ix + dx, iz + dz, T0, STEINZIEGEL);
+  for (var i = 0; i < 6; i++){
+    var a = (i / 6) * Math.PI * 2;
+    var px = Math.floor(cx + Math.cos(a) * 3.4), pz = Math.floor(cz + Math.sin(a) * 3.4);
+    var pT = natTop(px, pz), h = 1 + Math.floor(rng() * 3);
+    for (var L = pT; L < pT + h; L++) stamp(px, L, pz, (L === pT + h - 1 && rng() < 0.5) ? MOOSZIEGEL : STEINZIEGEL);
+  }
+  for (var j = 0; j < 5; j++){
+    var ra = rng() * Math.PI * 2, rd = 1.8 + rng() * 2.6;
+    var rx = Math.floor(cx + Math.cos(ra) * rd), rz = Math.floor(cz + Math.sin(ra) * rd);
+    stamp(rx, natTop(rx, rz), rz, rng() < 0.5 ? MOOSZIEGEL : STEINZIEGEL);
+  }
+  ruins.push({ x: cx, z: cz });
+  chestSpots.push({ x: ix + 0.5, z: iz + 0.5, y: T0 + 1, ruin: true, inCave: false });
+}
+
+function planRuins(){
   [{ a: 1.5, d: 15 }, { a: 4.4, d: 26 }, { a: 0.1, d: 36 }].forEach(function(s){
-    var cx = 0, cz = 0;
     for (var k = 0; k < 16; k++){
       var ra = s.a + ROT + k * 0.4;
-      cx = Math.cos(ra) * s.d; cz = Math.sin(ra) * s.d;
-      if (!insideCave(cx, cz) && !nearEntrance(cx, cz, 4) && baseHeight(cx, cz) > WATER_Y + 0.6 && !nearZone(cx, cz, 5)) break;
+      var cx = Math.cos(ra) * s.d, cz = Math.sin(ra) * s.d;
+      if (okBuildSpot(cx, cz, 4)){ buildRuin(cx, cz, rand); return; }
     }
-    var y0 = height(cx, cz);
-    var group = new THREE.Group();
-    group.position.set(cx, y0, cz);
-    for (var i = 0; i < 6; i++){
-      var a = (i / 6) * Math.PI * 2;
-      var px = Math.cos(a) * 3.2, pz = Math.sin(a) * 3.2;
-      var h = 1 + rand() * 2.4;
-      var pillar = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.42, h, 7), stone);
-      pillar.position.set(px, h / 2 - 0.1, pz);
-      pillar.rotation.z = (rand() - 0.5) * 0.12;
-      group.add(pillar);
-      if (rand() < 0.5){
-        var cap = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.3, 0.9), moss);
-        cap.position.set(px, h - 0.05, pz);
-        cap.rotation.y = rand();
-        group.add(cap);
-      }
-      addObstacle(cx + px, cz + pz, 0.5);
-    }
-    for (var j = 0; j < 5; j++){
-      var rubble = new THREE.Mesh(new THREE.IcosahedronGeometry(0.3 + rand() * 0.35, 0), stone);
-      var ra = rand() * Math.PI * 2, rd = 1.5 + rand() * 3;
-      rubble.position.set(Math.cos(ra) * rd, 0.15, Math.sin(ra) * rd);
-      rubble.rotation.set(rand(), rand(), rand());
-      group.add(rubble);
-    }
-    var altar = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.35, 1.6), stone);
-    altar.position.y = 0.12;
-    group.add(altar);
-    scene.add(group);
-    ruins.push({ x: cx, z: cz });
-    chestSpots.push({ x: cx, z: cz, y: y0 + 0.3, ruin: true, inCave: false });
   });
-}
-
-function buildTemple(scene){
-  var best = null, bestScore = -1;
-  for (var i = 0; i < 400; i++){
-    var a = rand() * Math.PI * 2, d = 12 + rand() * 30;
+  var rr = makeRandom(SEED * 5 + 3);
+  for (var i = 0; i < 600 && ruins.length < 26; i++){
+    var a = rr() * Math.PI * 2, d = 70 + rr() * (FIELD_R - 110);
     var x = Math.cos(a) * d, z = Math.sin(a) * d;
-    if (insideCave(x, z) || nearEntrance(x, z, 6.5) || height(x, z) < WATER_Y + 1 || nearZone(x, z, 7)) continue;
-    var score = desertness(x, z) - slopeAt(x, z) * 2;
-    var near = obstacles.some(function(o){ return Math.hypot(o.x - x, o.z - z) < 9; });
-    if (!near && score > bestScore){ bestScore = score; best = { x: x, z: z }; }
+    if (!okBuildSpot(x, z, 4)) continue;
+    if (ruins.some(function(r){ return Math.hypot(r.x - x, r.z - z) < 55; })) continue;
+    buildRuin(x, z, rr);
   }
-  if (!best) best = { x: 20, z: -20 };
-  templeSpot = { x: best.x, z: best.z, y: height(best.x, best.z) };
-  var sand = new THREE.MeshPhongMaterial({ color: 0xd9b778, flatShading: true, shininess: 4 });
-  var dark = new THREE.MeshPhongMaterial({ color: 0xa7864f, flatShading: true, shininess: 4 });
-  var gold = new THREE.MeshPhongMaterial({ color: 0xf2c33c, shininess: 80 });
-  var g = new THREE.Group();
-  g.position.set(templeSpot.x, templeSpot.y - 0.1, templeSpot.z);
-  var base = new THREE.Mesh(new THREE.BoxGeometry(9, 0.4, 9), dark);
-  base.position.y = 0.2;
-  g.add(base);
-  [[-3.6, -3.6], [3.6, -3.6], [-3.6, 3.6], [3.6, 3.6]].forEach(function(p){
-    for (var lvl = 0; lvl < 3; lvl++){
-      var block = new THREE.Mesh(new THREE.BoxGeometry(1.6 - lvl * 0.35, 1.2, 1.6 - lvl * 0.35), lvl % 2 ? dark : sand);
-      block.position.set(p[0], 0.9 + lvl * 1.2, p[1]);
-      g.add(block);
-    }
-    var tip = new THREE.Mesh(new THREE.ConeGeometry(0.5, 0.9, 4), gold);
-    tip.position.set(p[0], 4.5, p[1]);
-    tip.rotation.y = Math.PI / 4;
-    g.add(tip);
-    addObstacle(templeSpot.x + p[0], templeSpot.z + p[1], 1.0);
-  });
-  [-1, 1].forEach(function(side){
-    var wall = new THREE.Mesh(new THREE.BoxGeometry(0.6, 2.2, 5.6), sand);
-    wall.position.set(side * 3.6, 1.5, 0);
-    g.add(wall);
-    for (var k = -2; k <= 2; k++) addObstacle(templeSpot.x + side * 3.6, templeSpot.z + k * 1.1, 0.45);
-  });
-  var back = new THREE.Mesh(new THREE.BoxGeometry(5.6, 2.2, 0.6), sand);
-  back.position.set(0, 1.5, -3.6);
-  g.add(back);
-  for (var b = -2; b <= 2; b++) addObstacle(templeSpot.x + b * 1.1, templeSpot.z - 3.6, 0.45);
-  var altar = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.5, 1.2), dark);
-  altar.position.set(0, 0.65, -1.4);
-  g.add(altar);
-  scene.add(g);
-  chestSpots.push({ x: templeSpot.x, z: templeSpot.z - 1.4, y: templeSpot.y + 0.8, ruin: true, temple: true, inCave: false });
 }
 
-function nearZone(x, z, margin){
-  var m = margin || 0;
-  if (zones.lava && Math.hypot(x - zones.lava.x, z - zones.lava.z) < zones.lava.r + m) return true;
-  if (zones.pilz && Math.hypot(x - zones.pilz.x, z - zones.pilz.z) < zones.pilz.r + m) return true;
-  return false;
+function planTemple(){
+  var best = null, bestScore = -1;
+  for (var i = 0; i < 700; i++){
+    var a = rand() * Math.PI * 2, d = 25 + rand() * 140;
+    var x = Math.cos(a) * d, z = Math.sin(a) * d;
+    if (!okBuildSpot(x, z, 7)) continue;
+    var score = desertness(x, z) - slopeAt(x, z) * 2;
+    if (ruins.some(function(r){ return Math.hypot(r.x - x, r.z - z) < 14; })) continue;
+    if (score > bestScore){ bestScore = score; best = { x: x, z: z }; }
+  }
+  if (!best) best = { x: 30, z: -30 };
+  var ix = Math.floor(best.x), iz = Math.floor(best.z), T0 = natTop(ix, iz);
+  var dx, dz, L;
+  for (dx = -4; dx <= 4; dx++){
+    for (dz = -4; dz <= 4; dz++){
+      var col = natTop(ix + dx, iz + dz);
+      fillTo(ix + dx, iz + dz, T0, SANDSTEIN);
+      for (L = T0 + 1; L < col; L++) stamp(ix + dx, L, iz + dz, AIR);
+    }
+  }
+  [[-4, -4], [3, -4], [-4, 3], [3, 3]].forEach(function(p){
+    for (var ox = 0; ox < 2; ox++) for (var oz = 0; oz < 2; oz++){
+      for (L = T0 + 1; L <= T0 + 4; L++) stamp(ix + p[0] + ox, L, iz + p[1] + oz, SANDSTEIN);
+    }
+    stamp(ix + p[0], T0 + 5, iz + p[1], GOLDBLOCK);
+  });
+  for (dz = -2; dz <= 2; dz++){ for (L = T0 + 1; L <= T0 + 2; L++){ stamp(ix - 4, L, iz + dz, SANDSTEIN); stamp(ix + 4, L, iz + dz, SANDSTEIN); } }
+  for (dx = -2; dx <= 2; dx++){ for (L = T0 + 1; L <= T0 + 2; L++) stamp(ix + dx, L, iz - 4, SANDSTEIN); }
+  for (dx = -1; dx <= 1; dx++) stamp(ix + dx, T0 + 1, iz - 2, SANDSTEIN);
+  templeSpot = { x: ix + 0.5, z: iz + 0.5, y: T0 + 1 };
+  chestSpots.push({ x: ix + 0.5, z: iz - 1.5, y: T0 + 2, ruin: true, temple: true, inCave: false });
 }
 
 /* Banditenlager: drei Zelte um ein Feuer */
 var banditCamp = null;
 function planCamp(){
   for (var t = 0; t < 500 && !banditCamp; t++){
-    var a = rand() * Math.PI * 2, d = 22 + rand() * 20;
+    var a = rand() * Math.PI * 2, d = 22 + rand() * 24;
     var x = Math.cos(a) * d, z = Math.sin(a) * d;
-    if (Math.hypot(x, z) > FIELD_R - 6) continue;
     if (insideCave(x, z) || nearEntrance(x, z, 9) || nearZone(x, z, 10)) continue;
-    if (baseHeight(x, z) < WATER_Y + 0.9 || slopeAt(x, z) > 0.28 || height(x, z) > SNOW_Y - 0.5) continue;
+    if (baseHeight(x, z) < WATER_Y + 0.9 || slopeAt(x, z) > 0.28 || baseHeight(x, z) > SNOW_Y - 0.5) continue;
     if (templeSpot && Math.hypot(templeSpot.x - x, templeSpot.z - z) < 16) continue;
     if (ruins.some(function(r){ return Math.hypot(r.x - x, r.z - z) < 12; })) continue;
     if (nestSpots.some(function(n){ return Math.hypot(n.x - x, n.z - z) < 12; })) continue;
-    banditCamp = { x: x, z: z, y: height(x, z), tents: [] };
+    banditCamp = { x: x, z: z, y: natTop(Math.floor(x), Math.floor(z)), tents: [] };
   }
   if (!banditCamp) return;
   for (var k = 0; k < 3; k++){
@@ -719,252 +789,458 @@ function planCamp(){
   addObstacle(banditCamp.x, banditCamp.z, 0.7);
 }
 
-/* Vergrabene Schätze */
-var treasureSpots = [];
-function planTreasures(){
-  for (var t = 0; t < 600 && treasureSpots.length < 5; t++){
-    var a = rand() * Math.PI * 2, d = 10 + rand() * (FIELD_R - 14);
-    var x = Math.cos(a) * d, z = Math.sin(a) * d;
-    if (insideCave(x, z) || nearEntrance(x, z, 1) || isLava(x, z) || baseHeight(x, z) < WATER_Y + 0.5) continue;
-    if (obstacles.some(function(o){ return Math.hypot(o.x - x, o.z - z) < o.r + 2; })) continue;
-    if (treasureSpots.some(function(s2){ return Math.hypot(s2.x - x, s2.z - z) < 10; })) continue;
-    treasureSpots.push({ id: treasureSpots.length, x: x, z: z, dug: false });
-  }
+function freeSpot(x, z, margin){
+  if (insideCave(x, z) || nearEntrance(x, z, 1.5) || isLava(x, z) || nearZone(x, z, margin)) return false;
+  if (baseHeight(x, z) < WATER_Y + 0.8 || slopeAt(x, z) > 0.4) return false;
+  if (obstacles.some(function(o){ return Math.hypot(o.x - x, o.z - z) < o.r + 4; })) return false;
+  if (templeSpot && Math.hypot(templeSpot.x - x, templeSpot.z - z) < 8) return false;
+  if (ruins.some(function(r){ return Math.hypot(r.x - x, r.z - z) < 7; })) return false;
+  return true;
 }
 
 function planNests(){
-  for (var i = 0; i < 3; i++){
-    for (var tries = 0; tries < 60; tries++){
+  var i, tries;
+  for (i = 0; i < 3; i++){
+    for (tries = 0; tries < 60; tries++){
       var a = rand() * Math.PI * 2, d = 18 + rand() * 24;
       var x = Math.cos(a) * d, z = Math.sin(a) * d;
-      if (insideCave(x, z) || nearEntrance(x, z, 1.5) || height(x, z) < WATER_Y + 0.8 || slopeAt(x, z) > 0.35 || nearZone(x, z, 3)) continue;
-      if (obstacles.some(function(o){ return Math.hypot(o.x - x, o.z - z) < 5; })) continue;
+      if (!freeSpot(x, z, 3)) continue;
       if (nestSpots.some(function(n){ return Math.hypot(n.x - x, n.z - z) < 14; })) continue;
       nestSpots.push({ x: x, z: z });
       addObstacle(x, z, 1.0);
       break;
     }
   }
+  for (tries = 0; tries < 900 && nestSpots.length < 20; tries++){
+    var a2 = rand() * Math.PI * 2, d2 = 70 + rand() * (FIELD_R - 110);
+    var x2 = Math.cos(a2) * d2, z2 = Math.sin(a2) * d2;
+    if (!freeSpot(x2, z2, 3)) continue;
+    if (nestSpots.some(function(n){ return Math.hypot(n.x - x2, n.z - z2) < 60; })) continue;
+    nestSpots.push({ x: x2, z: z2 });
+    addObstacle(x2, z2, 1.0);
+  }
+}
+
+/* Vergrabene Schätze */
+var treasureSpots = [];
+function planTreasures(){
+  for (var t = 0; t < 3000 && treasureSpots.length < 30; t++){
+    var near = treasureSpots.length < 5;
+    var a = rand() * Math.PI * 2, d = near ? 10 + rand() * 34 : 50 + rand() * (FIELD_R - 90);
+    var x = Math.cos(a) * d, z = Math.sin(a) * d;
+    if (!freeSpot(x, z, 1)) continue;
+    if (treasureSpots.some(function(s2){ return Math.hypot(s2.x - x, s2.z - z) < (near ? 10 : 40); })) continue;
+    treasureSpots.push({ id: treasureSpots.length, x: x, z: z, dug: false });
+  }
 }
 
 function planChests(){
   var i, tries;
-  for (i = 0; i < 8; i++){
+  for (i = 0; i < 68; i++){
+    var near = i < 8;
     for (tries = 0; tries < 40; tries++){
-      var a = rand() * Math.PI * 2, d = 10 + rand() * (FIELD_R - 14);
+      var a = rand() * Math.PI * 2, d = near ? 10 + rand() * 34 : 50 + rand() * (FIELD_R - 80);
       var x = Math.cos(a) * d, z = Math.sin(a) * d;
-      if (insideCave(x, z) || nearEntrance(x, z) || height(x, z) < WATER_Y + 0.6 || slopeAt(x, z) > 0.4 || isLava(x, z)) continue;
-      chestSpots.push({ x: x, z: z, y: height(x, z), ruin: false, inCave: false });
+      if (!freeSpot(x, z, 1)) continue;
+      chestSpots.push({ x: x, z: z, y: natTop(Math.floor(x), Math.floor(z)), ruin: false, inCave: false });
       break;
     }
   }
   caves.forEach(function(c){
     for (var k = 0; k < (c.deep ? 3 : 2); k++){
       var ca = rand() * Math.PI * 2, cd = c.r * (0.3 + rand() * 0.4);
-      for (var t2 = 0; t2 < 12 && inTrench(c.x + Math.cos(ca) * cd, c.z + Math.sin(ca) * cd); t2++) ca = rand() * Math.PI * 2;
+      for (var t2 = 0; t2 < 12 && trenchLevel(c, c.x + Math.cos(ca) * cd, c.z + Math.sin(ca) * cd) !== null; t2++) ca = rand() * Math.PI * 2;
       chestSpots.push({ x: c.x + Math.cos(ca) * cd, z: c.z + Math.sin(ca) * cd, y: c.floorY, ruin: false, inCave: true, deep: c.deep });
     }
   });
   planTreasures();
 }
 
-/* ------------------------------------------------------------ Gelände */
-
-function slopeAt(x, z){
-  var e = 1.2;
-  var dx = height(x + e, z) - height(x - e, z);
-  var dz = height(x, z + e) - height(x, z - e);
-  return Math.hypot(dx, dz) / (2 * e);
-}
-
-var terrainGeo = null;
-var terrainCols = {
-  grass: new THREE.Color(0x5f9e46), grass2: new THREE.Color(0x7bb456),
-  rock: new THREE.Color(0x8d8f92), sand: new THREE.Color(0xd8c79a),
-  desert: new THREE.Color(0xe0c07e), desert2: new THREE.Color(0xd1a765),
-  snow: new THREE.Color(0xf1f5fa), dark: new THREE.Color(0x4d453c),
-  crater: new THREE.Color(0x3b3530),
-  moss: new THREE.Color(0x6a6aa0), moss2: new THREE.Color(0x4f8a86),
-  basalt: new THREE.Color(0x3a3230), ember: new THREE.Color(0x6a2a18)
-};
-
-function colorFor(x, z, y, out){
-  var s = slopeAt(x, z);
-  if (y < baseHeight(x, z) - 1.2){
-    var inCrater = craters.some(function(c){ return Math.hypot(x - c.x, z - c.z) < c.r; });
-    return out.copy(inCrater ? terrainCols.crater : terrainCols.dark);
-  }
-  if (zones.lava){
-    var ld = Math.hypot(x - zones.lava.x, z - zones.lava.z);
-    if (ld < zones.lava.r + 1.5){
-      out.copy(terrainCols.basalt);
-      if (isLava(x, z)) return out.copy(terrainCols.ember);
-      return out.lerp(terrainCols.rock, Math.min(1, Math.max(0, (ld - zones.lava.r + 1) / 2.5)) * 0.6);
-    }
-  }
-  if (zones.pilz && y > WATER_Y + 0.45 && y < SNOW_Y){
-    var pdz = Math.hypot(x - zones.pilz.x, z - zones.pilz.z);
-    if (pdz < zones.pilz.r + 1.5){
-      out.copy(terrainCols.moss).lerp(terrainCols.moss2, (Math.sin(x * 1.3) * Math.cos(z * 1.1) + 1) / 2);
-      return out.lerp(terrainCols.grass, Math.min(1, Math.max(0, (pdz - zones.pilz.r + 1) / 2.5)));
-    }
-  }
-  if (y > SNOW_Y) return out.copy(terrainCols.snow).lerp(terrainCols.rock, Math.min(0.5, Math.max(0, s - 0.6)));
-  if (y < WATER_Y + 0.45) return out.copy(terrainCols.sand);
-  if (s > 0.55) return out.copy(terrainCols.rock);
-  var dz = desertness(x, z);
-  if (dz > 0.55) return out.copy(terrainCols.desert).lerp(terrainCols.desert2, rand() * 0.5);
-  out.copy(terrainCols.grass).lerp(terrainCols.grass2, Math.min(1, Math.max(0, (y + 1) / 5)));
-  if (dz > 0.4) out.lerp(terrainCols.desert, (dz - 0.4) / 0.15 * 0.6);
-  return out.offsetHSL(0, 0, (rand() - 0.5) * 0.05);
-}
-
-/* Nur einen Ausschnitt neu berechnen (Krater, Graben) */
-function paintRegion(cx, cz, r){
-  if (!terrainGeo) return;
-  var pos = terrainGeo.attributes.position;
-  var col = terrainGeo.attributes.color;
-  var tmp = new THREE.Color();
-  var step = SIZE / SEG, half = SIZE / 2, n = SEG + 1;
-  var gx0 = Math.max(0, Math.floor((cx - r + half) / step)), gx1 = Math.min(SEG, Math.ceil((cx + r + half) / step));
-  var gz0 = Math.max(0, Math.floor((cz - r + half) / step)), gz1 = Math.min(SEG, Math.ceil((cz + r + half) / step));
-  for (var gz = gz0; gz <= gz1; gz++){
-    for (var gx = gx0; gx <= gx1; gx++){
-      var i = gz * n + gx;
-      var x = pos.getX(i), z = pos.getZ(i);
-      var y = height(x, z);
-      pos.setY(i, y);
-      colorFor(x, z, y, tmp);
-      col.setXYZ(i, tmp.r, tmp.g, tmp.b);
-    }
-  }
-  pos.needsUpdate = true;
-  col.needsUpdate = true;
-  terrainGeo.computeVertexNormals();
-}
-
-function paintTerrain(){
-  var pos = terrainGeo.attributes.position;
-  var col = terrainGeo.attributes.color;
-  var tmp = new THREE.Color();
-  for (var i = 0; i < pos.count; i++){
-    var x = pos.getX(i), z = pos.getZ(i);
-    var y = height(x, z);
-    pos.setY(i, y);
-    colorFor(x, z, y, tmp);
-    col.setXYZ(i, tmp.r, tmp.g, tmp.b);
-  }
-  pos.needsUpdate = true;
-  col.needsUpdate = true;
-  terrainGeo.computeVertexNormals();
-}
-
-var waterMesh = null;
-
-/* Wasser nur über echten Senken, damit die Höhlenrampen nicht überflutet aussehen */
-function buildWaterGeometry(){
-  var step = SIZE / SEG, half = SIZE / 2, n = SEG + 1;
-  var low = new Uint8Array(n * n);
-  for (var gz = 0; gz < n; gz++){
-    for (var gx = 0; gx < n; gx++) low[gz * n + gx] = baseHeight(gx * step - half, gz * step - half) < WATER_Y + 0.05 ? 1 : 0;
-  }
-  /* gemeinsame Eckpunkte, damit zwischen den Kacheln keine Nähte sichtbar sind */
-  var verts = new Float32Array(n * n * 3), normals = new Float32Array(n * n * 3), index = [];
-  for (var v = 0; v < n * n; v++){
-    verts[v * 3] = (v % n) * step - half;
-    verts[v * 3 + 2] = Math.floor(v / n) * step - half;
-    normals[v * 3 + 1] = 1;
-  }
-  for (var cz = 0; cz < SEG; cz++){
-    for (var cx = 0; cx < SEG; cx++){
-      var k = cz * n + cx;
-      if (!(low[k] || low[k + 1] || low[k + n] || low[k + n + 1])) continue;
-      if (trenchInfo((cx + 0.5) * step - half, (cz + 0.5) * step - half)) continue;
-      index.push(k, k + n, k + n + 1, k, k + n + 1, k + 1);
-    }
-  }
-  var geo = new THREE.BufferGeometry();
-  geo.setAttribute('position', new THREE.BufferAttribute(verts, 3));
-  geo.setAttribute('normal', new THREE.BufferAttribute(normals, 3));
-  geo.setIndex(index);
-  return geo;
-}
-
-function buildTerrain(scene){
-  planZones();
-  terrainGeo = new THREE.PlaneGeometry(SIZE, SIZE, SEG, SEG);
-  terrainGeo.rotateX(-Math.PI / 2);
-  terrainGeo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(terrainGeo.attributes.position.count * 3), 3));
-  paintTerrain();
-  scene.add(new THREE.Mesh(terrainGeo, new THREE.MeshPhongMaterial({
-    vertexColors: true, flatShading: true, shininess: 0, side: THREE.DoubleSide
-  })));
-  waterMesh = new THREE.Mesh(buildWaterGeometry(),
-    new THREE.MeshPhongMaterial({ color: 0x3f83a8, transparent: true, opacity: 0.78, shininess: 40 }));
-  waterMesh.position.y = WATER_Y;
-  scene.add(waterMesh);
-}
-
-function addCrater(x, z, r, depth){
-  var cr = { x: x, z: z, r: r || 4.2, depth: depth || 1.6 };
-  craters.push(cr);
-  paintRegion(x, z, cr.r + 2);
-  nodes.forEach(function(n){ if (!n.inCave && Math.hypot(n.x - x, n.z - z) < cr.r + 1) n.y = floorAt(n.x, n.z); });
-  dirty = true;
-}
-
-/* Mit der Schaufel graben: kleine Löcher, begrenzt, damit das Gelände schnell bleibt */
-var digCount = 0;
-function digAt(x, z){
-  if (digCount >= 60) return false;
-  var merged = null;
-  for (var i = 0; i < craters.length; i++){
-    var c = craters[i];
-    if (c.dig && Math.hypot(c.x - x, c.z - z) < 0.6){ merged = c; break; }
-  }
-  if (merged){
-    if (merged.depth >= 1.6) return false;
-    merged.depth += 0.4;
-    paintRegion(x, z, merged.r + 1.5);
-  } else {
-    craters.push({ x: x, z: z, r: 1.1, depth: 0.45, dig: true });
-    digCount++;
-    paintRegion(x, z, 2.6);
-  }
-  nodes.forEach(function(n){ if (!n.inCave && Math.hypot(n.x - x, n.z - z) < 2) n.y = floorAt(n.x, n.z); });
-  dirty = true;
-  return true;
-}
-
 /* Wasserflächen finden (für Fische und Angeln) */
 var waterSpots = [];
 function planWater(){
-  for (var i = 0; i < 300 && waterSpots.length < 7; i++){
-    var a = rand() * Math.PI * 2, d = 6 + rand() * 38;
+  for (var i = 0; i < 4000 && waterSpots.length < 48; i++){
+    var near = waterSpots.length < 7;
+    var a = rand() * Math.PI * 2, d = near ? 6 + rand() * 38 : 40 + rand() * (FIELD_R - 70);
     var x = Math.cos(a) * d, z = Math.sin(a) * d;
-    if (height(x, z) > WATER_Y - 0.4 || baseHeight(x, z) > WATER_Y - 0.4) continue;
-    if (waterSpots.some(function(w){ return Math.hypot(w.x - x, w.z - z) < 8; })) continue;
+    if (baseHeight(x, z) > WATER_Y - 0.9) continue;
+    if (waterSpots.some(function(w){ return Math.hypot(w.x - x, w.z - z) < (near ? 8 : 30); })) continue;
     waterSpots.push({ x: x, z: z });
   }
 }
 
-function isWater(x, z){ return !insideCave(x, z) && !inTrench(x, z) && baseHeight(x, z) < WATER_Y - 0.05 && height(x, z) < WATER_Y - 0.05; }
+/* ------------------------------------------------------------ Biome */
 
-/* Freiraum um Eingang und Rampe; margin für große Bauwerke */
-function nearEntrance(x, z, margin){
-  var extra = margin || 0;
-  for (var i = 0; i < caves.length; i++){
-    var c = caves[i];
-    var ax = c.mouth.x, az = c.mouth.z;
-    var vx = c.inner.x - ax, vz = c.inner.z - az;
-    var t = Math.min(1.15, Math.max(0, ((x - ax) * vx + (z - az) * vz) / (vx*vx + vz*vz)));
-    if (Math.hypot(x - (ax + vx * t), z - (az + vz * t)) < 3.6 + extra) return true;
-    if (Math.hypot(x - ax, z - az) < 5 + extra) return true;
+function surfaceKind(x, z, h){
+  for (var i = 0; i < zoneList.length; i++){
+    var zn = zoneList[i];
+    if (Math.hypot(x - zn.x, z - zn.z) < zn.r + (zn.name === 'lava' ? 1.5 : 0)) return zn.name === 'lava' ? 'lava' : 'pilzwald';
   }
-  return false;
+  if (h > SNOW_Y) return 'schnee';
+  if (desertness(x, z) > 0.55 && h > WATER_Y + 0.4) return 'wueste';
+  if (h < WATER_Y + 1.2) return 'strand';
+  return 'wald';
 }
 
-/* ------------------------------------------------------------ Rohstoffe */
+function biomeAt(x, z, refY){
+  if (insideCave(x, z, refY)) return 'hoehle';
+  if (inZone('lava', x, z)) return 'lava';
+  if (inZone('pilz', x, z)) return 'pilzwald';
+  var y = baseHeight(x, z);
+  if (y > SNOW_Y) return 'schnee';
+  if (desertness(x, z) > 0.55 && y > WATER_Y + 0.4) return 'wueste';
+  if (y < WATER_Y + 0.45) return 'strand';
+  return 'wald';
+}
+
+/* ------------------------------------------------------------ Blockdaten in Chunks */
+
+var chunks = new Map();
+var editsByChunk = new Map();
+var editTotal = 0;
+var glowList = [];
+var planByChunk = new Map();
+var removedNodes = new Set();
+var frameNo = 0;
+var viewer = { x: 0, z: 0, cx: 99999, cz: 99999 };
+var DATA_R = 150, DATA_R2 = DATA_R * DATA_R;
+var MAX_CHUNKS = 260;
+
+function caveListForChunk(cx, cz){
+  var out = [];
+  var x0 = cx << CS, z0 = cz << CS;
+  for (var gx = Math.floor(x0 / CAVE_CELL); gx <= Math.floor((x0 + CH) / CAVE_CELL); gx++){
+    for (var gz = Math.floor(z0 / CAVE_CELL); gz <= Math.floor((z0 + CH) / CAVE_CELL); gz++){
+      (caveGrid.get(gridKey(gx, gz)) || EMPTY).forEach(function(c){ if (out.indexOf(c) < 0) out.push(c); });
+    }
+  }
+  return out;
+}
+
+function computeCol(c, col){
+  var base = col * H, d = c.data, t = H - 1;
+  while (t >= 0 && !d[base + t]) t--;
+  c.top[col] = MIN_Y + t + 1;
+  var lw = c.top[col];
+  for (var k = 1; k < t; k++){ if (!d[base + k]){ lw = MIN_Y + k; break; } }
+  c.low[col] = lw;
+}
+
+function carveRange(d, base, from, to){
+  var a = Math.max(from, MIN_Y + 1), b = Math.min(to, MAX_Y);
+  for (var L = a; L < b; L++) d[base + L - MIN_Y] = AIR;
+}
+
+function genChunk(cx, cz){
+  var x0 = cx << CS, z0 = cz << CS;
+  var c = { cx: cx, cz: cz, x0: x0, z0: z0, key: ckey(cx, cz),
+    data: new Uint8Array(CH * CH * H), top: new Int16Array(CH * CH), low: new Int16Array(CH * CH), nat: new Int16Array(CH * CH),
+    lake: new Uint8Array(CH * CH), nodes: [], mesh: null, glass: null, glow: null, water: null, dirty: true, used: frameNo };
+  var d = c.data;
+  var HW = CH + 2, hs = new Float32Array(HW * HW), i, j;
+  for (j = 0; j < HW; j++) for (i = 0; i < HW; i++) hs[j * HW + i] = baseHeight(x0 + i - 0.5, z0 + j - 0.5);
+  var lz, lx;
+  for (lz = 0; lz < CH; lz++){
+    for (lx = 0; lx < CH; lx++){
+      var wx = x0 + lx, wz = z0 + lz;
+      var h = hs[(lz + 1) * HW + lx + 1];
+      var T = clampTop(Math.round(h));
+      var sl = Math.max(Math.abs(hs[(lz + 1) * HW + lx + 2] - hs[(lz + 1) * HW + lx]), Math.abs(hs[(lz + 2) * HW + lx + 1] - hs[lz * HW + lx + 1])) * 0.5;
+      var kind = surfaceKind(wx + 0.5, wz + 0.5, h);
+      var topT = GRAS, subT = ERDE, subN = 3, desert = false;
+      if (T <= -2){ topT = T > -5 ? SAND : ERDE; subT = SAND; }
+      else if (kind === 'lava'){ topT = BASALT; subT = BASALT; }
+      else if (kind === 'pilzwald'){ topT = MYZEL; }
+      else if (kind === 'schnee'){ topT = SCHNEE; subT = STEIN; subN = 1; }
+      else if (kind === 'wueste'){ topT = SAND; subT = SAND; subN = 4; desert = true; }
+      else if (kind === 'strand'){ topT = SAND; subT = SAND; }
+      else if (sl > 0.9 && h > 5){ topT = STEIN; subT = STEIN; }
+      var col = lz * CH + lx, base = col * H;
+      d[base] = BEDROCK;
+      for (var L = MIN_Y + 1; L < T; L++){
+        var dp = T - 1 - L, t;
+        if (dp === 0) t = topT;
+        else if (dp <= subN) t = subT;
+        else if (desert && dp <= subN + 3) t = SANDSTEIN;
+        else t = STEIN;
+        d[base + L - MIN_Y] = t;
+      }
+      c.nat[col] = T;
+      if (T <= -2) c.lake[col] = 1;
+    }
+  }
+  /* Höhlen und Rampen aushöhlen */
+  var cl = caveListForChunk(cx, cz);
+  cl.forEach(function(cv){
+    var r2 = cv.r * cv.r;
+    for (lz = 0; lz < CH; lz++){
+      for (lx = 0; lx < CH; lx++){
+        var px = x0 + lx + 0.5, pz = z0 + lz + 0.5;
+        var dx = px - cv.x, dz = pz - cv.z, hd2 = dx * dx + dz * dz;
+        var col2 = lz * CH + lx, base2 = col2 * H;
+        if (hd2 < r2){
+          var ceil = cv.floorY + Math.max(3, Math.round(0.6 * cv.r * Math.sqrt(1 - hd2 / r2)));
+          carveRange(d, base2, cv.floorY, ceil);
+          c.lake[col2] = 0;
+        }
+        var tl = trenchLevel(cv, px, pz);
+        if (tl !== null){
+          /* flach eine offene Rinne, tief unten ein Tunnel mit Decke */
+          var roof = c.nat[col2] - tl > 5 ? tl + 4 : MAX_Y;
+          carveRange(d, base2, tl, roof);
+          c.lake[col2] = 0;
+        }
+      }
+    }
+  });
+  /* Lavabecken */
+  lavaPools.forEach(function(lp){
+    if (lp.x + lp.r < x0 || lp.x - lp.r > x0 + CH || lp.z + lp.r < z0 || lp.z - lp.r > z0 + CH) return;
+    for (lz = 0; lz < CH; lz++){
+      for (lx = 0; lx < CH; lx++){
+        if (Math.hypot(x0 + lx + 0.5 - lp.x, z0 + lz + 0.5 - lp.z) >= lp.r * 0.92) continue;
+        var col3 = lz * CH + lx, T3 = c.nat[col3];
+        d[col3 * H + (T3 - 1 - MIN_Y)] = AIR;
+        d[col3 * H + (T3 - 2 - MIN_Y)] = LAVA;
+      }
+    }
+  });
+  /* Ruinen und Tempel */
+  var st = stamps.get(c.key);
+  if (st){
+    for (i = 0; i < st.length; i += 4){
+      var sx = st[i] - x0, sz = st[i + 2] - z0;
+      d[(sz * CH + sx) * H + (st[i + 1] - MIN_Y)] = st[i + 3];
+    }
+  }
+  /* Änderungen des Spielers */
+  var em = editsByChunk.get(c.key);
+  if (em) em.forEach(function(t, idx){ d[idx] = t; });
+  for (var k = 0; k < CH * CH; k++) computeCol(c, k);
+  return c;
+}
+
+function getChunk(cx, cz, create){
+  var k = ckey(cx, cz), c = chunks.get(k);
+  if (!c && create){ c = genChunk(cx, cz); chunks.set(k, c); genChunkNodes(c); }
+  if (c) c.used = frameNo;
+  return c;
+}
+
+/* Für Abfragen: vorhandene Chunks oder solche nah am Spieler erzeugen; weit weg gilt das natürliche Gelände */
+function chunkQ(ix, iz){
+  var cx = ix >> CS, cz = iz >> CS;
+  var c = chunks.get(ckey(cx, cz));
+  if (c){ c.used = frameNo; return c; }
+  var mx = (cx << CS) + 16 - viewer.x, mz = (cz << CS) + 16 - viewer.z;
+  if (mx * mx + mz * mz > DATA_R2) return null;
+  c = genChunk(cx, cz);
+  chunks.set(c.key, c);
+  genChunkNodes(c);
+  return c;
+}
+
+function rawAt(ix, iy, iz){
+  if (iy < MIN_Y) return BEDROCK;
+  if (iy >= MAX_Y) return AIR;
+  var c = chunkQ(ix, iz);
+  if (!c){
+    var cv = caveAt(ix + 0.5, iz + 0.5, iy);
+    if (cv && iy >= cv.floorY && iy < cv.floorY + 3) return AIR;
+    return iy < naturalFloor(ix, iz, iy) ? STEIN : AIR;
+  }
+  return c.data[((iz - c.z0) * CH + (ix - c.x0)) * H + (iy - MIN_Y)];
+}
+/* Blockart mit Erzen */
+function typeAt(ix, iy, iz){
+  var t = rawAt(ix, iy, iz);
+  if (t === STEIN){ var o = oreAt(ix, iy, iz); if (o) return o; }
+  return t;
+}
+
+function recordEdit(c, idx, t){
+  var em = editsByChunk.get(c.key);
+  if (!em){ em = new Map(); editsByChunk.set(c.key, em); }
+  if (!em.has(idx)) editTotal++;
+  em.set(idx, t);
+}
+
+var dirtyQueue = [];
+function markDirty(c){ if (c && !c.dirty){ c.dirty = true; } if (c && dirtyQueue.indexOf(c) < 0) dirtyQueue.push(c); }
+
+function setVoxel(ix, iy, iz, t){
+  if (iy <= MIN_Y || iy >= MAX_Y) return false;
+  var cx = ix >> CS, cz = iz >> CS;
+  var c = getChunk(cx, cz, true);
+  var lx = ix - c.x0, lz = iz - c.z0, col = lz * CH + lx, idx = col * H + (iy - MIN_Y);
+  var before = c.data[idx];
+  if (before === t) return false;
+  c.data[idx] = t;
+  recordEdit(c, idx, t);
+  if (before === LEUCHT) glowList = glowList.filter(function(g){ return !(g.x === ix && g.y === iy && g.z === iz); });
+  if (t === LEUCHT) glowList.push({ x: ix, y: iy, z: iz });
+  computeCol(c, col);
+  markDirty(c);
+  if (lx === 0) markDirty(chunks.get(ckey(cx - 1, cz)));
+  if (lx === CH - 1) markDirty(chunks.get(ckey(cx + 1, cz)));
+  if (lz === 0) markDirty(chunks.get(ckey(cx, cz - 1)));
+  if (lz === CH - 1) markDirty(chunks.get(ckey(cx, cz + 1)));
+  /* Pflanzen und Steine auf einem entfernten Block fallen herunter */
+  if (!t){
+    for (var i = 0; i < c.nodes.length; i++){
+      var n = c.nodes[i];
+      if (Math.floor(n.x) === ix && Math.floor(n.z) === iz && Math.abs(n.y - (iy + 1)) < 0.01){ n.y = floorAt(n.x, n.z, n.y); if (n.y === -Infinity) n.y = iy; dirty = true; }
+    }
+  }
+  if (W.onVoxelChange) W.onVoxelChange(ix, iy, iz, before, t);
+  return true;
+}
+
+function exportEdits(){
+  var out = [];
+  editsByChunk.forEach(function(em, key){
+    var cx = Math.floor(key / 4096) - 1024, cz = key % 4096 - 1024;
+    em.forEach(function(t, idx){
+      var L = idx % H, col = (idx - L) / H, lx = col % CH, lz = (col - lx) / CH;
+      out.push((cx << CS) + lx, L + MIN_Y, (cz << CS) + lz, t);
+    });
+  });
+  return out;
+}
+
+function importEdits(arr){
+  if (!arr || !arr.length) return;
+  for (var i = 0; i + 3 < arr.length; i += 4){
+    var ix = arr[i], iy = arr[i + 1], iz = arr[i + 2], t = arr[i + 3];
+    if (iy <= MIN_Y || iy >= MAX_Y || !VOX[t]) continue;
+    var cx = ix >> CS, cz = iz >> CS, key = ckey(cx, cz);
+    var idx = ((iz - (cz << CS)) * CH + (ix - (cx << CS))) * H + (iy - MIN_Y);
+    var em = editsByChunk.get(key);
+    if (!em){ em = new Map(); editsByChunk.set(key, em); }
+    if (!em.has(idx)) editTotal++;
+    em.set(idx, t);
+    if (t === LEUCHT) glowList.push({ x: ix, y: iy, z: iz });
+    var c = chunks.get(key);
+    if (c){ c.data[idx] = t; computeCol(c, idx / H | 0); markDirty(c); }
+  }
+}
+
+/* ------------------------------------------------------------ Abfragen: Boden, Hindernisse, Wasser */
+
+function naturalFloor(ix, iz, refY){
+  var px = ix + 0.5, pz = iz + 0.5;
+  var cv = caveAt(px, pz, refY);
+  if (cv) return cv.floorY;
+  var T = natTop(ix, iz);
+  var list = cavesNear(px, pz);
+  for (var i = 0; i < list.length; i++){ var tl = trenchLevel(list[i], px, pz); if (tl !== null) T = Math.min(T, tl); }
+  if (isLava(px, pz)) T -= 1;
+  return T;
+}
+
+/* Höchster Boden mit genug Kopffreiheit, auf den man von refY aus kommt (eine Stufe hoch geht) */
+function floorScan(c, col, refY){
+  var base = col * H, d = c.data;
+  var L = Math.min(Math.floor(refY + 0.1), c.top[col] - 1);
+  for (; L >= MIN_Y; L--){
+    var i = base + (L - MIN_Y);
+    if (d[i] && !(L + 1 < MAX_Y && d[i + 1]) && !(L + 2 < MAX_Y && d[i + 2])) return L + 1;
+  }
+  return -Infinity;
+}
+
+function floorAt(x, z, refY){
+  var ix = Math.floor(x), iz = Math.floor(z);
+  var c = chunkQ(ix, iz);
+  if (!c) return naturalFloor(ix, iz, refY);
+  var col = (iz - c.z0) * CH + (ix - c.x0);
+  if (refY === undefined){
+    var cv = caveAt(x, z);
+    if (cv){ var f = floorScan(c, col, cv.floorY + 0.5); if (f > -Infinity) return f; }
+    return c.top[col];
+  }
+  return floorScan(c, col, refY);
+}
+
+/* Oberkante der Säule (Draufsicht, ohne Höhlen) */
+function height(x, z){
+  var ix = Math.floor(x), iz = Math.floor(z);
+  var c = chunkQ(ix, iz);
+  if (!c){
+    var T = natTop(ix, iz);
+    if (isLava(x, z)) T -= 1;
+    return T;
+  }
+  return c.top[(iz - c.z0) * CH + (ix - c.x0)];
+}
+
+function canStand(x, z, refY){
+  if (refY === undefined) return true;
+  return floorAt(x, z, refY) > -Infinity;
+}
+
+function lakeNatural(x, z){ return natTop(Math.floor(x), Math.floor(z)) <= -2 && !insideCave(x, z) && !inTrench(x, z); }
+
+function isWater(x, z){ return lakeNatural(x, z) && height(x, z) <= -2; }
+
+function isDry(x, z, refY){
+  if (insideCave(x, z, refY) || inTrench(x, z)) return true;
+  if (natTop(Math.floor(x), Math.floor(z)) > -2) return true;
+  return floorAt(x, z, refY) >= WATER_Y + 0.15;
+}
+
+/* Liegt über diesem Punkt ein Block (Dach, Höhlendecke)? */
+function skyCovered(x, y, z){
+  var ix = Math.floor(x), iz = Math.floor(z);
+  var c = chunkQ(ix, iz);
+  if (!c) return insideCave(x, z, y);
+  return c.top[(iz - c.z0) * CH + (ix - c.x0)] > Math.floor(y) + 1;
+}
+
+function solidAt(x, y, z){ return rawAt(Math.floor(x), Math.floor(y), Math.floor(z)) !== AIR; }
+
+/* Strahl durch das Blockgitter (Amanatides & Woo) */
+function raycast(o, dir, maxDist){
+  var ox = o.x, oy = o.y, oz = o.z, dx = dir.x, dy = dir.y, dz = dir.z;
+  var ix = Math.floor(ox), iy = Math.floor(oy), iz = Math.floor(oz);
+  var t0 = rawAt(ix, iy, iz);
+  if (t0) return { ix: ix, iy: iy, iz: iz, raw: t0, type: t0 === STEIN ? (oreAt(ix, iy, iz) || STEIN) : t0, nx: 0, ny: dy < 0 ? 1 : -1, nz: 0, dist: 0 };
+  var stepX = dx > 0 ? 1 : -1, stepY = dy > 0 ? 1 : -1, stepZ = dz > 0 ? 1 : -1;
+  var tdx = dx !== 0 ? Math.abs(1 / dx) : Infinity, tdy = dy !== 0 ? Math.abs(1 / dy) : Infinity, tdz = dz !== 0 ? Math.abs(1 / dz) : Infinity;
+  var tmx = dx !== 0 ? (dx > 0 ? ix + 1 - ox : ox - ix) * tdx : Infinity;
+  var tmy = dy !== 0 ? (dy > 0 ? iy + 1 - oy : oy - iy) * tdy : Infinity;
+  var tmz = dz !== 0 ? (dz > 0 ? iz + 1 - oz : oz - iz) * tdz : Infinity;
+  var nx = 0, ny = 0, nz = 0, t = 0;
+  for (var guard = 0; guard < 400; guard++){
+    if (tmx < tmy && tmx < tmz){ ix += stepX; t = tmx; tmx += tdx; nx = -stepX; ny = 0; nz = 0; }
+    else if (tmy < tmz){ iy += stepY; t = tmy; tmy += tdy; nx = 0; ny = -stepY; nz = 0; }
+    else { iz += stepZ; t = tmz; tmz += tdz; nx = 0; ny = 0; nz = -stepZ; }
+    if (t > maxDist) return null;
+    if (iy >= MAX_Y && dy > 0) return null;
+    var r = rawAt(ix, iy, iz);
+    if (r) return { ix: ix, iy: iy, iz: iz, raw: r, type: r === STEIN ? (oreAt(ix, iy, iz) || STEIN) : r, nx: nx, ny: ny, nz: nz, dist: t };
+  }
+  return null;
+}
+
+/* Erster Treffer auf Boden, Block oder Wasser */
+function groundPoint(origin, dir, maxDist, out){
+  var hit = raycast(origin, dir, maxDist);
+  var tHit = hit ? hit.dist : Infinity;
+  if (dir.y < -0.001 && origin.y > WATER_Y){
+    var tw = (WATER_Y - origin.y) / dir.y;
+    if (tw < tHit && tw <= maxDist){
+      var wx = origin.x + dir.x * tw, wz = origin.z + dir.z * tw;
+      if (isWater(wx, wz)){ out.set(wx, WATER_Y, wz); return true; }
+    }
+  }
+  if (!hit) return false;
+  out.copy(origin).addScaledVector(dir, hit.dist);
+  if (hit.ny === 1) out.y = hit.iy + 1;
+  return true;
+}
+
+/* ------------------------------------------------------------ Rohstoffe (Bäume, Steine, Pflanzen) */
 
 var NODE_DEF = {
   tree:       { hp: 4, radius: 0.55, gives:'holz',      amount: 2, tool:'axt',        label:'Holz' },
@@ -1007,95 +1283,597 @@ var NODE_NAMES = {
 var ORE_COLOR = { kohle: 0x24242a, eisen: 0xb9a48c, kupfer: 0xd2763f, kristall: 0x59d7e8, gold: 0xf2c33c, rubin: 0xd8284a, obsidian: 0x2a1f3a, smaragd: 0x2fd07a };
 var ORES = ['kohle','eisen','kupfer','kristall','gold','rubin','stein','eis','fossil','obsidian','smaragd'];
 var WOODY = ['tree','apfelbaum','pine','cactus','riesenpilz','bambus'];
+var SOFT = ['bush','pilz','fliegenpilz','blume','muschel','kuerbis','leuchtpilz','blaubeere','sandhaufen'];
 
 var nodes = [];
 var meshes = {};
 var dirty = true;
 
 var SPOT_RULE = {
-  muschel: function(x, z){ var y = height(x, z); return y > WATER_Y + 0.05 && y < WATER_Y + 0.6; },
+  muschel: function(x, z){ var y = baseHeight(x, z); return y > WATER_Y + 0.05 && y < WATER_Y + 0.9; },
   fossil:  function(x, z){ return biomeAt(x, z) === 'wueste'; },
-  eis:     function(x, z){ return height(x, z) > SNOW_Y - 0.3; },
-  pine:    function(x, z){ return height(x, z) > SNOW_Y - 0.6; },
+  eis:     function(x, z){ return baseHeight(x, z) > SNOW_Y - 0.3; },
+  pine:    function(x, z){ return baseHeight(x, z) > SNOW_Y - 3; },
   blume:   function(x, z){ return biomeAt(x, z) === 'wald'; },
   kuerbis: function(x, z){ return biomeAt(x, z) === 'wald'; },
   fliegenpilz: function(x, z){ return biomeAt(x, z) === 'wald'; },
-  sandhaufen: function(x, z){ var y = height(x, z); return biomeAt(x, z) === 'strand' && y > WATER_Y + 0.1; },
-  bambus:     function(x, z){ var y = height(x, z); return y > WATER_Y + 0.1 && y < WATER_Y + 1.0; },
+  sandhaufen: function(x, z){ var y = baseHeight(x, z); return biomeAt(x, z) === 'strand' && y > WATER_Y + 0.1; },
+  bambus:     function(x, z){ var y = baseHeight(x, z); return y > WATER_Y + 0.1 && y < WATER_Y + 1.4; },
   bienenstock:function(x, z){ return biomeAt(x, z) === 'wald'; },
-  blaubeere:  function(x, z){ return height(x, z) > SNOW_Y - 0.4; },
+  blaubeere:  function(x, z){ return baseHeight(x, z) > SNOW_Y - 4; },
   riesenpilz: function(x, z){ return inZone('pilz', x, z); },
   leuchtpilz: function(x, z){ return inZone('pilz', x, z); },
   obsidian:   function(x, z){ return inZone('lava', x, z); }
 };
 
-function validSpot(x, z, minDist, allowCave, kind){
-  if (Math.hypot(x, z) > FIELD_R - 2) return false;
-  var cave = caveAt(x, z);
-  if (allowCave){
-    if (!cave || Math.hypot(x - cave.x, z - cave.z) > cave.r * 0.72 || inTrench(x, z)) return false;
-  } else {
-    if (cave || Math.hypot(x, z) < 6 || nearEntrance(x, z)) return false;
-    if (kind !== 'muschel' && kind !== 'bambus' && kind !== 'sandhaufen' && height(x, z) < WATER_Y + 0.7) return false;
-    if (isLava(x, z)) return false;
-    if (banditCamp && Math.hypot(banditCamp.x - x, banditCamp.z - z) < 5.5) return false;
-    if (height(x, z) < baseHeight(x, z) - 1) return false;
-    if (slopeAt(x, z) > ((kind === 'eis' || kind === 'pine') ? 0.75 : 0.45)) return false;
-    if (SPOT_RULE[kind] && !SPOT_RULE[kind](x, z)) return false;
-  }
+/* Wie viele pro Chunk (32 × 32 m) etwa wachsen */
+var NODE_DENSITY = [
+  ['tree', 11], ['bush', 3.7], ['stein', 6], ['kohle', 2.2], ['kupfer', 1.1], ['eisen', 0.9], ['kristall', 0.7], ['gold', 0.3],
+  ['blume', 2.5], ['kuerbis', 1.4], ['fliegenpilz', 1.1], ['muschel', 2], ['fossil', 1.4], ['eis', 2], ['pine', 1.7],
+  ['sandhaufen', 1.4], ['bambus', 1.7], ['bienenstock', 0.7], ['blaubeere', 1.1]
+];
+
+function spotFree(x, z, minDist, kind){
+  var d = Math.hypot(x, z);
+  if (d > FIELD_R - 4 || d < 6) return false;
+  if (nearEntrance(x, z)) return false;
+  var h = baseHeight(x, z);
+  if (kind !== 'muschel' && kind !== 'bambus' && kind !== 'sandhaufen' && h < WATER_Y + 0.7) return false;
+  if (isLava(x, z)) return false;
+  if (banditCamp && Math.hypot(banditCamp.x - x, banditCamp.z - z) < 5.5) return false;
+  if (slopeAt(x, z) > ((kind === 'eis' || kind === 'pine') ? 0.9 : 0.55)) return false;
+  if (SPOT_RULE[kind] && !SPOT_RULE[kind](x, z)) return false;
   for (var i = 0; i < obstacles.length; i++){
-    if (Math.hypot(obstacles[i].x - x, obstacles[i].z - z) < obstacles[i].r + 1) return false;
+    if (Math.abs(obstacles[i].x - x) < 4 && Math.hypot(obstacles[i].x - x, obstacles[i].z - z) < obstacles[i].r + 1) return false;
   }
-  if (templeSpot && Math.hypot(templeSpot.x - x, templeSpot.z - z) < 6) return false;
-  for (var j = 0; j < nodes.length; j++){
-    if (Math.hypot(nodes[j].x - x, nodes[j].z - z) < minDist) return false;
-  }
+  if (templeSpot && Math.hypot(templeSpot.x - x, templeSpot.z - z) < 7.5) return false;
+  for (var r = 0; r < ruins.length; r++) if (Math.hypot(ruins[r].x - x, ruins[r].z - z) < 5) return false;
+  var near = nodesNear(x, z, minDist);
+  for (var j = 0; j < near.length; j++) if (Math.hypot(near[j].x - x, near[j].z - z) < minDist) return false;
   return true;
 }
 
-function pushNode(kind, x, z, inCave){
+function spacingFor(k){ return (k === 'tree' || k === 'pine' || k === 'apfelbaum' || k === 'riesenpilz') ? 2.4 : ((k === 'blume' || k === 'leuchtpilz') ? 0.9 : 1.7); }
+
+var tmpNodeId = -1000000;
+function pushNode(kind, x, z, y, inCave, id, c){
   var def = NODE_DEF[kind];
-  var n = {
-    kind: kind, x: x, z: z, y: floorAt(x, z),
-    hp: def.hp, maxHp: def.hp,
-    size: 0.8 + rand() * 0.6, rot: rand() * Math.PI * 2,
-    radius: def.radius, inCave: !!inCave
-  };
+  if (id === undefined) id = tmpNodeId--;
+  var h1 = ihash(id | 0, 17, 3), h2 = ihash(id | 0, 29, 5);
+  var n = { kind: kind, x: x, z: z, y: y, hp: def.hp, maxHp: def.hp,
+    size: 0.8 + h1 * 0.6, rot: h2 * Math.PI * 2, radius: def.radius, inCave: !!inCave, id: id, chunk: c };
+  c.nodes.push(n);
   nodes.push(n);
   dirty = true;
   return n;
 }
 
-function addNode(kind, inCave, preferDeep){
-  var maxTries = SPOT_RULE[kind] ? 500 : 80;
-  for (var tries = 0; tries < maxTries; tries++){
-    var x, z;
+function genChunkNodes(c){
+  var k, i;
+  var dMid = Math.hypot(c.x0 + 16, c.z0 + 16);
+  if (dMid < FIELD_R + 20){
+    for (k = 0; k < NODE_DENSITY.length; k++){
+      var kind0 = NODE_DENSITY[k][0], lam = NODE_DENSITY[k][1];
+      var rng = makeRandom(Math.floor(ihash(c.cx, c.cz, 100 + k) * 4294967296));
+      var ruled = !!SPOT_RULE[kind0];
+      var tries = Math.ceil(lam * (ruled ? 5 : 1.6));
+      var limit = Math.floor(lam * (ruled ? 2.5 : 1.15) + rng());
+      var placed = 0;
+      for (i = 0; i < tries && placed < limit; i++){
+        var x = c.x0 + rng() * CH, z = c.z0 + rng() * CH;
+        var kind = kind0;
+        if (kind0 === 'tree'){
+          var b = biomeAt(x, z);
+          if (b === 'wueste') kind = 'cactus';
+          else if (b === 'schnee') kind = 'pine';
+          else if (b === 'lava') continue;
+          else if (b === 'pilzwald') kind = 'riesenpilz';
+          else if (rng() < 0.18) kind = 'apfelbaum';
+          if (b === 'strand' && baseHeight(x, z) < WATER_Y + 0.7) continue;
+        }
+        var id = c.key * 1000 + k * 40 + i;
+        if (removedNodes.has(id)) { placed++; continue; }
+        var col = (Math.floor(z) - c.z0) * CH + (Math.floor(x) - c.x0);
+        if (c.top[col] !== c.nat[col]) continue;
+        if (!spotFree(x, z, spacingFor(kind), kind)) continue;
+        pushNode(kind, x, z, c.top[col], false, id, c);
+        placed++;
+      }
+    }
+  }
+  var plan = planByChunk.get(c.key);
+  if (plan){
+    plan.forEach(function(p){
+      if (removedNodes.has(p.id)) return;
+      var col2 = (Math.floor(p.z) - c.z0) * CH + (Math.floor(p.x) - c.x0);
+      var y = p.inCave ? floorScan(c, col2, p.y + 0.5) : c.top[col2];
+      if (y === -Infinity) return;
+      pushNode(p.kind, p.x, p.z, y, p.inCave, p.id, c);
+    });
+  }
+}
+
+/* Feste Plätze für Höhlen- und Gebietsrohstoffe */
+function planNode(kind, x, z, y, inCave){
+  var k = ckey(Math.floor(x) >> CS, Math.floor(z) >> CS), arr = planByChunk.get(k);
+  if (!arr){ arr = []; planByChunk.set(k, arr); }
+  arr.push({ kind: kind, x: x, z: z, y: y, inCave: inCave, id: -(1 + planCount++) });
+}
+var planCount = 0;
+
+function planResourceNodes(){
+  caves.forEach(function(cv){
+    var pr = makeRandom(SEED + cv.id * 977 + 1);
+    var list = cv.deep ? [['rubin', 3], ['gold', 3], ['smaragd', 2], ['obsidian', 2], ['kristall', 3], ['leuchtpilz', 3], ['eisen', 2]]
+                       : [['eisen', 4], ['kupfer', 3], ['kohle', 3], ['kristall', 2], ['gold', 2], ['pilz', 3], ['leuchtpilz', 2]];
+    if (!cv.deep && pr() < 0.3) list.push(['rubin', 1]);
+    if (!cv.deep && pr() < 0.25) list.push(['smaragd', 1]);
+    var placed = [];
+    list.forEach(function(e){
+      for (var n = 0; n < e[1]; n++){
+        for (var t = 0; t < 12; t++){
+          var a = pr() * Math.PI * 2, d = pr() * cv.r * 0.7;
+          var x = cv.x + Math.cos(a) * d, z = cv.z + Math.sin(a) * d;
+          if (trenchLevel(cv, x, z) !== null) continue;
+          if (placed.some(function(p){ return Math.hypot(p[0] - x, p[1] - z) < 1.4; })) continue;
+          placed.push([x, z]);
+          planNode(e[0], x, z, cv.floorY, true);
+          break;
+        }
+      }
+    });
+  });
+  zoneList.forEach(function(zn, zi){
+    var zr = makeRandom(SEED + 5003 + zi * 131);
+    var list = zn.name === 'lava' ? [['obsidian', 6]] : [['riesenpilz', 7], ['leuchtpilz', 10]];
+    var placed = [];
+    list.forEach(function(e){
+      for (var n = 0; n < e[1]; n++){
+        for (var t = 0; t < 20; t++){
+          var a = zr() * Math.PI * 2, d = zr() * zn.r * 0.9;
+          var x = zn.x + Math.cos(a) * d, z = zn.z + Math.sin(a) * d;
+          if (isLava(x, z) || baseHeight(x, z) < WATER_Y + 0.6) continue;
+          if (placed.some(function(p){ return Math.hypot(p[0] - x, p[1] - z) < (e[0] === 'riesenpilz' ? 2.6 : 1.1); })) continue;
+          placed.push([x, z]);
+          planNode(e[0], x, z, 0, false);
+          break;
+        }
+      }
+    });
+  });
+}
+
+function nodesNear(x, z, r){
+  var out = [];
+  var cx0 = Math.floor(x - r) >> CS, cx1 = Math.floor(x + r) >> CS, cz0 = Math.floor(z - r) >> CS, cz1 = Math.floor(z + r) >> CS;
+  for (var cx = cx0; cx <= cx1; cx++){
+    for (var cz = cz0; cz <= cz1; cz++){
+      var c = chunks.get(ckey(cx, cz));
+      if (c && c.nodes.length) out = out.length ? out.concat(c.nodes) : c.nodes.slice();
+    }
+  }
+  return out;
+}
+
+function addNode(kind, inCave){
+  var base = kind;
+  for (var tries = 0; tries < 60; tries++){
+    var x, z, y;
     if (inCave){
-      var pool = preferDeep ? caves.filter(function(c){ return c.deep; }) : caves;
-      var c = pool[Math.floor(rand() * pool.length) % pool.length];
-      var a = rand() * Math.PI * 2, d = rand() * c.r * 0.7;
-      x = c.x + Math.cos(a) * d; z = c.z + Math.sin(a) * d;
+      var pool = caves.filter(function(c){ return Math.hypot(c.x - viewer.x, c.z - viewer.z) < 110; });
+      if (!pool.length) return null;
+      var cv = pool[Math.floor(rand() * pool.length) % pool.length];
+      var a = rand() * Math.PI * 2, d = rand() * cv.r * 0.7;
+      x = cv.x + Math.cos(a) * d; z = cv.z + Math.sin(a) * d;
+      if (trenchLevel(cv, x, z) !== null) continue;
+      y = floorAt(x, z, cv.floorY + 0.5);
     } else {
-      var ang = rand() * Math.PI * 2, dist = 6 + rand() * (FIELD_R - 8);
-      x = Math.cos(ang) * dist; z = Math.sin(ang) * dist;
+      var ang = rand() * Math.PI * 2, dist = 25 + rand() * 55;
+      x = viewer.x + Math.cos(ang) * dist; z = viewer.z + Math.sin(ang) * dist;
+      var k = base;
+      if (base === 'tree'){
+        var b = biomeAt(x, z);
+        if (b === 'wueste') k = 'cactus'; else if (b === 'schnee') k = 'pine'; else if (b === 'lava') continue;
+        else if (b === 'pilzwald') k = 'riesenpilz'; else if (rand() < 0.18) k = 'apfelbaum';
+      }
+      if (!spotFree(x, z, spacingFor(k), k)) continue;
+      kind = k;
+      y = height(x, z);
     }
-    var k = kind;
-    if (!inCave && kind === 'tree'){
-      var b = biomeAt(x, z);
-      if (b === 'wueste') k = 'cactus';
-      else if (b === 'schnee') k = 'pine';
-      else if (b === 'lava') continue;
-      else if (b === 'pilzwald') k = 'riesenpilz';
-      else if (rand() < 0.18) k = 'apfelbaum';
-    }
-    var spacing = (k === 'tree' || k === 'pine' || k === 'apfelbaum' || k === 'riesenpilz') ? 2.4 : ((k === 'blume' || k === 'leuchtpilz') ? 0.9 : 1.7);
-    if (!validSpot(x, z, spacing, inCave, k)) continue;
-    return pushNode(k, x, z, inCave);
+    if (y === -Infinity) continue;
+    var c = chunks.get(ckey(Math.floor(x) >> CS, Math.floor(z) >> CS));
+    if (!c) continue;
+    return pushNode(kind, x, z, y, inCave, undefined, c);
   }
   return null;
 }
 
-function addNodeAt(kind, x, z){ return pushNode(kind, x, z, insideCave(x, z)); }
+function addNodeAt(kind, x, z){
+  var c = getChunk(Math.floor(x) >> CS, Math.floor(z) >> CS, true);
+  return pushNode(kind, x, z, floorAt(x, z), insideCave(x, z), undefined, c);
+}
+
+function respawnNode(kind, inCave){
+  var base = (kind === 'pine' || kind === 'cactus' || kind === 'apfelbaum') ? 'tree' : kind;
+  if (base === 'riesenpilz') return;
+  addNode(base, inCave);
+}
+
+function removeNode(n){
+  var idx = nodes.indexOf(n);
+  if (idx >= 0) nodes.splice(idx, 1);
+  if (n.chunk){ var j = n.chunk.nodes.indexOf(n); if (j >= 0) n.chunk.nodes.splice(j, 1); }
+  removedNodes.add(n.id);
+  dirty = true;
+}
+
+function damageNode(n, amount){
+  n.hp -= amount;
+  dirty = true;
+  if (n.hp <= 0){
+    removeNode(n);
+    var def = NODE_DEF[n.kind];
+    return { gives: def.gives, amount: def.amount, label: def.label, kind: n.kind, extra: def.extra };
+  }
+  return null;
+}
+
+function nodeCenter(n, out){
+  var lift = 0.5;
+  if (n.kind === 'tree' || n.kind === 'pine' || n.kind === 'apfelbaum') lift = 1.5;
+  else if (n.kind === 'riesenpilz') lift = 1.3;
+  else if (n.kind === 'bienenstock') lift = 1.1;
+  else if (n.kind === 'bambus') lift = 0.9;
+  else if (n.kind === 'cactus') lift = 1.0;
+  else if (n.kind === 'leuchtpilz') lift = 0.2;
+  else if (n.kind === 'sandhaufen' || n.kind === 'blaubeere') lift = 0.3;
+  else if (n.kind === 'pilz' || n.kind === 'fliegenpilz' || n.kind === 'blume' || n.kind === 'muschel') lift = 0.2;
+  else if (n.kind === 'bush' || n.kind === 'kuerbis') lift = 0.35;
+  return out.set(n.x, n.y + lift, n.z);
+}
+
+function nodeHitRadius(n){
+  if (n.kind === 'tree' || n.kind === 'pine' || n.kind === 'apfelbaum' || n.kind === 'riesenpilz') return 1.25;
+  if (n.kind === 'bambus') return 0.7;
+  if (n.kind === 'cactus') return 0.9;
+  return n.radius + 0.35;
+}
+
+var _c = new THREE.Vector3();
+var _to = new THREE.Vector3();
+
+function rayHitNode(origin, dir, maxDist){
+  var best = null, bestT = maxDist;
+  var ex = origin.x + dir.x * maxDist, ez = origin.z + dir.z * maxDist;
+  var mx = (origin.x + ex) / 2, mz = (origin.z + ez) / 2;
+  var list = nodesNear(mx, mz, maxDist / 2 + 2);
+  for (var i = 0; i < list.length; i++){
+    var n = list[i];
+    nodeCenter(n, _c);
+    _to.copy(_c).sub(origin);
+    var along = _to.dot(dir);
+    if (along < 0.15 || along > bestT) continue;
+    var perp = Math.sqrt(Math.max(0, _to.lengthSq() - along * along));
+    if (perp <= nodeHitRadius(n)){ bestT = along; best = n; }
+  }
+  return best ? { node: best, dist: bestT } : null;
+}
+
+/* refY (Fußhöhe) trennt Höhlenboden und Gelände darüber; Blöcke sind feste Wände */
+function blocked(x, z, radius, refY){
+  var i, hasY = refY !== undefined, rr = radius + 1.5;
+  var cx0 = Math.floor(x - rr) >> CS, cx1 = Math.floor(x + rr) >> CS, cz0 = Math.floor(z - rr) >> CS, cz1 = Math.floor(z + rr) >> CS;
+  for (var cx = cx0; cx <= cx1; cx++){
+    for (var cz = cz0; cz <= cz1; cz++){
+      var ch = chunks.get(ckey(cx, cz));
+      if (!ch) continue;
+      var list = ch.nodes;
+      for (i = 0; i < list.length; i++){
+        var n = list[i];
+        if (Math.abs(n.x - x) > rr || Math.abs(n.z - z) > rr) continue;
+        if (SOFT.indexOf(n.kind) >= 0) continue;
+        if (hasY && Math.abs(n.y - refY) > CAVE_HEADROOM) continue;
+        if (Math.hypot(n.x - x, n.z - z) < n.radius + radius) return true;
+      }
+    }
+  }
+  for (i = 0; i < obstacles.length; i++){
+    var o = obstacles[i];
+    if (hasY && Math.abs(o.y - refY) > CAVE_HEADROOM) continue;
+    if (Math.hypot(o.x - x, o.z - z) < o.r + radius) return true;
+  }
+  if (!hasY) return false;
+  if (floorAt(x, z, refY) === -Infinity) return true;
+  if (radius > 0.15){
+    var q = radius * 0.72;
+    if (floorAt(x + q, z + q, refY) === -Infinity || floorAt(x - q, z + q, refY) === -Infinity ||
+        floorAt(x + q, z - q, refY) === -Infinity || floorAt(x - q, z - q, refY) === -Infinity) return true;
+  }
+  return false;
+}
+
+function removeObstacleNear(x, z, r){
+  for (var i = obstacles.length - 1; i >= 0; i--){
+    if (Math.hypot(obstacles[i].x - x, obstacles[i].z - z) < r) obstacles.splice(i, 1);
+  }
+}
+
+/* Vom Spieler gesetzter Block? */
+function isEdited(ix, iy, iz){
+  var cx = ix >> CS, cz = iz >> CS, em = editsByChunk.get(ckey(cx, cz));
+  if (!em) return false;
+  var t = em.get(((iz - (cz << CS)) * CH + (ix - (cx << CS))) * H + (iy - MIN_Y));
+  return t !== undefined && t !== AIR;
+}
+
+/* Meteoritenkrater: eine Mulde aus den Blöcken schlagen (Gebautes bleibt stehen) */
+function addCrater(x, z, r, depth){
+  r = r || 4.2; depth = depth || 1.6;
+  for (var ix = Math.floor(x - r); ix <= Math.floor(x + r); ix++){
+    for (var iz = Math.floor(z - r); iz <= Math.floor(z + r); iz++){
+      var cd = Math.hypot(ix + 0.5 - x, iz + 0.5 - z);
+      if (cd >= r) continue;
+      var dig = Math.round(Math.cos((cd / r) * Math.PI * 0.5) * depth + 0.3);
+      var top = height(ix + 0.5, iz + 0.5);
+      for (var k = 1; k <= dig; k++){
+        if (isEdited(ix, top - k, iz)) break;
+        if (rawAt(ix, top - k, iz) !== BEDROCK) setVoxel(ix, top - k, iz, AIR);
+      }
+    }
+  }
+}
+
+/* Schaufel (alte Schnittstelle): obersten Block an dieser Stelle abtragen */
+function digAt(x, z){
+  var ix = Math.floor(x), iz = Math.floor(z), top = height(x, z);
+  var t = typeAt(ix, top - 1, iz);
+  if (!t || t === BEDROCK) return false;
+  setVoxel(ix, top - 1, iz, AIR);
+  return t;
+}
+
+/* ------------------------------------------------------------ Zeichnen der Blöcke */
+
+var FC = new Int8Array([
+  1,0,0, 1,1,0, 1,1,1, 1,0,1,
+  0,0,0, 0,0,1, 0,1,1, 0,1,0,
+  0,1,0, 0,1,1, 1,1,1, 1,1,0,
+  0,0,0, 1,0,0, 1,0,1, 0,0,1,
+  0,0,1, 1,0,1, 1,1,1, 0,1,1,
+  0,0,0, 0,1,0, 1,1,0, 1,0,0
+]);
+var FN = new Int8Array([127,0,0, -127,0,0, 0,127,0, 0,-127,0, 0,0,127, 0,0,-127]);
+var SHADE = [0.88, 0.88, 1.0, 0.55, 0.77, 0.77];
+
+function Builder(){ this.cap = 0; this.n = 0; this.pos = null; this.nor = null; this.col = null; this.grow(4096); }
+Builder.prototype.grow = function(min){
+  var cap = Math.max(min, this.cap * 2);
+  var p = new Int8Array(cap * 3), no = new Int8Array(cap * 3), co = new Uint8Array(cap * 3);
+  if (this.pos){ p.set(this.pos); no.set(this.nor); co.set(this.col); }
+  this.pos = p; this.nor = no; this.col = co; this.cap = cap;
+};
+Builder.prototype.quad = function(x, y, z, f, r, g, b){
+  if (this.n + 4 > this.cap) this.grow(this.n + 4);
+  var o = this.n * 3, fo = f * 12, nx = FN[f * 3], ny = FN[f * 3 + 1], nz = FN[f * 3 + 2];
+  var pos = this.pos, nor = this.nor, col = this.col;
+  for (var k = 0; k < 4; k++){
+    pos[o] = x + FC[fo + k * 3]; pos[o + 1] = y + FC[fo + k * 3 + 1]; pos[o + 2] = z + FC[fo + k * 3 + 2];
+    nor[o] = nx; nor[o + 1] = ny; nor[o + 2] = nz;
+    col[o] = r; col[o + 1] = g; col[o + 2] = b;
+    o += 3;
+  }
+  this.n += 4;
+};
+Builder.prototype.build = function(withColor){
+  if (!this.n) return null;
+  var n = this.n, q = n / 4;
+  var geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(this.pos.slice(0, n * 3), 3));
+  geo.setAttribute('normal', new THREE.BufferAttribute(this.nor.slice(0, n * 3), 3, true));
+  if (withColor !== false) geo.setAttribute('color', new THREE.BufferAttribute(this.col.slice(0, n * 3), 3, true));
+  var idx = n > 65535 ? new Uint32Array(q * 6) : new Uint16Array(q * 6);
+  for (var i = 0, v = 0, j = 0; i < q; i++, v += 4){ idx[j++] = v; idx[j++] = v + 1; idx[j++] = v + 2; idx[j++] = v; idx[j++] = v + 2; idx[j++] = v + 3; }
+  geo.setIndex(new THREE.BufferAttribute(idx, 1));
+  return geo;
+};
+
+var BO = new Builder(), BG = new Builder(), BLW = new Builder(), BW = new Builder();
+var voxMat = null, glassMat = null, glowMat = null, waterMat = null;
+var sceneRef = null;
+
+var GRASS_A = [0x5f, 0x9e, 0x46], GRASS_B = [0x7b, 0xb4, 0x56], GRASS_DRY = [0xb4, 0xae, 0x62];
+
+function buildMesh(c){
+  var nW = getChunk(c.cx - 1, c.cz, true), nE = getChunk(c.cx + 1, c.cz, true);
+  var nN = getChunk(c.cx, c.cz - 1, true), nS = getChunk(c.cx, c.cz + 1, true);
+  BO.n = 0; BG.n = 0; BLW.n = 0; BW.n = 0;
+  var d = c.data, top = c.top, low = c.low;
+  var CHH = CH * H;
+  for (var lz = 0; lz < CH; lz++){
+    for (var lx = 0; lx < CH; lx++){
+      var col = lz * CH + lx, T = top[col];
+      var wx = c.x0 + lx, wz = c.z0 + lz, base = col * H;
+      if (c.lake[col] && T <= -2) BW.quad(lx, -1, lz, 2, 0, 0, 0);
+      var tE, tW, tN, tS, lo = low[col];
+      if (lx < CH - 1){ tE = top[col + 1]; lo = Math.min(lo, tE, low[col + 1]); } else { tE = nE.top[lz * CH]; lo = Math.min(lo, tE, nE.low[lz * CH]); }
+      if (lx > 0){ tW = top[col - 1]; lo = Math.min(lo, tW, low[col - 1]); } else { tW = nW.top[lz * CH + CH - 1]; lo = Math.min(lo, tW, nW.low[lz * CH + CH - 1]); }
+      if (lz < CH - 1){ tS = top[col + CH]; lo = Math.min(lo, tS, low[col + CH]); } else { tS = nS.top[lx]; lo = Math.min(lo, tS, nS.low[lx]); }
+      if (lz > 0){ tN = top[col - CH]; lo = Math.min(lo, tN, low[col - CH]); } else { tN = nN.top[(CH - 1) * CH + lx]; lo = Math.min(lo, tN, nN.low[(CH - 1) * CH + lx]); }
+      lo = Math.max(MIN_Y, lo - 1);
+      var grassDone = false, gr = 0, gg = 0, gb = 0;
+      for (var L = lo; L < T; L++){
+        var li = base + (L - MIN_Y);
+        var raw = d[li];
+        if (!raw) continue;
+        var t = raw === STEIN ? (oreAt(wx, L, wz) || STEIN) : raw;
+        var trans = TRANS[t], glow = GLOW[t];
+        for (var f = 0; f < 6; f++){
+          var nt, cover;
+          switch (f){
+            case 0: nt = lx < CH - 1 ? d[li + H] : nE.data[(lz * CH) * H + (L - MIN_Y)]; cover = tE > L + 1; break;
+            case 1: nt = lx > 0 ? d[li - H] : nW.data[(lz * CH + CH - 1) * H + (L - MIN_Y)]; cover = tW > L + 1; break;
+            case 2: nt = L + 1 < MAX_Y ? d[li + 1] : AIR; cover = T > L + 2; break;
+            case 3: if (L <= MIN_Y) continue; nt = d[li - 1]; cover = true; break;
+            case 4: nt = lz < CH - 1 ? d[li + CHH] : nS.data[lx * H + (L - MIN_Y)]; cover = tS > L + 1; break;
+            default: nt = lz > 0 ? d[li - CHH] : nN.data[((CH - 1) * CH + lx) * H + (L - MIN_Y)]; cover = tN > L + 1;
+          }
+          if (nt && (!TRANS[nt] || nt === t || trans)) continue;
+          var r, g, b;
+          if (f === 2 && t === GRAS){
+            if (!grassDone){
+              grassDone = true;
+              var m = vnoise(wx * 0.07, wz * 0.07, 5), dz = desertness(wx, wz);
+              gr = GRASS_A[0] + (GRASS_B[0] - GRASS_A[0]) * m; gg = GRASS_A[1] + (GRASS_B[1] - GRASS_A[1]) * m; gb = GRASS_A[2] + (GRASS_B[2] - GRASS_A[2]) * m;
+              if (dz > 0.35){ var k2 = Math.min(1, (dz - 0.35) / 0.2) * 0.6; gr += (GRASS_DRY[0] - gr) * k2; gg += (GRASS_DRY[1] - gg) * k2; gb += (GRASS_DRY[2] - gb) * k2; }
+            }
+            r = gr; g = gg; b = gb;
+          } else if (f === 2 || (f === 3 && t === 22)){ r = TOPR[t]; g = TOPG[t]; b = TOPB[t]; }
+          else { r = COLR[t]; g = COLG[t]; b = COLB[t]; }
+          var s = glow ? (f === 2 ? 1 : 0.88) : SHADE[f] * (cover ? 0.42 : 1);
+          s *= 0.94 + ihash(wx, L, wz) * 0.12;
+          r *= s; g *= s; b *= s;
+          (glow ? BLW : (trans ? BG : BO)).quad(lx, L, lz, f, r > 255 ? 255 : r, g > 255 ? 255 : g, b > 255 ? 255 : b);
+        }
+      }
+    }
+  }
+  c.mesh = swapMesh(c.mesh, BO.build(), voxMat, c, 0);
+  c.glass = swapMesh(c.glass, BG.build(), glassMat, c, 0);
+  c.glow = swapMesh(c.glow, BLW.build(), glowMat, c, 0);
+  c.water = swapMesh(c.water, BW.build(false), waterMat, c, WATER_Y);
+  c.dirty = false;
+  c.meshed = true;
+}
+
+function swapMesh(mesh, geo, material, c, y){
+  if (mesh){ mesh.geometry.dispose(); }
+  if (!geo){ if (mesh) sceneRef.remove(mesh); return null; }
+  if (!mesh){
+    mesh = new THREE.Mesh(geo, material);
+    mesh.position.set(c.x0, y, c.z0);
+    mesh.matrixAutoUpdate = false;
+    mesh.updateMatrix();
+    sceneRef.add(mesh);
+  } else mesh.geometry = geo;
+  return mesh;
+}
+
+function unloadMesh(c){
+  ['mesh', 'glass', 'glow', 'water'].forEach(function(k){
+    if (c[k]){ c[k].geometry.dispose(); sceneRef.remove(c[k]); c[k] = null; }
+  });
+  c.meshed = false;
+  c.dirty = true;
+}
+
+function evictChunk(c){
+  unloadMesh(c);
+  for (var i = nodes.length - 1; i >= 0; i--) if (nodes[i].chunk === c) nodes.splice(i, 1);
+  chunks.delete(c.key);
+  dirty = true;
+}
+
+/* ------------------------------------------------------------ Nachladen um den Spieler */
+
+var viewDist = 88, budgetMs = 5;
+var needed = [], neededSet = new Set();
+var lastNodeX = 1e9, lastNodeZ = 1e9, nodeView = 70;
+
+function recomputeNeeded(){
+  needed = []; neededSet = new Set();
+  var R = Math.ceil(viewDist / CH) + 1;
+  for (var cx = viewer.cx - R; cx <= viewer.cx + R; cx++){
+    for (var cz = viewer.cz - R; cz <= viewer.cz + R; cz++){
+      var nx = Math.max(cx << CS, Math.min(viewer.x, (cx << CS) + CH)), nz = Math.max(cz << CS, Math.min(viewer.z, (cz << CS) + CH));
+      var dd = Math.hypot(nx - viewer.x, nz - viewer.z);
+      if (dd > viewDist) continue;
+      needed.push({ cx: cx, cz: cz, d: dd });
+      neededSet.add(ckey(cx, cz));
+    }
+  }
+  needed.sort(function(a, b){ return a.d - b.d; });
+  chunks.forEach(function(c){
+    if (c.meshed && !neededSet.has(c.key)){
+      var nx = Math.max(c.x0, Math.min(viewer.x, c.x0 + CH)), nz = Math.max(c.z0, Math.min(viewer.z, c.z0 + CH));
+      if (Math.hypot(nx - viewer.x, nz - viewer.z) > viewDist + 24) unloadMesh(c);
+    }
+  });
+  if (chunks.size > MAX_CHUNKS){
+    var list = [];
+    chunks.forEach(function(c){
+      if (neededSet.has(c.key)) return;
+      var d2 = Math.hypot(c.x0 + 16 - viewer.x, c.z0 + 16 - viewer.z);
+      if (d2 > viewDist + 70) list.push({ c: c, d: d2 });
+    });
+    list.sort(function(a, b){ return b.d - a.d; });
+    for (var i = 0; i < list.length && chunks.size > MAX_CHUNKS - 30; i++) evictChunk(list[i].c);
+  }
+}
+
+function setViewer(x, z){
+  viewer.x = x; viewer.z = z;
+  var cx = Math.floor(x) >> CS, cz = Math.floor(z) >> CS;
+  if (cx !== viewer.cx || cz !== viewer.cz){ viewer.cx = cx; viewer.cz = cz; recomputeNeeded(); }
+}
+
+function stream(x, z){
+  frameNo++;
+  setViewer(x, z);
+  var t0 = performance.now();
+  /* geänderte Chunks sofort neu zeichnen */
+  while (dirtyQueue.length){
+    var dc = dirtyQueue.shift();
+    if (dc.meshed && chunks.get(dc.key) === dc) buildMesh(dc);
+  }
+  for (var i = 0; i < needed.length; i++){
+    var n = needed[i];
+    var c = chunks.get(ckey(n.cx, n.cz));
+    if (c && c.meshed && !c.dirty) continue;
+    if (!c) c = getChunk(n.cx, n.cz, true);
+    buildMesh(c);
+    if (performance.now() - t0 > budgetMs) break;
+  }
+  if (Math.hypot(x - lastNodeX, z - lastNodeZ) > 6) dirty = true;
+}
+
+/* Vor dem Spielstart alles rund um den Startpunkt vorbereiten, in kleinen Schritten */
+function prepare(x, z, onStep, done){
+  frameNo++;
+  viewer.cx = 99999;
+  setViewer(x, z);
+  var idx = 0;
+  function step(){
+    var t0 = performance.now();
+    while (idx < needed.length && performance.now() - t0 < 40){
+      var n = needed[idx++];
+      buildMesh(getChunk(n.cx, n.cz, true));
+    }
+    if (onStep) onStep(idx / Math.max(1, needed.length));
+    if (idx < needed.length) setTimeout(step, 0);
+    else { dirty = true; refresh(); if (done) done(); }
+  }
+  step();
+}
+
+function setView(dist, nodeDist, budget){
+  viewDist = dist;
+  nodeView = nodeDist || dist * 0.8;
+  if (budget) budgetMs = budget;
+  viewer.cx = 99999;
+  setViewer(viewer.x, viewer.z);
+  dirty = true;
+}
+
+function glowNear(x, z, r){
+  var out = [];
+  for (var i = 0; i < glowList.length; i++){
+    var g = glowList[i];
+    if (Math.abs(g.x + 0.5 - x) < r && Math.abs(g.z + 0.5 - z) < r) out.push(g);
+  }
+  return out;
+}
+
+/* ------------------------------------------------------------ Rohstoff-Modelle */
 
 function inst(scene, geo, mat, max){
   var m = new THREE.InstancedMesh(geo, mat, max);
@@ -1125,130 +1903,42 @@ function buildProps(scene){
   var boneGeo = new THREE.CylinderGeometry(0.05, 0.05, 0.6, 5);
   var iceGeo = new THREE.OctahedronGeometry(0.5, 0);
 
-  meshes.trunk   = inst(scene, trunkGeo, phong(0x6b4a2f, { shininess: 2 }), 220);
-  meshes.leaf    = inst(scene, leafGeo,  phong(0x3f8f45, { shininess: 2 }), 320);
-  meshes.leaf2   = inst(scene, leafGeo,  phong(0x59a84f, { shininess: 2 }), 320);
-  meshes.pine    = inst(scene, coneGeo,  phong(0x2f6b48, { shininess: 2 }), 200);
-  meshes.snowcap = inst(scene, coneGeo,  phong(0xeef4fa, { shininess: 10 }), 100);
-  meshes.cactus  = inst(scene, cactGeo,  phong(0x4f8f3e, { shininess: 6 }), 240);
-  meshes.rock    = inst(scene, rockGeo,  phong(0x8b8f95, { shininess: 6 }), 320);
-  meshes.bush    = inst(scene, bushGeo,  phong(0x3c7a3f, { shininess: 2 }), 120);
-  meshes.berry   = inst(scene, smallBall, new THREE.MeshPhongMaterial({ color: 0xd2433f, shininess: 20 }), 240);
-  meshes.apple   = inst(scene, smallBall, new THREE.MeshPhongMaterial({ color: 0xe23b2e, shininess: 40 }), 200);
-  meshes.stem    = inst(scene, stemGeo,  new THREE.MeshPhongMaterial({ color: 0xe8e0d0, shininess: 4 }), 220);
-  meshes.cap     = inst(scene, capGeo,   new THREE.MeshPhongMaterial({ color: 0x7fd6c8, emissive: 0x2b8a7e, shininess: 30 }), 80);
-  meshes.redcap  = inst(scene, capGeo,   new THREE.MeshPhongMaterial({ color: 0xd8302a, shininess: 30 }), 60);
-  meshes.petal   = inst(scene, petalGeo, new THREE.MeshPhongMaterial({ color: 0xf5d547, side: THREE.DoubleSide, shininess: 10 }), 80);
-  meshes.pumpkin = inst(scene, pumpkinGeo, phong(0xe9832b, { shininess: 10 }), 60);
-  meshes.shell   = inst(scene, shellGeo, new THREE.MeshPhongMaterial({ color: 0xf6d9d0, shininess: 60, side: THREE.DoubleSide }), 60);
-  meshes.bone    = inst(scene, boneGeo,  phong(0xefe8d6, { shininess: 10 }), 120);
-  meshes.ice     = inst(scene, iceGeo,   new THREE.MeshPhongMaterial({ color: 0xbfe8ff, emissive: 0x2a5a78, transparent: true, opacity: 0.85, flatShading: true, shininess: 90 }), 120);
+  meshes.trunk   = inst(scene, trunkGeo, phong(0x6b4a2f, { shininess: 2 }), 900);
+  meshes.leaf    = inst(scene, leafGeo,  phong(0x3f8f45, { shininess: 2 }), 800);
+  meshes.leaf2   = inst(scene, leafGeo,  phong(0x59a84f, { shininess: 2 }), 800);
+  meshes.pine    = inst(scene, coneGeo,  phong(0x2f6b48, { shininess: 2 }), 600);
+  meshes.snowcap = inst(scene, coneGeo,  phong(0xeef4fa, { shininess: 10 }), 300);
+  meshes.cactus  = inst(scene, cactGeo,  phong(0x4f8f3e, { shininess: 6 }), 700);
+  meshes.rock    = inst(scene, rockGeo,  phong(0x8b8f95, { shininess: 6 }), 900);
+  meshes.bush    = inst(scene, bushGeo,  phong(0x3c7a3f, { shininess: 2 }), 400);
+  meshes.berry   = inst(scene, smallBall, new THREE.MeshPhongMaterial({ color: 0xd2433f, shininess: 20 }), 600);
+  meshes.apple   = inst(scene, smallBall, new THREE.MeshPhongMaterial({ color: 0xe23b2e, shininess: 40 }), 500);
+  meshes.stem    = inst(scene, stemGeo,  new THREE.MeshPhongMaterial({ color: 0xe8e0d0, shininess: 4 }), 700);
+  meshes.cap     = inst(scene, capGeo,   new THREE.MeshPhongMaterial({ color: 0x7fd6c8, emissive: 0x2b8a7e, shininess: 30 }), 200);
+  meshes.redcap  = inst(scene, capGeo,   new THREE.MeshPhongMaterial({ color: 0xd8302a, shininess: 30 }), 200);
+  meshes.petal   = inst(scene, petalGeo, new THREE.MeshPhongMaterial({ color: 0xf5d547, side: THREE.DoubleSide, shininess: 10 }), 1200);
+  meshes.pumpkin = inst(scene, pumpkinGeo, phong(0xe9832b, { shininess: 10 }), 200);
+  meshes.shell   = inst(scene, shellGeo, new THREE.MeshPhongMaterial({ color: 0xf6d9d0, shininess: 60, side: THREE.DoubleSide }), 250);
+  meshes.bone    = inst(scene, boneGeo,  phong(0xefe8d6, { shininess: 10 }), 400);
+  meshes.ice     = inst(scene, iceGeo,   new THREE.MeshPhongMaterial({ color: 0xbfe8ff, emissive: 0x2a5a78, transparent: true, opacity: 0.85, flatShading: true, shininess: 90 }), 400);
   var bambooGeo = new THREE.CylinderGeometry(0.045, 0.05, 1, 6); bambooGeo.translate(0, 0.5, 0);
-  meshes.sand    = inst(scene, new THREE.IcosahedronGeometry(0.6, 0), phong(0xe6d29a, { shininess: 2 }), 40);
-  meshes.bamboo  = inst(scene, bambooGeo, phong(0x7fb048, { shininess: 10 }), 90);
-  meshes.hive    = inst(scene, new THREE.SphereGeometry(0.28, 9, 7), phong(0xd9a33a, { shininess: 12 }), 20);
-  meshes.blueberry = inst(scene, smallBall, new THREE.MeshPhongMaterial({ color: 0x3a4ad8, shininess: 30 }), 60);
-  meshes.bigcap  = inst(scene, capGeo, new THREE.MeshPhongMaterial({ color: 0xb45ad8, emissive: 0x3a1050, shininess: 20 }), 30);
-  meshes.glowcap = inst(scene, capGeo, new THREE.MeshBasicMaterial({ color: 0x7ffff0 }), 60);
+  meshes.sand    = inst(scene, new THREE.IcosahedronGeometry(0.6, 0), phong(0xe6d29a, { shininess: 2 }), 200);
+  meshes.bamboo  = inst(scene, bambooGeo, phong(0x7fb048, { shininess: 10 }), 600);
+  meshes.hive    = inst(scene, new THREE.SphereGeometry(0.28, 9, 7), phong(0xd9a33a, { shininess: 12 }), 80);
+  meshes.blueberry = inst(scene, smallBall, new THREE.MeshPhongMaterial({ color: 0x3a4ad8, shininess: 30 }), 300);
+  meshes.bigcap  = inst(scene, capGeo, new THREE.MeshPhongMaterial({ color: 0xb45ad8, emissive: 0x3a1050, shininess: 20 }), 80);
+  meshes.glowcap = inst(scene, capGeo, new THREE.MeshBasicMaterial({ color: 0x7ffff0 }), 150);
 
   Object.keys(ORE_COLOR).forEach(function(kind){
     meshes['nug_' + kind] = inst(scene, nugGeo, new THREE.MeshPhongMaterial({
       color: ORE_COLOR[kind],
       emissive: kind === 'kristall' ? 0x1d6c78 : (kind === 'rubin' ? 0x5a0616 : (kind === 'gold' ? 0x3a2a00 : 0x000000)),
       flatShading: true, shininess: (kind === 'kristall' || kind === 'rubin' || kind === 'gold') ? 80 : 24
-    }), 380);
-  });
-
-  var i;
-  for (i = 0; i < 80; i++) addNode('tree');
-  for (i = 0; i < 26; i++) addNode('bush');
-  for (i = 0; i < 44; i++) addNode('stein');
-  for (i = 0; i < 16; i++) addNode('kohle');
-  for (i = 0; i < 8;  i++) addNode('kupfer');
-  for (i = 0; i < 6;  i++) addNode('eisen');
-  for (i = 0; i < 5;  i++) addNode('kristall');
-  for (i = 0; i < 2;  i++) addNode('gold');
-  for (i = 0; i < 26; i++) addNode('eisen', true);
-  for (i = 0; i < 20; i++) addNode('kupfer', true);
-  for (i = 0; i < 18; i++) addNode('kohle', true);
-  for (i = 0; i < 14; i++) addNode('kristall', true);
-  for (i = 0; i < 10; i++) addNode('gold', true);
-  for (i = 0; i < 4;  i++) addNode('rubin', true);
-  for (i = 0; i < 16; i++) addNode('pilz', true);
-  // Neue Rohstoffe
-  for (i = 0; i < 6;  i++) addNode('rubin', true, true);
-  for (i = 0; i < 6;  i++) addNode('gold', true, true);
-  for (i = 0; i < 18; i++) addNode('blume');
-  for (i = 0; i < 10; i++) addNode('kuerbis');
-  for (i = 0; i < 8;  i++) addNode('fliegenpilz');
-  for (i = 0; i < 14; i++) addNode('muschel');
-  for (i = 0; i < 10; i++) addNode('fossil');
-  for (i = 0; i < 14; i++) addNode('eis');
-  for (i = 0; i < 12; i++) addNode('pine');
-  // 150er-Update: neue Rohstoffe
-  for (i = 0; i < 6;  i++) addNode('smaragd', true);
-  for (i = 0; i < 3;  i++) addNode('smaragd', true, true);
-  for (i = 0; i < 4;  i++) addNode('obsidian', true, true);
-  for (i = 0; i < 7;  i++) addNode('obsidian');
-  for (i = 0; i < 12; i++) addNode('leuchtpilz', true);
-  for (i = 0; i < 10; i++) addNode('leuchtpilz');
-  for (i = 0; i < 7;  i++) addNode('riesenpilz');
-  for (i = 0; i < 10; i++) addNode('sandhaufen');
-  for (i = 0; i < 12; i++) addNode('bambus');
-  for (i = 0; i < 5;  i++) addNode('bienenstock');
-  for (i = 0; i < 8;  i++) addNode('blaubeere');
-  refresh();
-}
-
-/* Blumenwiesen als reine Dekoration */
-var flowerMesh = null;
-function buildFlowerField(scene){
-  var geo = new THREE.CircleGeometry(0.07, 5);
-  var mat = new THREE.MeshBasicMaterial({ side: THREE.DoubleSide, vertexColors: false });
-  flowerMesh = new THREE.InstancedMesh(geo, mat, 420);
-  var colors = [0xf5d547, 0xe8e8f0, 0xd96aa8, 0x8fa8ff, 0xff8a4a];
-  var m = new THREE.Matrix4(), p = new THREE.Vector3(), q = new THREE.Quaternion(), s = new THREE.Vector3(), e = new THREE.Euler();
-  var col = new THREE.Color();
-  var n = 0;
-  for (var i = 0; i < 3000 && n < 420; i++){
-    var a = rand() * Math.PI * 2, d = 7 + rand() * 38;
-    var x = Math.cos(a) * d, z = Math.sin(a) * d;
-    if (biomeAt(x, z) !== 'wald' || slopeAt(x, z) > 0.4) continue;
-    if (Math.sin(x * 0.2) * Math.cos(z * 0.23) < 0.35) continue;
-    p.set(x, height(x, z) + 0.12, z);
-    e.set(-Math.PI / 2 + (rand() - 0.5) * 0.4, 0, rand() * 3);
-    q.setFromEuler(e);
-    var sc = 0.7 + rand() * 0.8;
-    s.set(sc, sc, sc);
-    m.compose(p, q, s);
-    flowerMesh.setMatrixAt(n, m);
-    flowerMesh.setColorAt(n, col.setHex(colors[Math.floor(rand() * colors.length)]));
-    n++;
-  }
-  flowerMesh.count = n;
-  if (flowerMesh.instanceColor) flowerMesh.instanceColor.needsUpdate = true;
-  scene.add(flowerMesh);
-}
-
-var lavaMeshes = [];
-function buildZones(scene){
-  var lavaMat = new THREE.MeshBasicMaterial({ color: 0xff6a1a });
-  var crustMat = new THREE.MeshBasicMaterial({ color: 0xffc04a, transparent: true, opacity: 0.55 });
-  lavaPools.forEach(function(lp){
-    var disc = new THREE.Mesh(new THREE.CircleGeometry(lp.r, 22), lavaMat);
-    disc.rotation.x = -Math.PI / 2;
-    disc.position.set(lp.x, lp.y + 0.12, lp.z);
-    var glow = new THREE.Mesh(new THREE.CircleGeometry(lp.r * 0.55, 16), crustMat);
-    glow.rotation.x = -Math.PI / 2;
-    glow.position.set(lp.x + 0.2, lp.y + 0.13, lp.z - 0.1);
-    scene.add(disc, glow);
-    lavaMeshes.push({ disc: disc, glow: glow, pool: lp });
+    }), 500);
   });
 }
 
-function setDecorVisible(v){
-  if (flowerMesh) flowerMesh.visible = v;
-}
+function setDecorVisible(){}
 
 var _m4 = new THREE.Matrix4();
 var _pos = new THREE.Vector3();
@@ -1257,8 +1947,9 @@ var _scale = new THREE.Vector3();
 var _euler = new THREE.Euler();
 
 function refresh(){
-  if (!dirty) return;
+  if (!dirty || !meshes.trunk) return;
   dirty = false;
+  lastNodeX = viewer.x; lastNodeZ = viewer.z;
   var counts = {};
   Object.keys(meshes).forEach(function(k){ counts[k] = 0; });
 
@@ -1273,7 +1964,11 @@ function refresh(){
     mesh.setMatrixAt(counts[name]++, _m4);
   }
 
-  nodes.forEach(function(n){
+  var vx = viewer.x, vz = viewer.z, nv2 = nodeView * nodeView;
+  for (var ni = 0; ni < nodes.length; ni++){
+    var n = nodes[ni];
+    var ddx = n.x - vx, ddz = n.z - vz;
+    if (ddx * ddx + ddz * ddz > nv2) continue;
     var s, h;
     switch (n.kind){
       case 'tree': case 'apfelbaum':
@@ -1376,7 +2071,7 @@ function refresh(){
           push(key, n.x, n.y + s*0.66, n.z - s*0.3, 0.2, n.rot*0.5, 0.6, s*0.7, s*0.7, s*0.7);
         }
     }
-  });
+  }
 
   Object.keys(meshes).forEach(function(k){
     meshes[k].count = counts[k] || 0;
@@ -1384,108 +2079,45 @@ function refresh(){
   });
 }
 
-function nodeCenter(n, out){
-  var lift = 0.5;
-  if (n.kind === 'tree' || n.kind === 'pine' || n.kind === 'apfelbaum') lift = 1.5;
-  else if (n.kind === 'riesenpilz') lift = 1.3;
-  else if (n.kind === 'bienenstock') lift = 1.1;
-  else if (n.kind === 'bambus') lift = 0.9;
-  else if (n.kind === 'cactus') lift = 1.0;
-  else if (n.kind === 'leuchtpilz') lift = 0.2;
-  else if (n.kind === 'sandhaufen' || n.kind === 'blaubeere') lift = 0.3;
-  else if (n.kind === 'pilz' || n.kind === 'fliegenpilz' || n.kind === 'blume' || n.kind === 'muschel') lift = 0.2;
-  else if (n.kind === 'bush' || n.kind === 'kuerbis') lift = 0.35;
-  return out.set(n.x, n.y + lift, n.z);
-}
+/* ------------------------------------------------------------ Aufbau */
 
-function nodeHitRadius(n){
-  if (n.kind === 'tree' || n.kind === 'pine' || n.kind === 'apfelbaum' || n.kind === 'riesenpilz') return 1.25;
-  if (n.kind === 'bambus') return 0.7;
-  if (n.kind === 'cactus') return 0.9;
-  return n.radius + 0.35;
-}
-
-var _c = new THREE.Vector3();
-var _to = new THREE.Vector3();
-
-function rayHitNode(origin, dir, maxDist){
-  var best = null, bestT = maxDist;
-  for (var i = 0; i < nodes.length; i++){
-    var n = nodes[i];
-    nodeCenter(n, _c);
-    _to.copy(_c).sub(origin);
-    var along = _to.dot(dir);
-    if (along < 0.15 || along > bestT) continue;
-    var perp = Math.sqrt(Math.max(0, _to.lengthSq() - along * along));
-    if (perp <= nodeHitRadius(n)){ bestT = along; best = n; }
-  }
-  return best ? { node: best, dist: bestT } : null;
-}
-
-function damageNode(n, amount){
-  n.hp -= amount;
-  dirty = true;
-  if (n.hp <= 0){
-    var idx = nodes.indexOf(n);
-    if (idx >= 0) nodes.splice(idx, 1);
-    var def = NODE_DEF[n.kind];
-    return { gives: def.gives, amount: def.amount, label: def.label, kind: n.kind, extra: def.extra };
-  }
-  return null;
-}
-
-var SOFT = ['bush','pilz','fliegenpilz','blume','muschel','kuerbis','leuchtpilz','blaubeere','sandhaufen'];
-
-/* refY (Fußhöhe) trennt Höhlenboden und Gelände darüber */
-function blocked(x, z, radius, refY){
-  var i, hasY = refY !== undefined;
-  for (i = 0; i < nodes.length; i++){
-    var n = nodes[i];
-    if (SOFT.indexOf(n.kind) >= 0) continue;
-    if (hasY && Math.abs(n.y - refY) > CAVE_HEADROOM) continue;
-    if (Math.hypot(n.x - x, n.z - z) < n.radius + radius) return true;
-  }
-  for (i = 0; i < obstacles.length; i++){
-    var o = obstacles[i];
-    if (hasY && Math.abs(o.y - refY) > CAVE_HEADROOM) continue;
-    if (Math.hypot(o.x - x, o.z - z) < o.r + radius) return true;
-  }
-  return false;
-}
-
-function groundPoint(origin, dir, maxDist, out){
-  var refY = origin.y - 1.6;
-  for (var t = 0.5; t < maxDist; t += 0.2){
-    var x = origin.x + dir.x * t, y = origin.y + dir.y * t, z = origin.z + dir.z * t;
-    var f = floorAt(x, z, refY);
-    if (!isDry(x, z, refY)) f = Math.max(f, WATER_Y);
-    if (y <= f){ out.set(x, f, z); return true; }
-  }
-  return false;
-}
-
-function respawnNode(kind, inCave){
-  var base = (kind === 'pine' || kind === 'cactus' || kind === 'apfelbaum') ? 'tree' : kind;
-  if (base === 'riesenpilz' && !zones.pilz) return;
-  addNode(base, inCave);
-}
-
-function removeObstacleNear(x, z, r){
-  for (var i = obstacles.length - 1; i >= 0; i--){
-    if (Math.hypot(obstacles[i].x - x, obstacles[i].z - z) < r) obstacles.splice(i, 1);
-  }
+function init(scene){
+  sceneRef = scene;
+  voxMat = new THREE.MeshLambertMaterial({ vertexColors: true });
+  glassMat = new THREE.MeshLambertMaterial({ vertexColors: true, transparent: true, opacity: 0.42, depthWrite: false });
+  glowMat = new THREE.MeshBasicMaterial({ vertexColors: true });
+  waterMat = new THREE.MeshPhongMaterial({ color: 0x3f83a8, transparent: true, opacity: 0.78, shininess: 40 });
+  /* Winzige Platzhalter, damit alle Grafik-Programme schon im Menü vorbereitet werden */
+  [voxMat, glassMat, glowMat].forEach(function(m){
+    BO.n = 0; BO.quad(0, 0, 0, 2, 255, 255, 255);
+    var dummy = new THREE.Mesh(BO.build(), m);
+    dummy.position.set(0, -500, 0);
+    scene.add(dummy);
+  });
+  BW.n = 0; BW.quad(0, 0, 0, 2, 0, 0, 0);
+  var wd = new THREE.Mesh(BW.build(false), waterMat);
+  wd.position.set(0, -500, 0);
+  scene.add(wd);
+  BO.n = 0; BW.n = 0;
+  buildProps(scene);
 }
 
 buildCaveData();
+planZones();
+planRuins();
+planTemple();
+planNests();
+planCamp();
+planChests();
+planWater();
+planResourceNodes();
 
-BL.NODE_DEF = NODE_DEF;
-BL.world = {
-  buildTerrain: buildTerrain, buildCaves: buildCaves, buildGrottos: buildGrottos, buildRuins: buildRuins,
-  buildTemple: buildTemple, planNests: planNests, buildProps: buildProps, buildFlowerField: buildFlowerField,
-  planChests: planChests, planWater: planWater, setDecorVisible: setDecorVisible,
-  buildZones: buildZones, planCamp: planCamp, zones: zones, lavaPools: lavaPools, lavaMeshes: lavaMeshes, isLava: isLava, inZone: inZone,
+var W = BL.world = {
+  init: init, stream: stream, prepare: prepare, setView: setView, refresh: refresh, buildProps: function(){}, setDecorVisible: setDecorVisible,
+  planChests: function(){}, planWater: function(){}, planNests: function(){}, planCamp: function(){},
+  zones: zones, zoneList: zoneList, lavaPools: lavaPools, lavaMeshes: [], isLava: isLava, inZone: inZone,
   treasureSpots: treasureSpots, camp: function(){ return banditCamp; }, digAt: digAt, NODE_NAMES: NODE_NAMES, SOFT: SOFT,
-  refresh: refresh, height: height, floorAt: floorAt, canStand: canStand, insideCave: insideCave,
+  height: height, floorAt: floorAt, canStand: canStand, insideCave: insideCave, surfaceHeight: baseHeight,
   caveAt: caveAt, biomeAt: biomeAt, isWater: isWater, isDry: isDry, inTrench: inTrench, nearEntrance: nearEntrance,
   caves: caves, ruins: ruins,
   chestSpots: chestSpots, nestSpots: nestSpots, waterSpots: waterSpots,
@@ -1494,8 +2126,13 @@ BL.world = {
   groundPoint: groundPoint, respawnNode: respawnNode, addNodeAt: addNodeAt, addCrater: addCrater,
   removeObstacleNear: removeObstacleNear,
   nodes: nodes, ORES: ORES, WOODY: WOODY, SEED: SEED, DEFAULT_SEED: DEFAULT_SEED,
-  WATER_Y: WATER_Y, FIELD_R: FIELD_R, SNOW_Y: SNOW_Y
+  WATER_Y: WATER_Y, FIELD_R: FIELD_R, SNOW_Y: SNOW_Y, MIN_Y: MIN_Y, MAX_Y: MAX_Y, CH: CH,
+  VOX: VOX, VT: VT, rawAt: rawAt, typeAt: typeAt, setVoxel: setVoxel, raycast: raycast, solidAt: solidAt,
+  skyCovered: skyCovered, glowNear: glowNear, exportEdits: exportEdits, importEdits: importEdits,
+  editCount: function(){ return editTotal; }, onVoxelChange: null,
+  stats: function(){ var m = 0; chunks.forEach(function(c){ if (c.meshed) m++; }); return { chunks: chunks.size, meshed: m, nodes: nodes.length, needed: needed.length, edits: editTotal, caves: caves.length }; }
 };
+BL.NODE_DEF = NODE_DEF;
 })();
 
 </script>
@@ -1575,15 +2212,27 @@ var SIMPLE = {
   blumentopf: ['pot', '#d96aa8'],
   druckwelle: ['wave', '#9fdcff'], zauberblitz: ['bolt2', '#f5d547'], heilzauber: ['plus', '#7bd389'], schutzzauber: ['bubble', '#5ab0f0'],
   upgrade: ['arrowup', '#f2c14e'], verzaubern: ['star', '#b48cff'], set_on: ['toggle1', '#7bd389'], set_off: ['toggle0', '#9fb0d0'],
-  absteigen: ['arrowdown', '#f2c14e'], lichtan: ['fackel', '#ffb347']
+  absteigen: ['arrowdown', '#f2c14e'], lichtan: ['fackel', '#ffb347'],
+  stein: ['cube', '#7c7f86', '#9a9ea5'], holz: ['cube', '#6b4a2f', '#c29a64'], eis: ['cube', '#a9d8f0', '#d8f2ff'],
+  erde: ['cube', '#7a5534', '#8f6a45'], bretter: ['cube', '#b8864e', '#caa06a'], ziegel: ['cube', '#b5523a', '#c86a50'],
+  steinziegel: ['cube', '#9b958a', '#b0aa9e'], sandstein: ['cube', '#d9b778', '#e8cc92'], schnee: ['cube', '#dfe6ee', '#ffffff'],
+  laub: ['cube', '#3f8f45', '#55a95a'], leuchtblock: ['cube', '#ffd46a', '#fff2c0'], goldblock: ['cube', '#e6b52e', '#ffd966'],
+  rotblock: ['cube', '#d2433f', '#e25e5a'], blaublock: ['cube', '#3f6fd8', '#5c88ea'], gruenblock: ['cube', '#4fae4a', '#68c462'],
+  gelbblock: ['cube', '#e8c830', '#ffe060'], weissblock: ['cube', '#dfe3ea', '#ffffff'], schwarzblock: ['cube', '#2a2a30', '#46464e']
 };
 
-function simpleIcon(ctx, shape, s, col){
+function simpleIcon(ctx, shape, s, col, col2){
   ctx.fillStyle = col; ctx.strokeStyle = col;
   function circle(x, y, r){ ctx.beginPath(); ctx.arc(s*x, s*y, s*r, 0, Math.PI*2); ctx.fill(); }
   function line(x1, y1, x2, y2){ ctx.beginPath(); ctx.moveTo(s*x1, s*y1); ctx.lineTo(s*x2, s*y2); ctx.stroke(); }
   function poly(pts){ ctx.beginPath(); pts.forEach(function(p, i){ if (i) ctx.lineTo(s*p[0], s*p[1]); else ctx.moveTo(s*p[0], s*p[1]); }); ctx.closePath(); ctx.fill(); }
   switch (shape){
+    case 'cube':
+      ctx.fillStyle = col2 || col; poly([[0,-0.82],[0.76,-0.42],[0,-0.02],[-0.76,-0.42]]);
+      ctx.fillStyle = col; poly([[-0.76,-0.42],[0,-0.02],[0,0.86],[-0.76,0.46]]);
+      poly([[0,-0.02],[0.76,-0.42],[0.76,0.46],[0,0.86]]);
+      ctx.fillStyle = 'rgba(0,0,0,0.28)'; poly([[0,-0.02],[0.76,-0.42],[0.76,0.46],[0,0.86]]);
+      break;
     case 'gem': poly([[0,-0.75],[0.6,-0.2],[0.35,0.7],[-0.35,0.7],[-0.6,-0.2]]); ctx.fillStyle = 'rgba(255,255,255,0.35)'; poly([[0,-0.75],[0.2,-0.2],[-0.2,-0.2]]); break;
     case 'pile': poly([[-0.8,0.6],[-0.4,-0.1],[0,-0.4],[0.4,-0.1],[0.8,0.6]]); break;
     case 'pane': ctx.globalAlpha = 0.7; ctx.fillRect(-s*0.6, -s*0.7, s*1.2, s*1.4); ctx.globalAlpha = 1; ctx.strokeStyle = '#eef3ff'; line(-0.3, -0.4, 0.2, 0.1); break;
@@ -1671,7 +2320,7 @@ function icon(ctx, kind, cx, cy, s, color){
     var dim = color && color.indexOf('rgba') === 0;
     if (dim) ctx.globalAlpha = 0.45;
     if (simple[0] === 'fackel'){ ctx.restore(); return icon(ctx, 'fackel', cx, cy, s, color); }
-    simpleIcon(ctx, simple[0], s, simple[1]);
+    simpleIcon(ctx, simple[0], s, simple[1], simple[2]);
     ctx.restore();
     return;
   }
@@ -2036,7 +2685,7 @@ var PW = 1024, PH = 700;
 var PANEL_W = 0.8, PANEL_H = PANEL_W * PH / PW;
 
 var TABS = [
-  { id:'waffen', label:'Waffen' }, { id:'bauen', label:'Bauen' }, { id:'ausruestung', label:'Ausrüst.' },
+  { id:'bloecke', label:'Blöcke' }, { id:'waffen', label:'Waffen' }, { id:'bauen', label:'Bauen' }, { id:'ausruestung', label:'Ausrüst.' },
   { id:'kueche', label:'Küche' }, { id:'magie', label:'Magie' }, { id:'skills', label:'Skills' }, { id:'handel', label:'Handel' },
   { id:'aufgaben', label:'Aufgaben' }, { id:'karte', label:'Karte' }, { id:'gesten', label:'Gesten' }
 ];
@@ -2407,12 +3056,16 @@ function createCraftPanel(){
 
   function mapPage(s){
     var size = 400;
-    var mx = 24, my = GRID_Y, scale = size / 100;
+    var m = s.map, v = m.view;
+    var mx = 24, my = GRID_Y, scale = size / v.size;
     ctx.save();
     roundRect(ctx, mx, my, size, size, 14); ctx.clip();
-    if (s.mapImage) ctx.drawImage(s.mapImage, mx, my, size, size);
-    function toMap(x, z){ return [mx + (x + 50) * scale, my + (z + 50) * scale]; }
-    var m = s.map;
+    ctx.fillStyle = '#23324a'; ctx.fillRect(mx, my, size, size);
+    if (s.mapImage){
+      var k = v.px / v.world;
+      ctx.drawImage(s.mapImage, (v.x0 + v.world / 2) * k, (v.z0 + v.world / 2) * k, v.size * k, v.size * k, mx, my, size, size);
+    }
+    function toMap(x, z){ return [mx + (x - v.x0) * scale, my + (z - v.z0) * scale]; }
     m.caves.forEach(function(c){
       var p = toMap(c.x, c.z);
       ctx.fillStyle = c.visited ? 'rgba(40,30,20,0.85)' : 'rgba(40,30,20,0.55)';
@@ -2449,7 +3102,7 @@ function createCraftPanel(){
     });
     ctx.fillStyle = 'rgba(159,176,208,0.85)';
     ctx.font = '16px Rubik, sans-serif';
-    wrap(ctx, 'Grün = Wald, gelb = Wüste, weiß = Schnee. Goldenes Quadrat = Wüstentempel. Weißer Kreis = Ziel.', lx, ly + 280, PW - lx - 30, 21, 5);
+    wrap(ctx, 'Ausschnitt 300 m um dich. Grün = Wald, gelb = Wüste, weiß = Schnee, dunkle Kreise = Höhlen. Weißer Kreis = Ziel.', lx, ly + 280, PW - lx - 30, 21, 5);
     pageCount = 1;
   }
 
@@ -2684,6 +3337,15 @@ var BL = window.BL;
 var W = BL.world;
 var NODE_DEF = BL.NODE_DEF;
 
+/* Steckt ein Punkt mitten in Blöcken, bleibt man auf der aktuellen Höhe statt ins Bodenlose zu fallen */
+var _worldFloor = W.floorAt;
+W.floorRaw = _worldFloor;
+W.floorAt = function(x, z, refY){
+  var f = _worldFloor(x, z, refY);
+  if (f !== -Infinity) return f;
+  return refY !== undefined ? refY : W.height(x, z);
+};
+
 /* ================================================================ Einstellungen */
 
 var DIFF = {
@@ -2695,9 +3357,9 @@ var DIFF = {
 };
 
 var QUALITY = {
-  hoch:    { label: 'Hoch',    pixelRatio: 2,    xrScale: 1.0,  foveation: 0.5, far: 260, decor: true,  clouds: true,  particles: 1.0, rain: 420, birds: true,  lights: 3 },
-  mittel:  { label: 'Mittel',  pixelRatio: 1.25, xrScale: 0.8,  foveation: 1,   far: 120, decor: true,  clouds: true,  particles: 0.6, rain: 200, birds: true,  lights: 2 },
-  niedrig: { label: 'Niedrig', pixelRatio: 1,    xrScale: 0.65, foveation: 1,   far: 70,  decor: false, clouds: false, particles: 0.35, rain: 100, birds: false, lights: 1 }
+  hoch:    { label: 'Hoch',    pixelRatio: 2,    xrScale: 1.0,  foveation: 0.5, far: 260, decor: true,  clouds: true,  particles: 1.0, rain: 420, birds: true,  lights: 3, view: 104, nodeView: 84 },
+  mittel:  { label: 'Mittel',  pixelRatio: 1.25, xrScale: 0.8,  foveation: 1,   far: 120, decor: true,  clouds: true,  particles: 0.6, rain: 200, birds: true,  lights: 2, view: 80, nodeView: 64 },
+  niedrig: { label: 'Niedrig', pixelRatio: 1,    xrScale: 0.65, foveation: 1,   far: 70,  decor: false, clouds: false, particles: 0.35, rain: 100, birds: false, lights: 1, view: 60, nodeView: 48 }
 };
 
 /* Meta Quest und andere Standalone-Brillen: leichter starten */
@@ -2767,18 +3429,7 @@ var stars = (function(){
   return pts;
 })();
 
-W.buildTerrain(scene);
-W.buildCaves(scene);
-W.buildGrottos(scene);
-W.buildRuins(scene);
-W.buildTemple(scene);
-W.planNests();
-W.planCamp();
-W.buildProps(scene);
-W.buildZones(scene);
-W.buildFlowerField(scene);
-W.planChests();
-W.planWater();
+W.init(scene);
 
 var cloudMesh = (function(){
   var mat = new THREE.MeshPhongMaterial({ color: 0xffffff, transparent: true, opacity: 0.85, flatShading: true, shininess: 0 });
@@ -2797,33 +3448,39 @@ var cloudMesh = (function(){
   return mesh;
 })();
 
-/* Kartenbild einmal aus dem Gelände erzeugen */
-var mapImage = (function(){
-  var c = document.createElement('canvas');
-  c.width = c.height = 200;
-  var g = c.getContext('2d');
-  var img = g.createImageData(200, 200);
-  for (var py = 0; py < 200; py++){
-    for (var px = 0; px < 200; px++){
-      var x = px / 2 - 50, z = py / 2 - 50;
-      var y = W.height(x, z);
+/* Kartenbild der ganzen Welt — wird nach und nach berechnet, damit nichts hängt */
+var MAP_PX = 320;
+var mapImage = document.createElement('canvas');
+mapImage.width = mapImage.height = MAP_PX;
+var mapCtx = mapImage.getContext('2d');
+var mapData = mapCtx.createImageData(MAP_PX, MAP_PX);
+var mapRow = 0;
+function mapJob(maxMs){
+  if (mapRow >= MAP_PX) return true;
+  var t0 = performance.now(), R = W.FIELD_R;
+  while (mapRow < MAP_PX && performance.now() - t0 < maxMs){
+    var py = mapRow++;
+    for (var px = 0; px < MAP_PX; px++){
+      var x = ((px + 0.5) / MAP_PX * 2 - 1) * R, z = ((py + 0.5) / MAP_PX * 2 - 1) * R;
+      var y = W.surfaceHeight(x, z);
       var b = W.biomeAt(x, z);
       var col;
-      if (W.isWater(x, z)) col = [63, 131, 168];
+      if (y < W.WATER_Y - 0.05 && !W.insideCave(x, z)) col = [63, 131, 168];
+      else if (b === 'hoehle') col = [92, 84, 76];
       else if (b === 'schnee') col = [236, 240, 246];
       else if (b === 'wueste') col = [224, 192, 126];
       else if (b === 'strand') col = [216, 199, 154];
       else if (b === 'lava') col = W.isLava(x, z) ? [255, 106, 26] : [70, 60, 58];
       else if (b === 'pilzwald') col = [120, 110, 170];
-      else if (Math.hypot(x, z) > 46) col = [141, 143, 146];
-      else col = [95 + y * 6, 158 + y * 4, 70];
-      var i = (py * 200 + px) * 4;
-      img.data[i] = col[0]; img.data[i+1] = col[1]; img.data[i+2] = col[2]; img.data[i+3] = 255;
+      else if (Math.hypot(x, z) > R - 20) col = [141, 143, 146];
+      else col = [Math.max(40, Math.min(200, 95 + y * 4)), Math.max(90, Math.min(210, 158 + y * 2.5)), 70];
+      var i = (py * MAP_PX + px) * 4;
+      mapData.data[i] = col[0]; mapData.data[i+1] = col[1]; mapData.data[i+2] = col[2]; mapData.data[i+3] = 255;
     }
+    if (py % 16 === 15 || mapRow >= MAP_PX) mapCtx.putImageData(mapData, 0, 0);
   }
-  g.putImageData(img, 0, 0);
-  return c;
-})();
+  return mapRow >= MAP_PX;
+}
 
 var _m4 = new THREE.Matrix4();
 var _v = new THREE.Vector3();
@@ -3046,7 +3703,7 @@ var sfx = {
 /* ================================================================ Zustand */
 
 var best = 0;
-try { best = parseInt(localStorage.getItem('waldwacht-best') || '0', 10) || 0; } catch(e){ best = 0; }
+try { best = parseInt(localStorage.getItem('waldwacht-best-naechte') || '0', 10) || 0; } catch(e){ best = 0; }
 
 var ITEM_KEYS = ['holz','stein','kohle','eisen','kupfer','gold','kristall','rubin','eis','knochen','perle',
   'beeren','fleisch','braten','fisch','fischbraten','apfel','kuerbis','ei','suppe','kuchen','pilz','fliegenpilz',
@@ -3066,11 +3723,12 @@ function freshState(){
     ammo: 0, reserve: 0, reloading: false, water: 0,
     inv: inv, owned: owned,
     skills: { staerke: 0, schuetze: 0, bergbau: 0, zaehigkeit: 0, sprinter: 0, glueck: 0, koch: 0, baumeister: 0, tierfreund: 0, magier: 0 }, skillPoints: 0,
-    selected: 'hand', tab: 'waffen', pages: {}, hotbarPage: 0,
+    selected: 'hand', tab: 'bloecke', pages: {}, hotbarPage: 0,
     xp: 0, level: 1, day: 1,
     stats: { kills:0, animals:0, ores:0, chests:0, built:0, cooked:0, bosses:0, trapKills:0, bloodMoons:0,
              maxWave:0, crafted:0, bedPlaced:0, fish:0, harvests:0, tamed:0, dragons:0, trades:0, nests:0,
              eliteKills:0, mimics:0, arrowKills:0, deepCave:0, temple:0, soups:0, cakes:0,
+             blocksPlaced:0, blocksMined:0, nights:0, maxTower:0, deepest:0, torches:0,
              caves:[], got:{}, kinds:{}, seen:{} },
     achievements: {}, questIndex: 0,
     buffTime: 0, nightVision: 0, poison: 0, slowTime: 0,
@@ -3491,7 +4149,7 @@ var yaw = 0, pitch = 0;
 var looking = false, lastMX = 0, lastMY = 0;
 var desktopMode = false;
 var mouseDown = false;
-var TAB_ORDER = ['waffen','bauen','ausruestung','kueche','magie','skills','handel','aufgaben','karte','gesten'];
+var TAB_ORDER = ['bloecke','waffen','bauen','ausruestung','kueche','magie','skills','handel','aufgaben','karte','gesten'];
 
 window.addEventListener('keydown', function(e){
   keysDown[e.code] = true;
@@ -3626,17 +4284,26 @@ function platformTopAt(x, z, refY){
 /* refY = aktuelle Fußhöhe: entscheidet zwischen Höhlenboden und Gelände darüber */
 function playerFloor(x, z, refY){
   var f = W.floorAt(x, z, refY);
+  if (f === -Infinity) f = W.height(x, z);
   var p = platformTopAt(x, z, refY);
   return p > f ? p : f;
 }
 
+/* An Wänden entlangrutschen statt stehen zu bleiben */
 function tryMove(dx, dz){
+  if (tryMoveOnce(dx, dz)) return true;
+  if (Math.abs(dx) > 1e-4 && tryMoveOnce(dx, 0)) return true;
+  if (Math.abs(dz) > 1e-4 && tryMoveOnce(0, dz)) return true;
+  return false;
+}
+
+function tryMoveOnce(dx, dz){
   var nx = dolly.position.x + dx, nz = dolly.position.z + dz;
   headWorld(_v3);
   var hx = _v3.x + dx, hz = _v3.z + dz;
-  if (Math.hypot(hx, hz) > W.FIELD_R + 6) return;
+  if (Math.hypot(hx, hz) > W.FIELD_R + 6) return false;
   var ry = dolly.position.y - (riding ? 0.78 : 0);
-  if (!W.canStand(hx, hz, ry)) return;
+  if (!W.canStand(hx, hz, ry)) return false;
   var boat = deckAt(_v3.x, _v3.z, ry);
   if (boat && boat.kind !== 'boot') boat = null;
   var onDeck = platformTopAt(hx, hz, ry) > -Infinity;
@@ -3649,17 +4316,18 @@ function tryMove(dx, dz){
     boat.mesh.rotation.y += (Math.atan2(dx, dz) - boat.mesh.rotation.y) * 0.08;
     dolly.position.x = nx; dolly.position.z = nz;
     markGesture('boot');
-    return;
+    return true;
   }
-  if (wet && riding) return;
-  if (W.blocked(hx, hz, 0.34, ry)) return;
-  if (structureBlocked(hx, hz, 0.34, true, ry)) return;
+  if (wet && riding) return false;
+  if (W.blocked(hx, hz, 0.34, ry)) return false;
+  if (structureBlocked(hx, hz, 0.34, true, ry)) return false;
   var here = playerFloor(_v3.x, _v3.z, ry);
-  if (floor - here > 1.6 && !(air.active && ry > floor - 0.2)) return;
+  if (floor - here > 1.6 && !(air.active && ry > floor - 0.2)) return false;
   if (wet){ floor = Math.max(floor, W.WATER_Y - SWIM_DEPTH); }
   dolly.position.x = nx;
   dolly.position.z = nz;
   if (riding){ riding.mesh.position.x += dx; riding.mesh.position.z += dz; }
+  return true;
 }
 
 function snapTurn(sign){
@@ -3906,7 +4574,7 @@ function makeChestMesh(gift){
   var normalIdx = [];
   W.chestSpots.forEach(function(spot, i){
     var mesh = makeChestMesh(false);
-    mesh.position.set(spot.x, W.floorAt(spot.x, spot.z) + (spot.temple ? 0.8 : (spot.ruin ? 0.3 : 0)), spot.z);
+    mesh.position.set(spot.x, spot.y !== undefined ? spot.y : W.floorAt(spot.x, spot.z), spot.z);
     mesh.rotation.y = spot.temple ? 0 : Math.random() * Math.PI * 2;
     scene.add(mesh);
     chests.push({ id: i, mesh: mesh, x: spot.x, z: spot.z, opened: false, rich: spot.inCave || spot.ruin,
@@ -4325,6 +4993,11 @@ function updateShots(dt){
     if (s.kind === 'feuer' && Math.random() < 0.7) spawnBurst(s.mesh.position, 0xff9b3d, 1, 0.4, { life: 0.35 });
     var floor = playerFloor(s.mesh.position.x, s.mesh.position.z, s.mesh.position.y);
     var done = false;
+    /* In einen Block geflogen: Granaten prallen ab, alles andere trifft */
+    if (W.solidAt(s.mesh.position.x, s.mesh.position.y, s.mesh.position.z)){
+      if (s.kind === 'granate'){ s.mesh.position.addScaledVector(s.vel, -dt); s.vel.x *= -0.4; s.vel.z *= -0.4; s.vel.y *= 0.3; floor = -Infinity; }
+      else floor = s.mesh.position.y + 0.01;
+    }
 
     if (SHOT_UPDATE[s.kind]){
       done = SHOT_UPDATE[s.kind](s, dt, floor);
@@ -4376,6 +5049,7 @@ function explode(pos, radius, damage, source){
       damageCreature(c, dmg, c.mesh.position, false, source, _v4);
     }
   });
+  if (source === 'granate' || source === 'rakete') blastBlocks(pos, radius * 0.5);
 }
 
 /* ================================================================ Nahkampf und Interaktion */
@@ -4449,6 +5123,13 @@ function swing(power){
   var st = rayStructure(h.wrist, h.dir, 3.2);
   var cr = rayCreature(h.wrist, h.dir, m.range);
   var node = W.rayHitNode(h.wrist, h.dir, 4.2);
+  var vox = blockTarget(h, Math.max(3.2, m.range + 1.2));
+
+  /* Blöcke abbauen, wenn nichts anderes näher ist */
+  if (vox && (!inter || vox.dist + 0.4 < inter.dist) && (!cr || vox.dist < cr.dist) && (!st || vox.dist + 0.4 < st.dist) && (!node || vox.dist + 0.6 < node.dist)){
+    mineVoxel(vox, tool, power);
+    return;
+  }
 
   if (inter && (!cr || inter.dist < cr.dist)){
     if (inter.kind === 'chest') openChest(inter.obj);
@@ -4511,6 +5192,7 @@ function swing(power){
     if (Math.random() < luckBonus()) amount += 1;
     give(reward.gives, amount, true);
     var text = '+' + amount + ' ' + reward.label;
+    if (reward.kind === 'tree' || reward.kind === 'apfelbaum' || reward.kind === 'pine'){ give('laub', 2, true); text += ' + 2 Laub'; }
     if (reward.kind === 'bienenstock' && Math.random() < 0.35 && !creative()){ damagePlayer(1); text += ' — autsch, eine Biene!'; }
     if (reward.extra && Math.random() < reward.extra[2]){
       give(reward.extra[0], reward.extra[1], true);
@@ -5290,6 +5972,9 @@ function updateStructures(dt){
     }
   }
 
+  W.glowNear(hx, hz, 26).forEach(function(g){
+    lightSources.push({ x: g.x + 0.5, y: g.y + 0.6, z: g.z + 0.5, color: 0xffe0a0, intensity: 1.3, dist: Math.hypot(g.x + 0.5 - hx, g.z + 0.5 - hz) });
+  });
   var active = quality().lights;
   lightSources.sort(function(a, b){ return a.dist - b.dist; });
   for (var q = 0; q < lightPool.length; q++){
@@ -5716,7 +6401,7 @@ function createEnemy(kind, x, z, waveNum, forceElite, refY){
   var def = ENEMY_DEF[kind];
   var inCave = W.insideCave(x, z, refY);
   var mesh = makeEnemyMesh(kind, inCave);
-  mesh.position.set(x, W.floorAt(x, z, refY) + def.off, z);
+  mesh.position.set(x, playerFloor(x, z, refY) + def.off, z);
   var elite = !def.boss && (forceElite || Math.random() < 0.1);
   var body = mesh.userData.body;
   if (elite){
@@ -5801,8 +6486,10 @@ function createAnimal(kind, x, z, tame, refY){
 function spawnAnimal(kind){
   var def = ANIMAL_DEF[kind];
   for (var tries = 0; tries < 80; tries++){
-    var a = Math.random() * Math.PI * 2, d = 8 + Math.random() * (W.FIELD_R - 12);
-    var x = Math.cos(a) * d, z = Math.sin(a) * d;
+    var a = Math.random() * Math.PI * 2, d = 18 + Math.random() * 62;
+    headWorld(_v4);
+    var x = _v4.x + Math.cos(a) * d, z = _v4.z + Math.sin(a) * d;
+    if (Math.hypot(x, z) > W.FIELD_R - 8) continue;
     if (def.water){ if (W.isWater(x, z) && W.height(x, z) < W.WATER_Y - 0.3){ var dk = createAnimal(kind, x, z); dk.mesh.position.y = W.WATER_Y; return dk; } continue; }
     if (def.shore){
       var hy = W.height(x, z);
@@ -5817,6 +6504,27 @@ function spawnAnimal(kind){
   }
   return null;
 }
+/* In der großen Welt bleiben die Tiere in der Nähe des Spielers */
+function relocateAnimal(a){
+  var def = ANIMAL_DEF[a.kind];
+  headWorld(_v4);
+  for (var t = 0; t < 14; t++){
+    var ang = Math.random() * Math.PI * 2, d = 45 + Math.random() * 45;
+    var x = _v4.x + Math.cos(ang) * d, z = _v4.z + Math.sin(ang) * d;
+    if (Math.hypot(x, z) > W.FIELD_R - 8) continue;
+    if (def.water){ if (!W.isWater(x, z)) continue; }
+    else if (def.shore){ var hy = W.height(x, z); if (hy < W.WATER_Y + 0.05 || hy > W.WATER_Y + 0.8 || W.insideCave(x, z)) continue; }
+    else {
+      if (W.insideCave(x, z) || W.floorAt(x, z) < W.WATER_Y + 0.5 || W.blocked(x, z, 0.5)) continue;
+      if (def.biome && W.biomeAt(x, z) !== def.biome) continue;
+    }
+    a.mesh.position.set(x, def.water ? W.WATER_Y : playerFloor(x, z) + (a.groundOffset || 0), z);
+    if (a.target) a.target.set(x, 0, z);
+    if (a.home) a.home.set(x, 0, z);
+    return;
+  }
+}
+
 var ANIMAL_WISHES = [['hase', 7], ['reh', 5], ['huhn', 5], ['wolf', 4], ['baer', 2]];
 
 [['hase', 7], ['reh', 5], ['huhn', 5], ['wolf', 4], ['baer', 2]].forEach(function(entry){
@@ -6148,7 +6856,8 @@ function updateEnemies(dt){
       else if (blocker && !keepAway){
         if (e.attackCd <= 0){ e.attackCd = 1.2; damageStructure(blocker, e.boss ? 6 : (e.kind.indexOf('golem') >= 0 ? 5 : 3)); }
       } else if (dist > 1.1 + keepAway && active){
-        moveCreature(e, nx, nz, e.speed * slowF, dt, true);
+        if (moveCreature(e, nx, nz, e.speed * slowF, dt, true)) e.stuckT = 0;
+        else { e.stuckT = (e.stuckT || 0) + dt; if (e.stuckT > 1) enemyBreakBlocks(e, nx, nz); }
       } else if (keepAway && dist < keepAway - 1 && active){
         moveCreature(e, -nx, -nz, e.speed * slowF, dt, true);
       } else if (!keepAway && active && e.attackCd <= 0 && (reachY || target.pet) && !def.explode){
@@ -6248,6 +6957,8 @@ function updateAnimals(dt){
     var dist = Math.hypot(px - pos.x, pz - pos.z);
     if (dist < 16) seeKind(a.kind);
     if (a.ridden) continue;
+    if (!a.tame && dist > 170){ relocateAnimal(a); continue; }
+    if (!a.tame && dist > 95){ a.mesh.visible = false; continue; }
     if (!ANIMAL_DEF[a.kind].flyingAnimal) a.mesh.visible = dist < animalCull();
     if (ANIMAL_DEF[a.kind].custom && animalCustom(a, dt, dist, px, pz)) continue;
     var tx = pos.x, tz = pos.z, speed = 0.8;
@@ -6375,7 +7086,7 @@ function updateProjectiles(dt){
       state.stats.blocks = (state.stats.blocks || 0) + 1;
     } else if (hit){ damagePlayer(p.dmg, true); if (p.poison) state.poison = Math.max(state.poison, 6); projectileHitsPlayer(p); }
     else if (petHit){ companion.hp -= p.dmg; if (companion.hp <= 0) companionDown(); }
-    if (hit || petHit || p.life <= 0 || p.mesh.position.y < W.floorAt(p.mesh.position.x, p.mesh.position.z, p.mesh.position.y)){
+    if (hit || petHit || p.life <= 0 || p.mesh.position.y < W.floorAt(p.mesh.position.x, p.mesh.position.z, p.mesh.position.y) || W.solidAt(p.mesh.position.x, p.mesh.position.y, p.mesh.position.z)){
       scene.remove(p.mesh);
       projectiles.splice(i, 1);
     }
@@ -6389,7 +7100,8 @@ var caveDark = 0;
 function updateCaves(dt){
   headWorld(_v3);
   var cave = W.caveAt(_v3.x, _v3.z, dolly.position.y);
-  caveDark += ((cave ? 1 : 0) - caveDark) * Math.min(1, dt * 2.5);
+  var roofed = !cave && W.skyCovered(_v3.x, _v3.y, _v3.z);
+  caveDark += ((cave ? 1 : (roofed ? 0.6 : 0)) - caveDark) * Math.min(1, dt * 2.5);
   if (cave && state.stats.caves.indexOf(cave.id) < 0){
     state.stats.caves.push(cave.id);
     var n = Math.round(3 * diff().enemies);
@@ -6425,12 +7137,18 @@ function updateCaves(dt){
   }
 }
 
-/* ================================================================ Wellen und Blutmond */
+/* ================================================================ Monster im Dunkeln und Blutmond */
 
-var wave = { n: 0, pending: 0, spawnTimer: 0, phase: 'break', timer: 45 };
-var bloodMoon = false, bloodSpawnTimer = 0, naturalTimer = 15;
+/* Keine Wellen mehr: Monster erscheinen ab und zu dort, wo es dunkel ist — nachts draußen,
+   in Höhlen, Tunneln und unter Dächern. Fackeln, Laternen, Lagerfeuer und Leuchtblöcke halten sie fern. */
+var wave = { n: 1, pending: 0, spawnTimer: 0, phase: 'dunkel', timer: 0 };
+var bloodMoon = false, darkTimer = 10, despawnClock = 0, bossPlan = null;
 
 function setWaveText(text){ if (state.waveText !== text){ state.waveText = text; uiDirty = true; } }
+
+function dangerLevel(){ return Math.max(1, Math.min(25, 1 + Math.floor((state.day - 1) * 0.8))); }
+
+function darkAt(x, y, z){ return nightFactor > 0.55 || W.skyCovered(x, y + 1.2, z) || !!W.caveAt(x, z, y); }
 
 function pickEnemyKind(n){
   headWorld(_v3);
@@ -6440,90 +7158,100 @@ function pickEnemyKind(n){
   if (nightFactor > 0.5){
     if (n >= 2 && r < 0.14) return 'skelett';
     if (n >= 3 && r < 0.24) return 'geist';
-    if (n >= 2 && r < 0.38) return 'zombie';
-    if (n >= 5 && r < 0.44) return 'hexe';
+    if (r < 0.4) return 'zombie';
+    if (n >= 5 && r < 0.46) return 'hexe';
   }
   if (n >= 6 && Math.random() < 0.08) return 'bomber';
   if ((biome === 'wald' || biome === 'pilzwald') && n >= 2 && Math.random() < 0.12) return 'schleim';
   if (biome === 'hoehle') return Math.random() < 0.5 ? 'spinne' : 'fledermaus';
   if (biome === 'wueste' && r < 0.3) return 'skorpion';
   if (biome === 'schnee' && r < 0.2) return 'eisgolem';
-  if (n >= 4 && r < 0.45) return 'spitter';
-  if (n >= 3 && r < 0.55) return 'jumper';
-  if (n >= 2 && r < 0.7) return 'flyer';
+  if (n >= 4 && r < 0.5) return 'spitter';
+  if (n >= 3 && r < 0.6) return 'jumper';
+  if (n >= 2 && r < 0.72) return 'flyer';
   return 'crawler';
 }
 
-function updateWaves(dt){
-  if (state.dead) return;
-  if (diff().enemies === 0){ setWaveText(creative() ? 'Kreativmodus' : 'Friedlich'); return; }
-  if (wave.phase === 'break'){
-    wave.timer -= dt;
-    setWaveText('Welle ' + (wave.n + 1) + ' in ' + Math.ceil(Math.max(0, wave.timer)) + 's');
-    if (wave.timer <= 0){
-      wave.n++;
-      wave.pending = Math.round((Math.min(16, 2 + wave.n * 2) + (nightFactor > 0.5 ? 2 : 0)) * diff().enemies);
-      wave.spawnTimer = 0;
-      wave.phase = 'fight';
-      sfx.wave();
-      var boss = null;
-      if (wave.n % 15 === 0){
-        banner('DRACHEN-WELLE ' + wave.n, ['Ein Drache verdunkelt den Himmel!'], '#e4452e');
-        boss = spawnEnemy('drache', wave.n);
-        sfx.roar();
-      } else if (wave.n % 5 === 0){
-        var kk = wave.n / 5;
-        var bossKind = ['brute', 'wasp', 'waldriese'][(kk - Math.floor(kk / 3) - 1) % 3];
-        banner('BOSS-WELLE ' + wave.n, [bossKind === 'brute' ? 'Ein Brocken kommt!' : (bossKind === 'wasp' ? 'Die Riesenwespe greift an!' : 'Der Waldriese stampft heran!')], '#e4452e');
-        boss = spawnEnemy(bossKind, wave.n);
-      } else banner('WELLE ' + wave.n, [nightFactor > 0.5 ? 'Nachts sind es mehr!' : 'Halte durch!'], '#7bd389');
-      if (boss) boss.wave = true;
-    }
-    return;
-  }
-  if (wave.pending > 0){
-    wave.spawnTimer -= dt;
-    if (wave.spawnTimer <= 0){
-      wave.spawnTimer = 1.1;
-      var we = spawnEnemy(pickEnemyKind(wave.n), wave.n);
-      if (we) we.wave = true;
-      wave.pending--;
-    }
-  } else if (!enemies.some(function(e){ return e.wave; })){
-    wave.phase = 'break';
-    wave.timer = 40;
-    give('kristall', 1); give('eisen', 1);
-    state.stats.maxWave = Math.max(state.stats.maxWave, wave.n);
-    banner('GESCHAFFT', ['Welle ' + wave.n + ' überstanden', '+1 Eisen +1 Kristall'], '#7bd389');
-    sfx.craft();
-    if (wave.n > state.best){
-      state.best = wave.n;
-      try { localStorage.setItem('waldwacht-best', String(state.best)); } catch(e){}
-    }
-    saveSoon();
-  }
-  if (wave.phase === 'fight') setWaveText('Welle ' + wave.n + ' · Gegner ' + (wave.pending + enemies.filter(function(e){ return e.wave; }).length));
+function pickUndergroundKind(){
+  var r = Math.random();
+  return r < 0.28 ? 'spinne' : (r < 0.48 ? 'crawler' : (r < 0.62 ? 'skelett' : (r < 0.76 ? 'fledermaus' : (r < 0.9 ? 'jumper' : 'golem'))));
 }
 
-/* Natürliche Bewohner: Skorpione in der Wüste, Eisgolems im Schnee, Geister in der Nacht */
-function updateNaturalSpawns(dt){
-  if (diff().enemies === 0 || state.dead || sleeping) return;
-  naturalTimer -= dt;
-  if (naturalTimer > 0) return;
-  naturalTimer = 20;
+function trySpawnDark(head, feet){
+  var cave = W.caveAt(head.x, head.z, feet);
+  for (var t = 0; t < 14; t++){
+    var a = Math.random() * Math.PI * 2, d = cave ? 6 + Math.random() * 6 : 12 + Math.random() * 14;
+    var x = head.x + Math.cos(a) * d, z = head.z + Math.sin(a) * d;
+    if (Math.hypot(x, z) > W.FIELD_R - 4) continue;
+    var fy = W.floorRaw(x, z, feet + 3);
+    if (fy === -Infinity || Math.abs(fy - feet) > 8) continue;
+    if (!W.isDry(x, z, fy) || W.isLava(x, z)) continue;
+    if (W.blocked(x, z, 0.4, fy)) continue;
+    if (!darkAt(x, fy, z) || isLitSpot(x, fy, z)) continue;
+    if (structures.some(function(s){ return Math.hypot(s.x - x, s.z - z) < 2.5; })) continue;
+    var underground = W.skyCovered(x, fy + 1.2, z) || !!W.caveAt(x, z, fy);
+    var kind = (underground && nightFactor < 0.55) ? pickUndergroundKind() : pickEnemyKind(wave.n);
+    var def = ENEMY_DEF[kind];
+    if (!def || (def.flying && underground && !def.caveOk)) kind = 'crawler';
+    var e = createEnemy(kind, x, z, wave.n, false, fy);
+    e.dark = true;
+    spawnBurst(e.mesh.position, 0x5a3a8a, 10, 2.2);
+    return e;
+  }
+  return null;
+}
+
+function updateWaves(dt){
+  wave.n = dangerLevel();
   headWorld(_v3);
-  var biome = W.biomeAt(_v3.x, _v3.z, dolly.position.y);
-  var natural = enemies.filter(function(e){ return e.natural; }).length;
-  if (natural >= 4) return;
-  var kind = null, near = null;
-  if (biome === 'wueste') kind = 'skorpion';
-  else if (biome === 'schnee') kind = 'eisgolem';
-  else if (biome === 'hoehle'){ kind = Math.random() < 0.55 ? 'fledermaus' : 'spinne'; near = W.caveAt(_v3.x, _v3.z, dolly.position.y); }
-  else if (biome === 'pilzwald') kind = 'schleim';
-  else if (nightFactor > 0.6 && Math.random() < 0.5) kind = Math.random() < 0.5 ? 'geist' : 'zombie';
-  if (!kind) return;
-  var e = spawnEnemy(kind, Math.max(1, wave.n), near);
-  if (e) e.natural = true;
+  var feet = dolly.position.y;
+  if (diff().enemies === 0) setWaveText(creative() ? 'Kreativmodus' : 'Friedlich');
+  else {
+    var lit = isLitSpot(_v3.x, feet, _v3.z);
+    setWaveText((lit ? 'Im Licht: sicher' : (darkAt(_v3.x, feet, _v3.z) ? 'Dunkel: Monster!' : 'Hell: sicher')) + ' · Gefahr ' + wave.n);
+  }
+  if (state.dead || sleeping || diff().enemies === 0) return;
+  updateBossNight(dt);
+  darkTimer -= dt;
+  if (darkTimer > 0) return;
+  darkTimer = (6 + Math.random() * 8) / (bloodMoon ? 2 : 1) / Math.max(0.5, diff().enemies);
+  var alive = 0;
+  for (var i = 0; i < enemies.length; i++) if (enemies[i].dark) alive++;
+  var cap = Math.min(12, Math.round((2 + wave.n * 0.35 + (bloodMoon ? 3 : 0)) * diff().enemies));
+  if (alive >= cap) return;
+  trySpawnDark(_v3, feet);
+}
+
+/* Weit entfernte Dunkel-Monster verschwinden, im Sonnenlicht zerfallen sie */
+function updateNaturalSpawns(dt){
+  despawnClock -= dt;
+  if (despawnClock > 0) return;
+  despawnClock = 1;
+  headWorld(_v3);
+  for (var i = enemies.length - 1; i >= 0; i--){
+    var e = enemies[i];
+    if (!e.dark || e.boss) continue;
+    var p = e.mesh.position;
+    if (Math.hypot(p.x - _v3.x, p.z - _v3.z) > 60){ e.hp = 0; scene.remove(e.mesh); scene.remove(e.bar); enemies.splice(i, 1); continue; }
+    var fy = footY(e);
+    if (nightFactor < 0.25 && !eclipseActive && !W.skyCovered(p.x, fy + 1.2, p.z) && !W.caveAt(p.x, p.z, fy)) e.burnT = Math.max(e.burnT || 0, 1.2);
+  }
+}
+
+/* Jede 5. Nacht kommt ein Boss aus der Dunkelheit, in Nacht 15, 30 … der Drache */
+function updateBossNight(dt){
+  if (!bossPlan) return;
+  if (nightFactor < 0.3){ bossPlan = null; return; }
+  bossPlan.t -= dt;
+  if (bossPlan.t > 0) return;
+  var kind = bossPlan.kind;
+  bossPlan = null;
+  var boss = spawnEnemy(kind, Math.max(3, wave.n));
+  if (!boss) return;
+  boss.wave = true;
+  if (kind === 'drache'){ banner('DER DRACHE!', ['Ein Drache verdunkelt den Himmel!'], '#e4452e'); }
+  else banner('BOSS AUS DER DUNKELHEIT', [kind === 'brute' ? 'Ein Brocken kommt!' : (kind === 'wasp' ? 'Die Riesenwespe greift an!' : 'Der Waldriese stampft heran!')], '#e4452e');
+  sfx.roar();
 }
 
 var wasNight = false;
@@ -6534,23 +7262,31 @@ function updateBloodMoon(dt){
     bloodMoon = state.day % 4 === 0;
     tip('night');
     if (bloodMoon){
-      banner('BLUTMOND', ['Heute Nacht sind sie stärker', 'Bessere Beute'], '#e4452e');
+      banner('BLUTMOND', ['Heute Nacht kommen mehr Monster', 'Bessere Beute'], '#e4452e');
       tone(110, 1.2, 'sawtooth', 0.07, 70);
     }
+    if (diff().enemies > 0 && state.day % 5 === 0){
+      var k = state.day / 5;
+      bossPlan = { t: 25 + Math.random() * 25, kind: state.day % 15 === 0 ? 'drache' : ['brute', 'wasp', 'waldriese'][(k - Math.floor(k / 3) - 1) % 3] };
+    }
   }
-  if (!isNight && wasNight && bloodMoon){
+  if (!isNight && wasNight && gameStarted){
+    if (!state.dead){
+      state.stats.nights = (state.stats.nights || 0) + 1;
+      var n = state.stats.nights;
+      if (bloodMoon) state.stats.bloodMoons++;
+      give('eisen', 1); give('kristall', 1);
+      banner(bloodMoon ? 'BLUTMOND ÜBERSTANDEN' : 'NACHT ÜBERSTANDEN', ['Nacht ' + n + ' geschafft', '+1 Eisen +1 Kristall'], '#7bd389');
+      if (n > state.best){
+        state.best = n;
+        try { localStorage.setItem('waldwacht-best-naechte', String(n)); } catch(e){}
+      }
+      saveSoon();
+    }
     bloodMoon = false;
-    if (!state.dead){ state.stats.bloodMoons++; banner('ÜBERSTANDEN', ['Der Blutmond ist vorbei'], '#7bd389'); }
   }
   wasNight = isNight;
   moonDisc.material.color.setHex(bloodMoon ? 0xd8284a : 0xe2e8ff);
-  if (bloodMoon && isNight && diff().enemies > 0 && !state.dead && !sleeping){
-    bloodSpawnTimer -= dt;
-    if (bloodSpawnTimer <= 0){
-      bloodSpawnTimer = 7 / diff().enemies;
-      if (enemies.length < 18) spawnEnemy(pickEnemyKind(Math.max(3, wave.n)), Math.max(2, wave.n));
-    }
-  }
 }
 
 /* ================================================================ Tag, Nacht und Wetter */
@@ -6629,6 +7365,7 @@ function updateDayNight(dt){
   sunDisc.position.set(_v3.x + dirX * 60, _v3.y + dirY * 60, _v3.z - 22);
   moonDisc.position.set(_v3.x - dirX * 60, _v3.y - dirY * 60, _v3.z + 22);
   stars.position.set(_v3.x, _v3.y, _v3.z);
+  cloudMesh.position.set(_v3.x, Math.max(0, _v3.y - 1.6), _v3.z);
   sunDisc.visible = dirY > -0.08 && weather.rain < 0.6;
   moonDisc.visible = dirY < 0.08;
   sun.position.set(dirX * 48, Math.max(4, dirY * 48), -18);
@@ -6747,11 +7484,13 @@ var birds = (function(){
 
 function updateBirds(dt){
   var show = quality().birds && nightFactor < 0.4 && caveDark < 0.5;
+  headWorld(_v3);
+  var bx = _v3.x, bz = _v3.z;
   birds.forEach(function(f){
     f.group.visible = show;
     if (!show) return;
     f.angle += f.speed * dt;
-    f.group.position.set(Math.cos(f.angle) * f.radius, f.height, Math.sin(f.angle) * f.radius);
+    f.group.position.set(bx + Math.cos(f.angle) * f.radius, Math.max(f.height, _v3.y + 18), bz + Math.sin(f.angle) * f.radius);
     f.group.rotation.y = -f.angle;
     var flap = Math.sin(performance.now() / 120) * 0.4;
     f.group.children.forEach(function(b, i){ b.rotation.z = (i % 2 ? flap : -flap); });
@@ -6985,8 +7724,8 @@ function die(){
   deathTimer = 4.5;
   stopFishing();
   deathPanel.draw('BESIEGT', [
-    'Du bist bis Welle ' + Math.max(1, wave.n) + ' gekommen.',
-    'Bestwert: Welle ' + state.best,
+    'Du hast ' + (state.stats.nights || 0) + ' Nächte überlebt.',
+    'Bestwert: ' + state.best + ' Nächte',
     (state.spawn.x || state.spawn.z) ? 'Du wachst an deinem Startpunkt auf.' : 'Deine Sachen behältst du.'
   ], '#e4452e');
   deathPanel.mesh.visible = true;
@@ -7171,8 +7910,9 @@ function banner(title, lines, accent){
 }
 
 var TIPS = {
-  start:  ['Sammle Steine mit der Hand.', 'Die Aufgaben im Menü zeigen dir den Weg.'],
-  night:  ['Nachts brauchst du Licht:', 'Fackeln aus Holz + Kohle (Tab Ausrüstung).'],
+  start:  ['Alles ist aus Blöcken: pinchen = abbauen.', 'Block in der Hotbar wählen = bauen.'],
+  night:  ['Monster kommen nur im Dunkeln!', 'Fackeln und Leuchtblöcke halten sie fern.'],
+  blocks: ['Pinch halten = mehrere Blöcke setzen.', 'Faust in einen Block schlagen = abbauen.'],
   cave:   ['In Höhlen ist es dunkel.', 'Halte eine Fackel in der Hand.'],
   hunger: ['Du wirst hungrig.', 'Beeren, Äpfel oder gebratenes Fleisch helfen.'],
   thirst: ['Du hast Durst.', 'Mit leerer Hand aufs Wasser zeigen und pinchen.'],
@@ -7195,6 +7935,8 @@ function S(){ return state.stats; }
 var QUESTS = [
   { title:'Sammle 3 Stein mit der Hand',   goal: 3, val: function(){ return gotCount('stein'); }, reward: [['holz', 3]], xp: 8, target: 'stein' },
   { title:'Sammle 4 Holz',                 goal: 4, val: function(){ return gotCount('holz'); }, reward: [['stein', 2]], xp: 8, target: 'tree' },
+  { title:'Baue 10 Blöcke ab',             goal: 10, val: function(){ return S().blocksMined || 0; }, reward: [['fackel', 2]], xp: 10 },
+  { title:'Setze 10 Blöcke',               goal: 10, val: function(){ return S().blocksPlaced || 0; }, reward: [['bretter', 12]], xp: 10 },
   { title:'Baue eine Spitzhacke',          goal: 1, val: function(){ return state.owned.spitzhacke ? 1 : 0; }, reward: [['beeren', 2]], xp: 10 },
   { title:'Betritt eine Höhle',            goal: 1, val: function(){ return S().caves.length; }, reward: [['fackel', 2]], xp: 15, target: 'cave' },
   { title:'Baue 4 Eisen ab',               goal: 4, val: function(){ return gotCount('eisen'); }, reward: [['kristall', 1]], xp: 12, target: 'cave' },
@@ -7203,8 +7945,10 @@ var QUESTS = [
   { title:'Jage ein Tier',                 goal: 1, val: function(){ return S().animals; }, reward: [['leder', 1]], xp: 10, target: 'animal' },
   { title:'Brate Fleisch am Lagerfeuer',   goal: 1, val: function(){ return S().cooked; }, reward: [['kohle', 2]], xp: 12 },
   { title:'Öffne eine Schatzkiste',        goal: 1, val: function(){ return S().chests; }, reward: [['gold', 1]], xp: 12, target: 'chest' },
-  { title:'Überlebe Welle 3',              goal: 3, val: function(){ return S().maxWave; }, reward: [['turm', 1]], xp: 20 },
+  { title:'Überlebe 2 Nächte',             goal: 2, val: function(){ return S().nights || 0; }, reward: [['turm', 1]], xp: 20 },
   { title:'Stelle ein Bett auf',           goal: 1, val: function(){ return S().bedPlaced; }, reward: [['laterne', 1]], xp: 15 },
+  { title:'Mach Licht: 4 Fackeln oder Leuchtblöcke', goal: 4, val: function(){ return S().torches || 0; }, reward: [['leuchtblock', 4]], xp: 15 },
+  { title:'Baue einen Turm: 8 Blöcke hoch',goal: 8, val: function(){ return S().maxTower || 0; }, reward: [['goldblock', 2]], xp: 25 },
   { title:'Baue 3 Gold ab',                goal: 3, val: function(){ return gotCount('gold'); }, reward: [['granate', 2]], xp: 20, target: 'cave' },
   { title:'Stelle eine Werkbank auf',      goal: 1, val: function(){ return structures.some(function(s){ return s.kind === 'werkbank'; }) ? 1 : 0; }, reward: [['eisen', 3]], xp: 15 },
   { title:'Baue das Sturmgewehr',          goal: 1, val: function(){ return state.owned.sturmgewehr ? 1 : 0; }, reward: [], ammo: 30, xp: 25 },
@@ -7220,9 +7964,11 @@ var QUESTS = [
   { title:'Baue einen Blitzturm',          goal: 1, val: function(){ return structures.some(function(s){ return s.kind === 'blitzturm'; }) ? 1 : 0; }, reward: [['gold', 2]], xp: 25 },
   { title:'Betritt die Tiefenhöhle',       goal: 1, val: function(){ return S().deepCave; }, reward: [['nachtsicht', 1]], xp: 30, target: 'deep' },
   { title:'Besiege 3 Elite-Gegner',        goal: 3, val: function(){ return S().eliteKills; }, reward: [['rubin', 1]], xp: 30 },
-  { title:'Überlebe Welle 10',             goal: 10, val: function(){ return S().maxWave; }, reward: [['medipackxl', 1]], xp: 50 },
+  { title:'Grabe tief: bis Höhe -20',      goal: 1, val: function(){ return (S().deepest || 0) <= -20 ? 1 : 0; }, reward: [['rubin', 1]], xp: 40 },
+  { title:'Baue 200 Blöcke ab',            goal: 200, val: function(){ return S().blocksMined || 0; }, reward: [['kristall', 3]], xp: 40 },
+  { title:'Überlebe 7 Nächte',             goal: 7, val: function(){ return S().nights || 0; }, reward: [['medipackxl', 1]], xp: 50 },
   { title:'Baue das Energieschwert',       goal: 1, val: function(){ return state.owned.energieschwert ? 1 : 0; }, reward: [['gold', 3]], xp: 40 },
-  { title:'Besiege den Drachen (Welle 15)',goal: 1, val: function(){ return S().dragons; }, reward: [['rubin', 3]], xp: 200 }
+  { title:'Besiege den Drachen (Nacht 15)',goal: 1, val: function(){ return S().dragons; }, reward: [['rubin', 3]], xp: 200 }
 ];
 
 /* ================================================================ Erfolge */
@@ -7259,7 +8005,14 @@ var ACHIEVEMENTS = [
   { id:'schuetze',title:'Meisterschütze',   test: function(){ return S().arrowKills >= 20; } },
   { id:'mimic',   title:'Mimic-Jäger',      test: function(){ return S().mimics >= 1; } },
   { id:'elite',   title:'Elitejäger',       test: function(){ return S().eliteKills >= 5; } },
-  { id:'legende', title:'Legende (Lv 20)',  test: function(){ return state.level >= 20; } }
+  { id:'legende', title:'Legende (Lv 20)',  test: function(){ return state.level >= 20; } },
+  { id:'block100', title:'Blockbauer',      test: function(){ return (S().blocksPlaced || 0) >= 100; } },
+  { id:'block1000',title:'Baumeister der Blöcke', test: function(){ return (S().blocksPlaced || 0) >= 1000; } },
+  { id:'mine200', title:'Minenarbeiter',    test: function(){ return (S().blocksMined || 0) >= 200; } },
+  { id:'turm15',  title:'Himmelsturm',      test: function(){ return (S().maxTower || 0) >= 15; } },
+  { id:'tief',    title:'Bis zum Grundgestein', test: function(){ return (S().deepest || 0) <= W.MIN_Y + 3; } },
+  { id:'nacht10', title:'Nachtwächter',     test: function(){ return (S().nights || 0) >= 10; } },
+  { id:'licht',   title:'Lichtbringer',     test: function(){ return (S().torches || 0) >= 20; } }
 ];
 
 var progressClock = 0;
@@ -7317,10 +8070,10 @@ var BESTIARY = [
   { kind: 'eisgolem', name: 'Eisgolem',        info: 'Schnee, verlangsamt', hostile: true },
   { kind: 'mimic',    name: 'Mimic',           info: 'getarnte Schatzkiste', hostile: true },
   { kind: 'nest',     name: 'Monsternest',     info: 'brütet Krabbler aus', hostile: true },
-  { kind: 'brute',    name: 'Brocken',         info: 'Boss, Welle 5', hostile: true },
-  { kind: 'wasp',     name: 'Riesenwespe',     info: 'Boss, Welle 10', hostile: true },
+  { kind: 'brute',    name: 'Brocken',         info: 'Boss, jede 5. Nacht', hostile: true },
+  { kind: 'wasp',     name: 'Riesenwespe',     info: 'Boss aus der Dunkelheit', hostile: true },
   { kind: 'golemking',name: 'Golemkönig',      info: 'Boss der Tiefenhöhle', hostile: true },
-  { kind: 'drache',   name: 'Drache',          info: 'Endboss, Welle 15', hostile: true },
+  { kind: 'drache',   name: 'Drache',          info: 'Endboss, Nacht 15', hostile: true },
   { kind: 'haendler', name: 'Händler',         info: 'jeden 3. Tag' }
 ];
 
@@ -7417,7 +8170,7 @@ function saveGame(){
   try {
     headWorld(_v3);
     var data = {
-      v: 3, seed: W.SEED,
+      v: 4, seed: W.SEED,
       hp: state.hp, maxHp: state.maxHp, hunger: state.hunger, thirst: state.thirst, warmth: state.warmth,
       ammo: state.ammo, reserve: state.reserve, water: state.water,
       inv: state.inv, owned: state.owned, skills: state.skills, skillPoints: state.skillPoints,
@@ -7433,7 +8186,8 @@ function saveGame(){
       }),
       chests: state.openedChests.slice(),
       nests: nests.map(function(n){ return n.hp > 0 ? 1 : 0; }),
-      x150: extraSaveData()
+      x150: extraSaveData(),
+      vox: W.exportEdits()
     };
     localStorage.setItem(SAVE_KEY, JSON.stringify(data));
     saveFlag = false;
@@ -7468,16 +8222,20 @@ function applySave(data){
   state.best = Math.max(state.best, data.best || 0);
   state.log = data.log || [];
   timeOfDay = typeof data.timeOfDay === 'number' ? data.timeOfDay : 0.3;
-  if (data.pos) dolly.position.set(data.pos.x, playerFloor(data.pos.x, data.pos.z, data.pos.y), data.pos.z);
+  /* Alte Spielstände stammen aus der Welt ohne Blöcke: Höhen neu bestimmen */
+  var voxWorld = (data.v || 0) >= 4;
+  if (voxWorld && data.vox && !editsImported){ W.importEdits(data.vox); editsImported = true; }
+  if (data.pos) dolly.position.set(data.pos.x, voxWorld ? playerFloor(data.pos.x, data.pos.z, data.pos.y) : W.height(data.pos.x, data.pos.z), data.pos.z);
   (data.structures || []).forEach(function(s){
     if (!BUILDABLE[s[0]]) return;
     var extra = s[4] ? { crop: s[4].crop, growth: s[4].growth } : {};
-    if (typeof s[5] === 'number') extra.y = s[5];
+    if (typeof s[5] === 'number' && voxWorld) extra.y = s[5];
     var st = addStructure(s[0], s[1], s[2], s[3], true, extra);
     if (st.kind === 'farmbeet') refreshFarm(st);
   });
   state.spawn = data.spawn || state.spawn;
-  state.openedChests = (data.chests || []).slice();
+  if (!voxWorld && state.spawn) state.spawn.y = W.height(state.spawn.x || 0, state.spawn.z || 0);
+  state.openedChests = voxWorld ? (data.chests || []).slice() : [];
   state.openedChests.forEach(function(id){
     var c = chests.filter(function(ch){ return ch.id === id; })[0];
     if (!c) return;
@@ -7510,9 +8268,11 @@ function readRecords(){
   try { return JSON.parse(localStorage.getItem('waldwacht-records') || '{}') || {}; } catch(e){ return {}; }
 }
 
+var editsImported = false;
+
 function saveRecords(){
   var r = readRecords();
-  r.wave = Math.max(r.wave || 0, state.stats.maxWave || 0, state.best || 0);
+  r.nights = Math.max(r.nights || 0, state.stats.nights || 0);
   r.day = Math.max(r.day || 0, state.day || 0);
   r.kills = Math.max(r.kills || 0, state.stats.kills || 0);
   r.level = Math.max(r.level || 0, state.level || 0);
@@ -7992,6 +8752,8 @@ function updateInteraction(dt){
     if (ownedTool && pressed) castFireball();
   } else if (sel === 'angel'){
     if (ownedTool) useRod(justPressed);
+  } else if (BLOCK_ITEMS[sel]){
+    updateBlockHand(ctx);
   } else if (USE_ITEMS[sel]){
     if (justPressed){ useItem(sel); pressLock = true; }
   } else if (BUILDABLE[sel]){
@@ -8096,7 +8858,7 @@ function uiState(){
     statsLines: [
       'Gegner ' + state.stats.kills + ' · Tiere ' + state.stats.animals + ' · Erz ' + state.stats.ores + ' · Kisten ' + state.stats.chests +
         ' · Gebaut ' + state.stats.built + ' · Fische ' + state.stats.fish + ' · Ernten ' + state.stats.harvests,
-      'Beste Welle ' + state.stats.maxWave + ' · Bosse ' + state.stats.bosses + ' · Nester ' + state.stats.nests + ' · Elite ' + state.stats.eliteKills +
+      'Nächte ' + (state.stats.nights || 0) + ' · Blöcke ' + (state.stats.blocksPlaced || 0) + ' gesetzt, ' + (state.stats.blocksMined || 0) + ' abgebaut · Bosse ' + state.stats.bosses + ' · Nester ' + state.stats.nests + ' · Elite ' + state.stats.eliteKills +
         ' · Handel ' + state.stats.trades + ' · Rang: ' + rankName(state.level)
     ],
     achievements: ACHIEVEMENTS.map(function(a){ return { title: a.title, done: !!state.achievements[a.id] }; }),
@@ -8104,18 +8866,29 @@ function uiState(){
     bestiary: BESTIARY.map(function(b){ return { name: b.name, info: b.info, hostile: !!b.hostile, seen: !!state.stats.seen[b.kind], kills: state.stats.kinds[b.kind] || 0 }; }),
     bestiarySeen: BESTIARY.filter(function(b){ return state.stats.seen[b.kind]; }).length,
     mapImage: mapImage,
-    map: state.tab === 'karte' ? {
-      caves: W.caves.map(function(c){ return { x: c.x, z: c.z, r: c.r, deep: c.deep, visited: state.stats.caves.indexOf(c.id) >= 0 }; }),
-      structures: structures.map(function(s){ return { x: s.x, z: s.z }; }),
-      chests: chests.filter(function(c){ return !c.opened; }).map(function(c){ return { x: c.x, z: c.z }; })
+    map: state.tab === 'karte' ? mapState() : null
+  };
+}
+
+/* Die Karte zeigt einen Ausschnitt von 300 m um den Spieler */
+function mapState(){
+  headWorld(_v3);
+  var half = 150, R = W.FIELD_R;
+  var cx = Math.max(-R + half, Math.min(R - half, _v3.x)), cz = Math.max(-R + half, Math.min(R - half, _v3.z));
+  var view = { x0: cx - half, z0: cz - half, size: half * 2, world: R * 2, px: MAP_PX };
+  function inView(x, z){ return x > view.x0 - 12 && x < view.x0 + view.size + 12 && z > view.z0 - 12 && z < view.z0 + view.size + 12; }
+  return {
+      view: view,
+      caves: W.caves.filter(function(c){ return inView(c.x, c.z); }).map(function(c){ return { x: c.x, z: c.z, r: c.r, deep: c.deep, visited: state.stats.caves.indexOf(c.id) >= 0 }; }),
+      structures: structures.filter(function(s){ return inView(s.x, s.z); }).map(function(s){ return { x: s.x, z: s.z }; }),
+      chests: chests.filter(function(c){ return !c.opened && inView(c.x, c.z); }).map(function(c){ return { x: c.x, z: c.z }; })
         .concat(crates.filter(function(c){ return c.landed && !c.opened; }).map(function(c){ return { x: c.x, z: c.z }; })),
-      nests: nests.filter(function(n){ return n.hp > 0; }).map(function(n){ return { x: n.x, z: n.z }; }),
+      nests: nests.filter(function(n){ return n.hp > 0 && inView(n.x, n.z); }).map(function(n){ return { x: n.x, z: n.z }; }),
       enemies: enemies.map(function(e){ return { x: e.mesh.position.x, z: e.mesh.position.z }; }),
       temple: W.temple(), trader: trader.present ? { x: trader.x, z: trader.z } : null,
       bed: (state.spawn.x || state.spawn.z) ? state.spawn : null,
       target: currentTarget,
       player: { x: headWorld(_v3).x, z: _v3.z, yaw: headYawWorld() }
-    } : null
   };
 }
 
@@ -8140,6 +8913,7 @@ function applyQuality(){
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, q.pixelRatio));
   camera.far = q.far;
   camera.updateProjectionMatrix();
+  W.setView(q.view, q.nodeView, IS_QUEST ? 4 : 7);
   W.setDecorVisible(q.decor);
   cloudMesh.visible = q.clouds;
   if (!renderer.xr.isPresenting && renderer.xr.setFramebufferScaleFactor){
@@ -8233,7 +9007,7 @@ function refreshMenu(){
   }
   if (recordsEl){
     var r = readRecords();
-    recordsEl.textContent = (r.wave || r.day) ? 'Rekorde: Welle ' + (r.wave || 0) + ' · Tag ' + (r.day || 0) + ' · ' + (r.kills || 0) + ' Gegner · Level ' + (r.level || 1) + (r.dragons ? ' · ' + r.dragons + '× Drache' : '') : 'Noch keine Rekorde — leg los!';
+    recordsEl.textContent = (r.nights || r.day) ? 'Rekorde: ' + (r.nights || 0) + ' Nächte · Tag ' + (r.day || 0) + ' · ' + (r.kills || 0) + ' Gegner · Level ' + (r.level || 1) + (r.dragons ? ' · ' + r.dragons + '× Drache' : '') : 'Noch keine Rekorde — leg los!';
   }
 }
 
@@ -8280,6 +9054,7 @@ function startGame(){
   if (!gameStarted){
     gameStarted = true;
     if (existingSave) applySave(existingSave);
+    else starterKit();
     updateHeldTool();
     uiDirty = true;
     later(4000, function(){ tip('start'); });
@@ -8369,7 +9144,7 @@ function tick(dt, frame){
   updateBody();
   updateHeldTool();
   var live = gameStarted && !state.paused;
-  if (gameStarted) updateInteraction(dt);
+  if (gameStarted){ updateInteraction(dt); updateBlocks(dt); }
   if (live){
     updateEnemies(dt);
     updateAnimals(dt);
@@ -8413,7 +9188,10 @@ function tick(dt, frame){
   chests.forEach(function(c){
     if (c.opened && c.lidAngle < 1.9){ c.lidAngle = Math.min(1.9, c.lidAngle + dt * 3); c.mesh.userData.lid.rotation.x = -c.lidAngle; }
   });
+  headWorld(_v3);
+  W.stream(_v3.x, _v3.z);
   W.refresh();
+  if (mapRow < MAP_PX) mapJob(1.5);
 
   uiClock += dt;
   var panelSeen = craftPanelInView();
@@ -9370,7 +10148,9 @@ var GESTURE_LIST = [
   ['zauber', 'zauberbuch', 'Zaubern', 'Stoßen = Druckwelle, Hand runter = Blitz, Hände hoch = Heilen, Arme kreuzen = Schild'],
   ['schleichen', 'stiefel', 'Schleichen', 'In die Hocke gehen — Gegner bemerken dich später'],
   ['reiten', 'pferd', 'Reiten', 'Pferd mit Äpfeln zähmen, an den Sattel fassen und pinchen'],
-  ['schwimmen', 'trinken', 'Schwimmen', 'Einfach ins Wasser laufen']
+  ['schwimmen', 'trinken', 'Schwimmen', 'Einfach ins Wasser laufen'],
+  ['blockbau', 'erde', 'Blöcke bauen', 'Block in der Hotbar wählen, zeigen, pinchen — halten setzt mehrere'],
+  ['blockab', 'spitzhacke', 'Blöcke abbauen', 'Pinchen und halten, mit Werkzeug schlagen oder mit der Faust boxen']
 ];
 
 function gestureTabData(){
@@ -10016,30 +10796,10 @@ function updateGrapple(dt){
 
 /* Schaufel: Löcher graben und Schätze heben */
 function digWithShovel(h){
-  if (!W.groundPoint(h.wrist, h.dir, 3.8, _v2)) return say('Zeig mit der Schaufel auf den Boden', true);
-  var x = _v2.x, z = _v2.z;
-  var ts = null;
-  W.treasureSpots.forEach(function(t){ if (!t.dug && Math.hypot(t.x - x, t.z - z) < 1.9) ts = t; });
-  if (W.insideCave(x, z, dolly.position.y) || !W.isDry(x, z)) return say('Hier kannst du nicht graben', true);
-  if (structures.some(function(s){ return Math.hypot(s.x - x, s.z - z) < s.r + 0.8; })) return say('Hier steht etwas im Weg', true);
-  var dug = W.digAt(x, z);
-  spawnBurst(_v2, 0x6b4a2f, 8, 2.4);
-  sfx.mine();
-  pulse(h, 0.5, 40);
+  var hit = blockTarget(h, 4.2);
+  if (!hit) return say('Zeig mit der Schaufel auf den Boden', true);
   state.stats.dug = (state.stats.dug || 0) + 1;
-  structures.forEach(function(s){ if (Math.hypot(s.x - x, s.z - z) < 3 && !BUILDABLE[s.kind].deck) s.mesh.position.y = playerFloor(s.x, s.z, s.y + 0.5); });
-  if (ts){ findTreasure(ts, _v2); return; }
-  if (!dug) return say('Der Boden ist hier zu hart', true);
-  var b = W.biomeAt(x, z);
-  if (b === 'strand' || b === 'wueste'){ give('sand', 2, true); return say('+2 Sand', true); }
-  var r = Math.random();
-  if (r < 0.45){ give('stein', 1, true); say('+1 Stein', true); }
-  else if (r < 0.6){ give('kohle', 1, true); say('+1 Kohle', true); }
-  else if (r < 0.7){ give('knochen', 1, true); say('Ein alter Knochen!', true); }
-  else if (r < 0.78){ give('weizensamen', 2, true); say('+2 Weizensamen', true); }
-  else if (r < 0.84){ give('karottensamen', 2, true); say('+2 Karottensamen', true); }
-  else if (r < 0.87){ give('muenzen', 3, true); say('+3 alte Münzen!', true); }
-  else say('Nur Erde …', true);
+  mineVoxel(hit, 'schaufel', 1.2);
 }
 
 function findTreasure(ts, pos){
@@ -11955,14 +12715,11 @@ function updateLightningStrikes(dt){
 var lavaClock = 0;
 function updateLava(dt){
   var t = performance.now() / 1000;
-  W.lavaMeshes.forEach(function(lm, i){
-    var pulse = 0.5 + Math.sin(t * 1.3 + i) * 0.5;
-    lm.disc.material.color.setRGB(1, 0.36 + pulse * 0.12, 0.08);
-    lm.glow.material.opacity = 0.35 + pulse * 0.3;
-    lm.glow.position.x = lm.pool.x + Math.sin(t * 0.4 + i) * lm.pool.r * 0.3;
-    if (Math.random() < dt * 1.5){ _v.set(lm.pool.x + rnd(-lm.pool.r, lm.pool.r) * 0.6, lm.pool.y + 0.2, lm.pool.z + rnd(-lm.pool.r, lm.pool.r) * 0.6); spawnBurst(_v, 0xffb347, 2, 1.2, { gravity: 3, life: 0.6 }); }
-  });
   headWorld(_v3);
+  W.lavaPools.forEach(function(lp){
+    if (Math.abs(lp.x - _v3.x) > 40 || Math.abs(lp.z - _v3.z) > 40) return;
+    if (Math.random() < dt * 1.5){ _v.set(lp.x + rnd(-lp.r, lp.r) * 0.6, W.height(lp.x, lp.z) + 0.15, lp.z + rnd(-lp.r, lp.r) * 0.6); spawnBurst(_v, 0xffb347, 2, 1.2, { gravity: 3, life: 0.6 }); }
+  });
   var feet = dolly.position.y;
   var inLava = W.isLava(_v3.x, _v3.z) && !air.active && feet < W.height(_v3.x, _v3.z) + 0.5 && platformTopAt(_v3.x, _v3.z, feet) === -Infinity;
   if (inLava){
@@ -12152,7 +12909,7 @@ QUESTS.push(
   { title:'Besiege die Königsspinne',       goal: 1, val: function(){ return K('koenigsspinne'); }, reward: [['smaragd', 2]], xp: 60, target: 'spiderboss' },
   { title:'Öffne die Schatzkammer',         goal: 1, val: function(){ return state.vaultOpen ? 1 : 0; }, reward: [['rubin', 2]], xp: 60, target: 'vault' },
   { title:'Besiege das Seeungeheuer (nachts angeln)', goal: 1, val: function(){ return K('krake'); }, reward: [['perle', 5]], xp: 80, target: 'kraken' },
-  { title:'Besiege den Waldriesen (Welle 20)', goal: 1, val: function(){ return K('waldriese'); }, reward: [['rubin', 3]], xp: 120 },
+  { title:'Besiege den Waldriesen (Bossnacht)', goal: 1, val: function(){ return K('waldriese'); }, reward: [['rubin', 3]], xp: 120 },
   { title:'Erreiche Level 25',              goal: 25, val: function(){ return state.level; }, reward: [['smaragd', 3]], xp: 100 }
 );
 
@@ -12286,6 +13043,8 @@ function questCompassTarget(t){
 }
 
 function spiderBossCave(){
+  var marked = W.caves.filter(function(c){ return c.spider; })[0];
+  if (marked) return marked;
   var list = W.caves.filter(function(c){ return !c.deep; }).sort(function(a, b){ return b.r - a.r; });
   return list[0] || null;
 }
@@ -12330,6 +13089,407 @@ function applyExtraSave(d){
   if (state.vaultOpen && vault){ vault.chest.locked = false; vault.sink = 1.7; vault.bars.position.y = -1.7; }
   // Alte Spielstände: Golemkönig schon besiegt, aber kein Schlüssel
   if (!state.vaultOpen && K('golemking') > 0 && !has('schluessel', 1) && !creative()) give('schluessel', 1);
+}
+
+/* ================================================================ Blöcke: alles abbauen, alles bauen */
+
+/* Welcher Gegenstand welchen Block setzt */
+var BLOCK_ITEMS = {
+  erde: 'erde', stein: 'steinblock', holz: 'stamm', bretter: 'bretter', sand: 'sand', glas: 'glas',
+  ziegel: 'ziegel', steinziegel: 'steinziegel', sandstein: 'sandstein', schnee: 'schnee', eis: 'eis', laub: 'laub',
+  leuchtblock: 'leuchtblock', goldblock: 'goldblock', obsidian: 'obsidian',
+  rotblock: 'rotblock', blaublock: 'blaublock', gruenblock: 'gruenblock', gelbblock: 'gelbblock', weissblock: 'weissblock', schwarzblock: 'schwarzblock'
+};
+var BLOCK_LABELS = {
+  erde: 'Erde', stein: 'Stein', holz: 'Holz', bretter: 'Bretter', sand: 'Sand', glas: 'Glas', ziegel: 'Ziegel',
+  steinziegel: 'Steinziegel', sandstein: 'Sandstein', schnee: 'Schnee', eis: 'Eis', laub: 'Laub', leuchtblock: 'Leuchtblock',
+  goldblock: 'Goldblock', obsidian: 'Obsidian', rotblock: 'Rot', blaublock: 'Blau', gruenblock: 'Grün', gelbblock: 'Gelb',
+  weissblock: 'Weiß', schwarzblock: 'Schwarz', kohle: 'Kohle', eisen: 'Eisen', kupfer: 'Kupfer', gold: 'Gold',
+  kristall: 'Kristall', rubin: 'Rubin', smaragd: 'Smaragd'
+};
+var BLOCK_ORDER = ['erde','stein','holz','bretter','sand','glas','ziegel','steinziegel','sandstein','leuchtblock','schnee','eis','laub',
+  'goldblock','obsidian','rotblock','blaublock','gruenblock','gelbblock','weissblock','schwarzblock'];
+
+['erde','bretter','ziegel','steinziegel','sandstein','schnee','laub','leuchtblock','goldblock','rotblock','blaublock','gruenblock',
+ 'gelbblock','weissblock','schwarzblock'].forEach(function(k){ if (ITEM_KEYS.indexOf(k) < 0) ITEM_KEYS.push(k); if (state.inv[k] === undefined) state.inv[k] = 0; });
+
+(function(){
+  var idx = HOTBAR_DEFS.findIndex(function(d){ return d[0] === 'hammer'; });
+  var entries = BLOCK_ORDER.map(function(k){ return [k, BLOCK_LABELS[k], 'stack']; });
+  HOTBAR_DEFS.splice.apply(HOTBAR_DEFS, [idx + 1, 0].concat(entries));
+})();
+
+RECIPES.bloecke = [
+  R('bretter', 'bretter', '4 Bretter', { holz: 1 }, { out: ['bretter', 4], info: 'Schöne Holzblöcke zum Bauen.' }),
+  R('steinziegel', 'steinziegel', '2 Steinziegel', { stein: 2 }, { out: ['steinziegel', 2], info: 'Feste, schöne Mauern.' }),
+  R('ziegel', 'ziegel', '4 Ziegel', { erde: 2, kohle: 1 }, { out: ['ziegel', 4], info: 'Rote Ziegel aus gebrannter Erde.' }),
+  R('glasblock', 'glas', '2 Glas', { sand: 2, kohle: 1 }, { out: ['glas', 2], info: 'Durchsichtige Fenster.' }),
+  R('leuchtblock', 'leuchtblock', '2 Leuchtblöcke', { kristall: 1, kohle: 1 }, { out: ['leuchtblock', 2], info: 'Leuchtet hell. Im Licht erscheinen keine Monster.' }),
+  R('sandstein', 'sandstein', 'Sandstein', { sand: 2 }, { out: ['sandstein', 1] }),
+  R('goldblock', 'goldblock', 'Goldblock', { gold: 2 }, { out: ['goldblock', 1], info: 'Glänzt wie ein Schatz.' }),
+  R('schneeblock', 'schnee', '2 Schnee', { eis: 1 }, { out: ['schnee', 2] }),
+  R('rotblock', 'rotblock', '4 rote Blöcke', { stein: 1, blume: 1 }, { out: ['rotblock', 4] }),
+  R('blaublock', 'blaublock', '4 blaue Blöcke', { stein: 1, blaubeeren: 1 }, { out: ['blaublock', 4] }),
+  R('gruenblock', 'gruenblock', '4 grüne Blöcke', { stein: 1, laub: 2 }, { out: ['gruenblock', 4] }),
+  R('gelbblock', 'gelbblock', '4 gelbe Blöcke', { sand: 1, blume: 1 }, { out: ['gelbblock', 4] }),
+  R('weissblock', 'weissblock', '4 weiße Blöcke', { stein: 1, knochen: 1 }, { out: ['weissblock', 4] }),
+  R('schwarzblock', 'schwarzblock', '4 schwarze Blöcke', { stein: 1, kohle: 1 }, { out: ['schwarzblock', 4] })
+];
+RECIPES.bloecke.forEach(function(r){ RECIPE_BY_ID['craft:' + r.id] = r; RECIPE_BY_ID[r.id] = r; });
+
+/* ---------------------------------------------------------------- Anzeigen: Rahmen, Vorschau, Risse */
+
+var blockFrame = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(1.012, 1.012, 1.012)),
+  new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.85 }));
+blockFrame.visible = false;
+scene.add(blockFrame);
+
+var blockGhost = new THREE.Group();
+var ghostBox = new THREE.Mesh(new THREE.BoxGeometry(1.0, 1.0, 1.0), new THREE.MeshBasicMaterial({ color: 0x7bd389, transparent: true, opacity: 0.22, depthWrite: false }));
+var ghostEdges = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(1.01, 1.01, 1.01)), new THREE.LineBasicMaterial({ color: 0x7bd389 }));
+blockGhost.add(ghostBox, ghostEdges);
+blockGhost.visible = false;
+scene.add(blockGhost);
+
+var crackMesh = (function(){
+  var c = document.createElement('canvas');
+  c.width = c.height = 64;
+  var g = c.getContext('2d');
+  g.strokeStyle = 'rgba(20,16,12,0.95)';
+  g.lineWidth = 3;
+  var rr = makeCrackRandom(7);
+  for (var i = 0; i < 9; i++){
+    var x = 32 + (rr() - 0.5) * 20, y = 32 + (rr() - 0.5) * 20;
+    g.beginPath(); g.moveTo(x, y);
+    for (var k = 0; k < 4; k++){ x += (rr() - 0.5) * 30; y += (rr() - 0.5) * 30; g.lineTo(x, y); }
+    g.stroke();
+  }
+  var tex = new THREE.CanvasTexture(c);
+  tex.generateMipmaps = false; tex.minFilter = THREE.LinearFilter;
+  var m = new THREE.Mesh(new THREE.BoxGeometry(1.02, 1.02, 1.02), new THREE.MeshBasicMaterial({ map: tex, transparent: true, opacity: 0, depthWrite: false }));
+  m.visible = false;
+  scene.add(m);
+  return m;
+})();
+function makeCrackRandom(seed){ var s = seed; return function(){ s = (s * 16807) % 2147483647; return s / 2147483647; }; }
+
+/* Kleiner Block in der Hand */
+var heldBlock = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.11, 0.11), new THREE.MeshLambertMaterial({ color: 0xffffff }));
+heldBlock.visible = false;
+scene.add(heldBlock);
+
+/* ---------------------------------------------------------------- Ziel finden */
+
+var _bt = new THREE.Vector3();
+
+/* Block, auf den die Hand zeigt (Wasser davor zählt nicht) */
+function blockTarget(h, maxDist){
+  var hit = W.raycast(h.wrist, h.dir, maxDist);
+  if (!hit) return null;
+  if (h.dir.y < -0.001 && h.wrist.y > W.WATER_Y){
+    var tw = (W.WATER_Y - h.wrist.y) / h.dir.y;
+    if (tw < hit.dist && W.isWater(h.wrist.x + h.dir.x * tw, h.wrist.z + h.dir.z * tw)) return null;
+  }
+  return hit;
+}
+
+/* Feld, in das ein neuer Block käme */
+function placeCell(h){
+  var hit = W.raycast(h.wrist, h.dir, 6);
+  if (h.dir.y < -0.001 && h.wrist.y > W.WATER_Y){
+    var tw = (W.WATER_Y - h.wrist.y) / h.dir.y;
+    if (tw <= 6 && (!hit || tw < hit.dist)){
+      var wx = h.wrist.x + h.dir.x * tw, wz = h.wrist.z + h.dir.z * tw;
+      if (W.isWater(wx, wz)) return { x: Math.floor(wx), y: Math.floor(W.WATER_Y), z: Math.floor(wz) };
+    }
+  }
+  if (!hit || hit.dist === 0) return null;
+  return { x: hit.ix + hit.nx, y: hit.iy + hit.ny, z: hit.iz + hit.nz };
+}
+
+function playerFeet(){ return dolly.position.y - ((renderer.xr.isPresenting && settings.seated) ? 0.45 : 0) - (riding ? 0.78 : 0); }
+
+function whyNotPlace(cell){
+  if (cell.y <= W.MIN_Y || cell.y >= W.MAX_Y - 1) return 'So hoch geht es nicht';
+  if (W.rawAt(cell.x, cell.y, cell.z)) return 'Da ist schon ein Block';
+  if (Math.hypot(cell.x + 0.5, cell.z + 0.5) > W.FIELD_R + 4) return 'Hier endet die Welt';
+  headWorld(_v3);
+  var feet = playerFeet();
+  if (_v3.x > cell.x - 0.28 && _v3.x < cell.x + 1.28 && _v3.z > cell.z - 0.28 && _v3.z < cell.z + 1.28 && cell.y + 1 > feet + 0.05 && cell.y < feet + 1.75) return 'Da stehst du selbst';
+  var cx = cell.x + 0.5, cz = cell.z + 0.5, i;
+  var all = enemies.concat(animals);
+  for (i = 0; i < all.length; i++){
+    var p = all[i].mesh.position, fy = footY(all[i]), rad = (all[i].hitRadius || 0.4) * 0.6;
+    if (Math.abs(p.x - cx) < 0.5 + rad && Math.abs(p.z - cz) < 0.5 + rad && fy < cell.y + 1 && fy + 1.2 > cell.y) return 'Da ist jemand im Weg';
+  }
+  for (i = 0; i < W.nodes.length; i++){
+    var n = W.nodes[i];
+    if (Math.abs(n.x - cx) < 0.5 + n.radius * 0.5 && Math.abs(n.z - cz) < 0.5 + n.radius * 0.5 && n.y < cell.y + 1 && n.y + 1.5 > cell.y) return 'Da wächst etwas';
+  }
+  for (i = 0; i < structures.length; i++){
+    var s = structures[i];
+    if (Math.abs(s.x - cx) < 0.5 + s.r * 0.6 && Math.abs(s.z - cz) < 0.5 + s.r * 0.6 && s.y < cell.y + 1 && s.y + 1.6 > cell.y) return 'Da steht ein Bauwerk';
+  }
+  if (W.editCount() > 80000) return 'Die Welt ist voll — erst etwas abbauen';
+  return null;
+}
+
+/* ---------------------------------------------------------------- Bauen */
+
+var blockPlaceT = 0, blockPunchArmed = true, blockTipShown = false;
+
+function placeBlock(h, repeat){
+  var item = state.selected;
+  var vt = W.VT[BLOCK_ITEMS[item]];
+  if (vt === undefined) return false;
+  if (!has(item, 1)){ if (!repeat) say('Keine ' + BLOCK_LABELS[item] + ' mehr', true); return false; }
+  var cell = placeCell(h);
+  if (!cell){ if (!repeat) say('Zeig auf einen Block oder den Boden', true); return false; }
+  var why = whyNotPlace(cell);
+  if (why){ if (!repeat) say(why, true); return false; }
+  W.setVoxel(cell.x, cell.y, cell.z, vt);
+  if (!creative()) state.inv[item]--;
+  state.stats.blocksPlaced = (state.stats.blocksPlaced || 0) + 1;
+  if (item === 'leuchtblock') state.stats.torches = (state.stats.torches || 0) + 1;
+  var tower = cell.y + 1 - Math.round(W.surfaceHeight(cell.x + 0.5, cell.z + 0.5));
+  if (tower > (state.stats.maxTower || 0)) state.stats.maxTower = tower;
+  sfx.place();
+  pulse(h, 0.35, 25);
+  markGesture('blockbau');
+  if (!blockTipShown){ blockTipShown = true; tip('blocks'); }
+  if (!has(item, 1)) selectSlot('hand');
+  uiDirty = true;
+  saveSoon();
+  return true;
+}
+
+/* Mit einem Block in der Hand: Pinch = setzen (halten = weiter setzen), Faust = abbauen */
+function updateBlockHand(ctx){
+  var h = ctx.h;
+  if (ctx.justPressed){ placeBlock(h, false); blockPlaceT = 0.32; }
+  else if (ctx.pressed){
+    blockPlaceT -= ctx.dt;
+    if (blockPlaceT <= 0){ placeBlock(h, true); blockPlaceT = 0.24; }
+  }
+  if (vrLike() && h.active && h.fist && !h.pinch){
+    if (h.speed < 1.2) blockPunchArmed = true;
+    if (h.speed > 2.2 && blockPunchArmed && swingCd <= 0){
+      blockPunchArmed = false;
+      swingCd = 0.3;
+      var hit = blockTarget(h, 2.6);
+      if (hit){ mineVoxel(hit, 'hand', Math.min(1.7, 1 + (h.speed - 2.2) * 0.3)); markGesture('boxen'); }
+    }
+  }
+}
+
+/* ---------------------------------------------------------------- Abbauen */
+
+var mineState = { key: null, dmg: 0, t: 0, hit: null };
+
+function toolMult(def, tool){
+  if (def.tool && def.tool === tool) return 4 * ((tool === 'spitzhacke' || tool === 'axt') ? upgradeMult(tool) : 1);
+  if (tool === 'schwert' || tool === 'energieschwert' || tool === 'hammer') return 1.4;
+  return 1;
+}
+
+function mineVoxel(hit, tool, power){
+  var def = W.VOX[hit.type];
+  if (!def) return;
+  _bt.set(hit.ix + 0.5, hit.iy + 0.5, hit.iz + 0.5);
+  if (def.hard === Infinity){ say('Grundgestein ist unzerstörbar — tiefer geht es nicht', true); sfx.mine(); return; }
+  if (def.need && def.need !== tool && !creative()){ say(def.label + ': dafür brauchst du eine Spitzhacke', true); sfx.mine(); return; }
+  var key = hit.ix + ',' + hit.iy + ',' + hit.iz;
+  if (mineState.key !== key){ mineState.key = key; mineState.dmg = 0; }
+  mineState.t = 1.8;
+  mineState.hit = hit;
+  var dmg = creative() ? 999 : toolMult(def, tool) * (1 + state.skills.bergbau * 0.25) * Math.min(1.6, power || 1) * (state.strengthT > 0 ? 1.5 : 1);
+  mineState.dmg += dmg;
+  spawnBurst(_bt, def.c, 4, 2);
+  if (def.tool === 'axt') sfx.chop(); else sfx.mine();
+  pulse(toolHand(), 0.45, 30);
+  markGesture('blockab');
+  if (mineState.dmg < def.hard){
+    crackMesh.position.copy(_bt);
+    crackMesh.visible = true;
+    crackMesh.material.opacity = 0.25 + 0.7 * (mineState.dmg / def.hard);
+    return;
+  }
+  breakVoxel(hit, def, tool);
+}
+
+function breakVoxel(hit, def, tool){
+  mineState.key = null;
+  crackMesh.visible = false;
+  _bt.set(hit.ix + 0.5, hit.iy + 0.5, hit.iz + 0.5);
+  var wasTop = hit.iy >= Math.round(W.surfaceHeight(hit.ix + 0.5, hit.iz + 0.5)) - 3;
+  W.setVoxel(hit.ix, hit.iy, hit.iz, 0);
+  state.stats.blocksMined = (state.stats.blocksMined || 0) + 1;
+  spawnBurst(_bt, def.c, 12, 3);
+  var text = '';
+  if (def.drop){
+    var amount = 1;
+    if (def.ore){
+      if (goldRush) amount *= 2;
+      if (Math.random() < luckBonus()) amount += 1;
+      state.stats.ores++;
+      gainXP(def.xp || 2, _bt);
+    }
+    give(def.drop, amount, true);
+    text = '+' + amount + ' ' + (BLOCK_LABELS[def.drop] || def.label);
+    if (def.name === 'laub' && Math.random() < 0.12){ give('apfel', 1, true); text += ' + 1 Apfel'; }
+    if (def.name === 'laub' && Math.random() < 0.08){ give('samen', 1, true); text += ' + 1 Samen'; }
+    if (tool === 'schaufel' && (def.name === 'gras' || def.name === 'erde')){
+      var r = Math.random();
+      if (r < 0.1){ give('kohle', 1, true); text += ' + 1 Kohle'; }
+      else if (r < 0.16){ give('knochen', 1, true); text += ' + ein Knochen'; }
+      else if (r < 0.22){ give('weizensamen', 1, true); text += ' + Weizensamen'; }
+      else if (r < 0.26){ give('karottensamen', 1, true); text += ' + Karottensamen'; }
+      else if (r < 0.28){ give('muenzen', 3, true); text += ' + 3 alte Münzen!'; }
+    }
+  }
+  if (text) say(text, true);
+  sfx.pick();
+  /* Vergrabener Schatz direkt unter der Oberfläche */
+  if (wasTop && (def.name === 'gras' || def.name === 'erde' || def.name === 'sand' || def.name === 'schnee')){
+    var ts = null;
+    W.treasureSpots.forEach(function(t){ if (!t.dug && Math.hypot(t.x - _bt.x, t.z - _bt.z) < 1.9) ts = t; });
+    if (ts) findTreasure(ts, _bt.clone());
+  }
+  if (def.light) state.stats.torches = Math.max(0, (state.stats.torches || 0) - 1);
+  uiDirty = true;
+  saveSoon();
+}
+
+/* Granaten und Raketen sprengen Blöcke weg (Obsidian und Grundgestein halten) */
+function blastBlocks(pos, r){
+  var n = 0;
+  for (var x = Math.floor(pos.x - r); x <= Math.floor(pos.x + r); x++){
+    for (var y = Math.floor(pos.y - r); y <= Math.floor(pos.y + r); y++){
+      for (var z = Math.floor(pos.z - r); z <= Math.floor(pos.z + r); z++){
+        if (Math.hypot(x + 0.5 - pos.x, y + 0.5 - pos.y, z + 0.5 - pos.z) > r) continue;
+        var t = W.typeAt(x, y, z);
+        if (!t) continue;
+        var def = W.VOX[t];
+        if (!def || def.hard >= 12) continue;
+        W.setVoxel(x, y, z, 0);
+        n++;
+        if (def.drop && Math.random() < 0.3) give(def.drop, 1, true);
+      }
+    }
+  }
+  if (n){ state.stats.blocksMined = (state.stats.blocksMined || 0) + n; uiDirty = true; saveSoon(); }
+  return n;
+}
+
+/* Starke Gegner (Golems, Bosse) schlagen Blöcke kaputt, die im Weg sind */
+var BLOCK_BREAKERS = { golem: 1, eisgolem: 1, golemking: 1, brute: 1, waldriese: 1 };
+function enemyBreakBlocks(e, nx, nz){
+  if (!(e.boss || BLOCK_BREAKERS[e.kind]) || e.attackCd > 0) return;
+  var fy = footY(e);
+  var bx = Math.floor(e.mesh.position.x + nx * 0.9), bz = Math.floor(e.mesh.position.z + nz * 0.9);
+  for (var k = 0; k < 3; k++){
+    var ly = Math.floor(fy + 0.2) + k;
+    var raw = W.rawAt(bx, ly, bz);
+    if (!raw) continue;
+    var def = W.VOX[raw];
+    if (!def || def.hard >= 12) return;
+    e.attackCd = 1.3;
+    _bt.set(bx + 0.5, ly + 0.5, bz + 0.5);
+    spawnBurst(_bt, def.c, 8, 2.5);
+    sfx.mine();
+    if (Math.random() < 3 / def.hard) W.setVoxel(bx, ly, bz, 0);
+    return;
+  }
+}
+
+/* Heruntergefallene Bauwerke: steht etwas auf einem abgebauten Block, rutscht es nach unten */
+W.onVoxelChange = function(ix, iy, iz, before, after){
+  if (after) return;
+  for (var i = 0; i < structures.length; i++){
+    var s = structures[i];
+    if (Math.floor(s.x) !== ix || Math.floor(s.z) !== iz || Math.abs(s.y - (iy + 1)) > 0.05) continue;
+    var def = BUILDABLE[s.kind];
+    if (def.water) continue;
+    var ny = W.floorRaw(s.x, s.z, s.y - 0.5);
+    if (ny === -Infinity) continue;
+    s.y = ny; s.mesh.position.y = ny; s.top = ny + (def.deck ? def.deck.h : 0.04);
+  }
+};
+
+/* ---------------------------------------------------------------- Pro Bild */
+
+var _hbPos = new THREE.Vector3();
+var MINING_TOOLS = { spitzhacke: 1, schaufel: 1, axt: 1 };
+
+function updateBlocks(dt){
+  var th = toolHand();
+  var sel = state.selected;
+  var active = th.active && !state.dead && !sleeping && !state.paused && gameStarted;
+  if (mineState.t > 0){ mineState.t -= dt; if (mineState.t <= 0){ mineState.key = null; crackMesh.visible = false; } }
+
+  /* Vorschau beim Bauen */
+  var isBlock = !!BLOCK_ITEMS[sel] && has(sel, 1);
+  var cell = active && isBlock ? placeCell(th) : null;
+  if (cell){
+    var bad = whyNotPlace(cell);
+    blockGhost.visible = true;
+    blockGhost.position.set(cell.x + 0.5, cell.y + 0.5, cell.z + 0.5);
+    ghostBox.material.color.setHex(bad ? 0xe4452e : 0x7bd389);
+    ghostEdges.material.color.setHex(bad ? 0xe4452e : 0x7bd389);
+  } else blockGhost.visible = false;
+
+  /* Rahmen um den Block, den man abbauen würde */
+  var showFrame = active && !isBlock && (MINING_TOOLS[sel] || (sel === 'hand' && th.pinch) || (desktopMode && keysDown['KeyX']));
+  var hit = showFrame ? blockTarget(th, 4.5) : null;
+  if (hit){ blockFrame.visible = true; blockFrame.position.set(hit.ix + 0.5, hit.iy + 0.5, hit.iz + 0.5); }
+  else blockFrame.visible = false;
+
+  /* Am PC: X = abbauen */
+  if (active && desktopMode && keysDown['KeyX'] && swingCd <= 0){
+    swingCd = 0.45;
+    var tool = MELEE[sel] || MINING_TOOLS[sel] ? sel : 'hand';
+    var dh = blockTarget(th, 4.5);
+    if (dh) mineVoxel(dh, tool, 1);
+  }
+
+  /* Block in der Hand zeigen */
+  if (isBlock && th.active){
+    var vt = W.VOX[W.VT[BLOCK_ITEMS[sel]]];
+    heldBlock.visible = true;
+    heldBlock.material.color.setHex(vt.c);
+    _hbPos.copy(th.wrist).addScaledVector(th.dir, 0.1);
+    heldBlock.position.copy(_hbPos);
+    heldBlock.quaternion.copy(th.group.quaternion);
+  } else heldBlock.visible = false;
+
+  if (gameStarted && !state.dead){
+    var feet = playerFeet();
+    if (feet < (state.stats.deepest || 0)) state.stats.deepest = Math.floor(feet);
+  }
+}
+
+/* Startausrüstung für ein neues Spiel */
+function starterKit(){
+  give('erde', 12);
+  give('bretter', 16);
+  give('fackel', 3);
+}
+
+/* ---------------------------------------------------------------- Licht hält Monster fern */
+
+function lightRadius(s){ return s.kind === 'laterne' ? 11 : (s.kind === 'lagerfeuer' ? 10 : 8); }
+function isLitSpot(x, y, z){
+  for (var i = 0; i < structures.length; i++){
+    var s = structures[i];
+    if (!BUILDABLE[s.kind].light) continue;
+    var r = lightRadius(s);
+    if (Math.abs(s.x - x) < r && Math.abs(s.z - z) < r && Math.hypot(s.x - x, s.z - z, (s.y - y) * 0.7) < r) return true;
+  }
+  var gl = W.glowNear(x, z, 8);
+  for (var k = 0; k < gl.length; k++){
+    if (Math.hypot(gl[k].x + 0.5 - x, gl[k].z + 0.5 - z, (gl[k].y - y) * 0.7) < 7.5) return true;
+  }
+  return false;
 }
 
 /* ================================================================ Start, Testzugang und Ende */
@@ -12446,13 +13606,25 @@ function warmupShaders(done){
   if (lastErr) statusEl.textContent = 'Beim letzten Spielen gab es einen Fehler: ' + lastErr + ' — sag das bitte Claude.';
   desktopBtn.disabled = true;
   updateVrButton();
+  /* Zuerst die Blockwelt rund um den Startpunkt bauen, dann die Grafik-Programme vorbereiten */
+  var start = { x: 0, z: 0 };
+  if (existingSave && (existingSave.v || 0) >= 4){
+    if (existingSave.pos) start = existingSave.pos;
+    if (existingSave.vox && !editsImported){ W.importEdits(existingSave.vox); editsImported = true; }
+  }
   setTimeout(function(){
-    warmupShaders(function(){
-      desktopBtn.disabled = false;
-      updateVrButton();
+    var tw = performance.now();
+    W.prepare(start.x, start.z, function(p){ vrBtn.textContent = 'Welt wird gebaut … ' + Math.round(p * 100) + ' %'; }, function(){
+      worldMs = Math.round(performance.now() - tw);
+      warmupShaders(function(){
+        desktopBtn.disabled = false;
+        updateVrButton();
+        (function mapLoop(){ if (!mapJob(8)) setTimeout(mapLoop, 30); })();
+      });
     });
   }, 60);
 })();
+var worldMs = 0;
 
 
 BL.debug = {
@@ -12474,7 +13646,9 @@ BL.debug = {
   setVR: function(on){ debugVR = !!on; },
   forceTick: function(on){ debugForceTick = !!on; },
   shadersReady: function(){ return shadersReady; },
-  warmup: function(){ return { ms: warmupMs, programs: renderer.info.programs ? renderer.info.programs.length : -1 }; },
+  warmup: function(){ return { ms: warmupMs, worldMs: worldMs, programs: renderer.info.programs ? renderer.info.programs.length : -1 }; },
+  world: W, blockTarget: blockTarget, mineVoxel: mineVoxel, placeBlock: placeBlock, updateBlocks: updateBlocks, mapState: mapState, isLitSpot: isLitSpot,
+  trySpawnDark: function(){ headWorld(_v3); return trySpawnDark(_v3, dolly.position.y); },
   noRender: function(on){ debugNoRender = !!on; },
   renderInfo: function(){ return renderer.info.render; },
   fakeHand: fakeHand,
