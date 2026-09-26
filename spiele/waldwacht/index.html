@@ -1938,8 +1938,8 @@ function createHotbar(){
   var canvas = document.createElement('canvas');
   canvas.width = HOT_W; canvas.height = HOT_H;
   var ctx = canvas.getContext('2d');
-  var texture = new THREE.CanvasTexture(canvas);
-  texture.anisotropy = 4;
+  var texture = new THREE.CanvasTexture(canvas); texture.generateMipmaps = false; texture.minFilter = THREE.LinearFilter;
+  
   var mesh = new THREE.Mesh(new THREE.PlaneGeometry(HOTBAR_PW, HOTBAR_PH),
     new THREE.MeshBasicMaterial({ map: texture, transparent: true }));
 
@@ -2065,8 +2065,8 @@ function createCraftPanel(){
   var canvas = document.createElement('canvas');
   canvas.width = PW; canvas.height = PH;
   var ctx = canvas.getContext('2d');
-  var texture = new THREE.CanvasTexture(canvas);
-  texture.anisotropy = 4;
+  var texture = new THREE.CanvasTexture(canvas); texture.generateMipmaps = false; texture.minFilter = THREE.LinearFilter;
+  
   var mesh = new THREE.Mesh(new THREE.PlaneGeometry(PANEL_W, PANEL_H),
     new THREE.MeshBasicMaterial({ map: texture, transparent: true }));
   var current = 'waffen', pageCount = 1, regionsExtra = [];
@@ -2505,7 +2505,7 @@ function createHandMenu(){
   var canvas = document.createElement('canvas');
   canvas.width = HM_W; canvas.height = HM_H;
   var ctx = canvas.getContext('2d');
-  var texture = new THREE.CanvasTexture(canvas);
+  var texture = new THREE.CanvasTexture(canvas); texture.generateMipmaps = false; texture.minFilter = THREE.LinearFilter;
   var mesh = new THREE.Mesh(new THREE.PlaneGeometry(HM_PW, HM_PH),
     new THREE.MeshBasicMaterial({ map: texture, transparent: true, side: THREE.DoubleSide }));
   mesh.visible = false;
@@ -2547,7 +2547,7 @@ function createInfoLabel(){
   var canvas = document.createElement('canvas');
   canvas.width = cw; canvas.height = ch;
   var ctx = canvas.getContext('2d');
-  var texture = new THREE.CanvasTexture(canvas);
+  var texture = new THREE.CanvasTexture(canvas); texture.generateMipmaps = false; texture.minFilter = THREE.LinearFilter;
   var mesh = new THREE.Mesh(new THREE.PlaneGeometry(0.64, 0.16),
     new THREE.MeshBasicMaterial({ map: texture, transparent: true, depthTest: false }));
   mesh.renderOrder = 995;
@@ -2580,7 +2580,7 @@ function createCompass(){
   var c = document.createElement('canvas');
   c.width = c.height = 256;
   var ctx = c.getContext('2d');
-  var tex = new THREE.CanvasTexture(c);
+  var tex = new THREE.CanvasTexture(c); tex.generateMipmaps = false; tex.minFilter = THREE.LinearFilter;
   var mesh = new THREE.Mesh(new THREE.CircleGeometry(0.06, 28), new THREE.MeshBasicMaterial({ map: tex, transparent: true }));
   function draw(angle, label, dist, clock){
     ctx.clearRect(0,0,256,256);
@@ -2614,7 +2614,7 @@ function createMessagePanel(width, height, cw, ch){
   var canvas = document.createElement('canvas');
   canvas.width = cw; canvas.height = ch;
   var ctx = canvas.getContext('2d');
-  var texture = new THREE.CanvasTexture(canvas);
+  var texture = new THREE.CanvasTexture(canvas); texture.generateMipmaps = false; texture.minFilter = THREE.LinearFilter;
   var mesh = new THREE.Mesh(new THREE.PlaneGeometry(width, height),
     new THREE.MeshBasicMaterial({ map: texture, transparent: true, depthTest: false }));
   mesh.renderOrder = 999;
@@ -2643,7 +2643,7 @@ function createFloatingText(){
   var c = document.createElement('canvas');
   c.width = 256; c.height = 96;
   var ctx = c.getContext('2d');
-  var tex = new THREE.CanvasTexture(c);
+  var tex = new THREE.CanvasTexture(c); tex.generateMipmaps = false; tex.minFilter = THREE.LinearFilter;
   var sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false }));
   sprite.scale.set(0.8, 0.3, 1);
   sprite.renderOrder = 998;
@@ -2695,10 +2695,13 @@ var DIFF = {
 };
 
 var QUALITY = {
-  hoch:    { label: 'Hoch',    pixelRatio: 2,    xrScale: 1.0,  far: 260, decor: true,  clouds: true,  particles: 1.0, rain: 420, birds: true,  lights: 4 },
-  mittel:  { label: 'Mittel',  pixelRatio: 1.25, xrScale: 0.85, far: 140, decor: true,  clouds: true,  particles: 0.7, rain: 240, birds: true,  lights: 3 },
-  niedrig: { label: 'Niedrig', pixelRatio: 1,    xrScale: 0.7,  far: 75,  decor: false, clouds: false, particles: 0.4, rain: 110, birds: false, lights: 2 }
+  hoch:    { label: 'Hoch',    pixelRatio: 2,    xrScale: 1.0,  foveation: 0.5, far: 260, decor: true,  clouds: true,  particles: 1.0, rain: 420, birds: true,  lights: 3 },
+  mittel:  { label: 'Mittel',  pixelRatio: 1.25, xrScale: 0.8,  foveation: 1,   far: 120, decor: true,  clouds: true,  particles: 0.6, rain: 200, birds: true,  lights: 2 },
+  niedrig: { label: 'Niedrig', pixelRatio: 1,    xrScale: 0.65, foveation: 1,   far: 70,  decor: false, clouds: false, particles: 0.35, rain: 100, birds: false, lights: 1 }
 };
+
+/* Meta Quest und andere Standalone-Brillen: leichter starten */
+var IS_QUEST = /OculusBrowser|Quest|Pacific|Pico|Wolvic/i.test(navigator.userAgent || '');
 
 var settings = {
   difficulty: 'normal', lefty: false, music: true, musicVol: 0.7, sfxVol: 0.9,
@@ -2708,6 +2711,7 @@ var settings = {
 try {
   var storedSettings = JSON.parse(localStorage.getItem('waldwacht-settings') || 'null');
   if (storedSettings) settings = Object.assign(settings, storedSettings);
+  else if (IS_QUEST) settings.quality = 'mittel';
 } catch(e){}
 
 function saveSettings(){ try { localStorage.setItem('waldwacht-settings', JSON.stringify(settings)); } catch(e){} }
@@ -3083,7 +3087,7 @@ function freshState(){
 
 var state = freshState();
 var messageTimer = 0;
-var uiDirty = true;
+var uiDirty = true, uiUrgent = true;
 
 function clockShort(){
   var hours = (timeOfDay * 24) % 24;
@@ -3295,8 +3299,6 @@ function makeHand(side){
   shield.visible = false;
   if (side === 'right') shield.position.x = 0.09;
   group.add(shield);
-  var light = new THREE.PointLight(0xffb357, 0, 14, 1.3);
-  group.add(light);
   var tipDot = new THREE.Mesh(new THREE.SphereGeometry(0.013, 10, 8), new THREE.MeshBasicMaterial({ color: 0xffffff }));
   var thumbDot = new THREE.Mesh(new THREE.SphereGeometry(0.013, 10, 8), new THREE.MeshBasicMaterial({ color: 0xffffff }));
   tipDot.visible = thumbDot.visible = false;
@@ -3304,12 +3306,15 @@ function makeHand(side){
   return {
     side: side, active: false, isHand: false, pinch: false, pinchPrev: false,
     wrist: new THREE.Vector3(), tip: new THREE.Vector3(), thumb: new THREE.Vector3(), dir: new THREE.Vector3(0,0,-1),
-    group: group, palm: palm, tools: tools, shield: shield, light: light, tipDot: tipDot, thumbDot: thumbDot,
+    group: group, palm: palm, tools: tools, shield: shield, tipDot: tipDot, thumbDot: thumbDot,
     gamepad: null
   };
 }
 
 var hands = { left: makeHand('left'), right: makeHand('right') };
+/* Ein einziges Fackel-Licht, das der Hand mit der Fackel folgt (weniger Lichter = schneller auf der Quest) */
+var torchLight = new THREE.PointLight(0xffb357, 0, 14, 1.3);
+scene.add(torchLight);
 
 function toolHand(){ return (settings.lefty && renderer.xr.isPresenting) ? hands.left : hands.right; }
 function uiHand(){ return (settings.lefty && renderer.xr.isPresenting) ? hands.right : hands.left; }
@@ -3432,6 +3437,7 @@ function pulse(hand, strength, ms){
 function updateHeldTool(){
   var th = toolHand(), uh = uiHand();
   var vrBow = state.selected === 'bogen' && vrLike() && uh.active && uh !== th;
+  var torchHand = null;
   ['left','right'].forEach(function(side){
     var h = hands[side];
     var shown = null;
@@ -3445,9 +3451,11 @@ function updateHeldTool(){
       if (show) shown = k;
     });
     h.palm.visible = !shown && !(fingersVisible() && h.hasJoints);
-    h.light.intensity = (shown === 'fackel') ? 1.5 : 0;
+    if (shown === 'fackel' && h.active) torchHand = h;
     h.shield.visible = state.owned.schild && h === uh && renderer.xr.isPresenting && !(vrBow);
   });
+  if (torchHand){ torchLight.position.copy(torchHand.wrist).addScaledVector(torchHand.dir, 0.2); torchLight.position.y += 0.1; torchLight.intensity = 1.5; }
+  else torchLight.intensity = 0;
   if (state.owned.goldlauf){
     ['left','right'].forEach(function(side){
       var pb = hands[side].tools.pistole.userData.barrel;
@@ -3483,7 +3491,7 @@ var yaw = 0, pitch = 0;
 var looking = false, lastMX = 0, lastMY = 0;
 var desktopMode = false;
 var mouseDown = false;
-var TAB_ORDER = ['waffen','bauen','ausruestung','kueche','skills','handel','aufgaben','karte'];
+var TAB_ORDER = ['waffen','bauen','ausruestung','kueche','magie','skills','handel','aufgaben','karte','gesten'];
 
 window.addEventListener('keydown', function(e){
   keysDown[e.code] = true;
@@ -3495,7 +3503,7 @@ window.addEventListener('keydown', function(e){
   if (e.code === 'Tab'){
     e.preventDefault();
     state.tab = TAB_ORDER[(TAB_ORDER.indexOf(state.tab) + (e.shiftKey ? TAB_ORDER.length - 1 : 1)) % TAB_ORDER.length];
-    uiDirty = true;
+    uiUrgent = true;
   }
   if (e.code === 'KeyR') startReload();
   if (e.code === 'Backquote') doAction('hotpage');
@@ -4914,7 +4922,7 @@ var BUILDABLE = {
 };
 
 var lightPool = [];
-for (var li = 0; li < 4; li++){
+for (var li = 0; li < 3; li++){
   var pl = new THREE.PointLight(0xffa348, 0, 16, 1.4);
   scene.add(pl);
   lightPool.push(pl);
@@ -7540,6 +7548,7 @@ function hotbarItems(){
 function selectSlot(id){
   if (state.selected === id) return;
   state.selected = id;
+  uiUrgent = true;
   if (WEAPONS[id] && state.ammo > weaponMag()){ state.reserve += state.ammo - weaponMag(); state.ammo = weaponMag(); }
   state.reloading = false;
   bowCharge = 0;
@@ -7818,6 +7827,7 @@ function trade(offerId){
 
 function doAction(id){
   if (!id) return;
+  uiUrgent = true;
   if (id.indexOf('hm:') === 0){
     var what = id.slice(3);
     if (what === 'eat') eat();
@@ -7954,7 +7964,7 @@ function updateInteraction(dt){
     }
   }
   if (region === 'panel') region = null;
-  if (region !== state.hover){ state.hover = region; uiDirty = true; }
+  if (region !== state.hover){ state.hover = region; uiUrgent = true; }
 
   updateGhost();
   if (sleeping || state.dead || state.paused){ bowCharge = 0; return; }
@@ -8109,11 +8119,18 @@ function uiState(){
   };
 }
 
-function drawUI(){
+function drawUI(skipPanel){
   if (!hotbarItems().some(function(it){ return it.id === state.selected; })) state.selected = 'hand';
   var s = uiState();
   hotbar.draw(s);
-  craftPanel.draw(s);
+  if (!skipPanel) craftPanel.draw(s);
+}
+
+/* Das große Menü nur neu zeichnen, wenn man in seine Richtung schaut */
+var _uiDir = new THREE.Vector3(), panelWasSeen = false, panelPending = true;
+function craftPanelInView(){
+  camera.getWorldDirection(_uiDir);
+  return _uiDir.y < -0.15;
 }
 
 /* ================================================================ Grafik */
@@ -8128,7 +8145,7 @@ function applyQuality(){
   if (!renderer.xr.isPresenting && renderer.xr.setFramebufferScaleFactor){
     try { renderer.xr.setFramebufferScaleFactor(q.xrScale); } catch(e){}
   }
-  if (renderer.xr.setFoveation){ try { renderer.xr.setFoveation(settings.quality === 'hoch' ? 0.3 : 1); } catch(e){} }
+  if (renderer.xr.setFoveation){ try { renderer.xr.setFoveation(q.foveation); } catch(e){} }
   lastW = 0;
 }
 
@@ -8272,19 +8289,28 @@ function startGame(){
   saveGame();
 }
 
-var xrSupported = false;
+var xrSupported = false, xrChecked = false;
+
+/* VR-Knopf erst freigeben, wenn Vorbereitung und VR-Prüfung fertig sind */
+function updateVrButton(){
+  if (typeof shadersReady !== 'undefined' && !shadersReady){ vrBtn.disabled = true; vrBtn.textContent = 'Spiel wird vorbereitet …'; return; }
+  if (!navigator.xr || !navigator.xr.isSessionSupported){
+    vrBtn.disabled = true; vrBtn.textContent = 'VR hier nicht verfügbar';
+    if (!statusEl.textContent) statusEl.textContent = 'Dieser Browser unterstützt kein WebXR.';
+    return;
+  }
+  if (!xrChecked){ vrBtn.disabled = true; vrBtn.textContent = 'VR wird geprüft…'; return; }
+  vrBtn.disabled = !xrSupported;
+  vrBtn.textContent = xrSupported ? 'In VR starten' : 'VR hier nicht verfügbar';
+  if (!xrSupported && !statusEl.textContent) statusEl.textContent = 'Diesen Link im Meta-Quest-Browser öffnen, um in VR zu spielen.';
+}
+
 if (navigator.xr && navigator.xr.isSessionSupported){
   navigator.xr.isSessionSupported('immersive-vr').then(function(ok){
-    xrSupported = ok;
-    vrBtn.disabled = !ok;
-    vrBtn.textContent = ok ? 'In VR starten' : 'VR hier nicht verfügbar';
-    if (!ok) statusEl.textContent = 'Diesen Link im Meta-Quest-Browser öffnen, um in VR zu spielen.';
-  }).catch(function(){ vrBtn.disabled = true; vrBtn.textContent = 'VR hier nicht verfügbar'; });
-} else {
-  vrBtn.disabled = true;
-  vrBtn.textContent = 'VR hier nicht verfügbar';
-  statusEl.textContent = 'Dieser Browser unterstützt kein WebXR.';
+    xrSupported = ok; xrChecked = true; updateVrButton();
+  }).catch(function(){ xrSupported = false; xrChecked = true; updateVrButton(); });
 }
+updateVrButton();
 
 vrBtn.addEventListener('click', function(){
   if (!xrSupported) return;
@@ -8297,6 +8323,10 @@ vrBtn.addEventListener('click', function(){
     reticle.style.display = 'none';
     keysHint.hidden = true;
     startGame();
+    later(9000, function(){
+      if (!renderer.xr.isPresenting) return;
+      banner('VR LÄUFT', [fps + ' Bilder pro Sekunde · Grafik ' + quality().label, fps < 45 ? 'Ruckelt es? Im Menü „Grafik: Niedrig“ wählen' : 'Viel Spaß!'], fps < 45 ? '#f2c14e' : '#7bd389');
+    });
     session.addEventListener('end', function(){ menu.style.display = 'flex'; saveGame(); existingSave = readSave(); refreshMenu(); });
   }).catch(function(err){ statusEl.textContent = 'VR-Start fehlgeschlagen: ' + err.message; });
 });
@@ -8386,7 +8416,14 @@ function tick(dt, frame){
   W.refresh();
 
   uiClock += dt;
-  if (uiDirty || uiClock > 0.4){ uiClock = 0; uiDirty = false; drawUI(); }
+  var panelSeen = craftPanelInView();
+  if (panelSeen && !panelWasSeen && panelPending) uiUrgent = true;
+  panelWasSeen = panelSeen;
+  if (uiUrgent || (uiDirty && uiClock > 0.35) || uiClock > 2.5){
+    uiClock = 0; uiDirty = false; uiUrgent = false;
+    drawUI(!panelSeen);
+    panelPending = !panelSeen;
+  }
 
   hands.left.pinchPrev = hands.left.pinch;
   hands.right.pinchPrev = hands.right.pinch;
@@ -10149,14 +10186,12 @@ function castSpell(id){
   }
 }
 
-var lightningFlash = new THREE.PointLight(0xdfe8ff, 0, 30, 1.2);
-scene.add(lightningFlash);
 function lightningStrike(at, dmg, radius, noHurtPlayer){
   var top = at.clone(); top.y += 16;
   addZigzag(top, at, 0xf5f0ff);
   addZigzag(top, at, 0x9fdcff);
-  lightningFlash.position.copy(at); lightningFlash.position.y += 3;
-  lightningFlash.intensity = 5;
+  boomLight.position.copy(at); boomLight.position.y += 3;
+  boomLight.intensity = 5;
   spawnBurst(at, 0xf5f0ff, 12, 4);
   noiseBurst(0.9, 0.18, 1400);
   allCreatures().forEach(function(c){
@@ -10350,7 +10385,6 @@ function updateItems(dt){
     shockRing.material.opacity = Math.max(0, shockT / 0.6) * 0.8;
     if (shockT <= 0) shockRing.visible = false;
   }
-  if (lightningFlash.intensity > 0) lightningFlash.intensity = Math.max(0, lightningFlash.intensity - dt * 12);
   if ((state.owned.jetpack) && state.jetFuel <= 0 && jetInput() && has('kohle', 1) && !creative()){
     state.inv.kohle--; state.jetFuel = 50; say('Jetpack nachgetankt (1 Kohle)', true); uiDirty = true;
   }
@@ -12304,11 +12338,121 @@ drawUI();
 updateHeldTool();
 applyQuality();
 
+/* Fehler in einem Bild dürfen das Spiel nicht einfrieren: weiter zeichnen und den Fehler anzeigen */
+var lastErrorMsg = '', lastErrorShown = 0;
+function reportError(e){
+  var line = ((e && e.stack) || '').split('\n')[1] || '';
+  var msg = (e && e.message ? e.message : String(e)) + ' ' + line.trim().replace(/^at\s+/, '').slice(0, 60);
+  if (msg !== lastErrorMsg){
+    lastErrorMsg = msg;
+    try { localStorage.setItem('waldwacht-lasterror', msg); } catch(x){}
+    if (window.console) console.error(e);
+  }
+  if (performance.now() - lastErrorShown > 5000){
+    lastErrorShown = performance.now();
+    try { showBanner('FEHLER', [msg.slice(0, 48), msg.slice(48, 96), 'Bitte Claude Bescheid sagen'], '#e4452e'); } catch(x){}
+  }
+}
+
 renderer.setAnimationLoop(function(time, frame){
   var dt = lastTime ? Math.min(0.08, (time - lastTime) / 1000) : 0.016;
   lastTime = time;
-  tick(dt, frame);
+  // Solange das Startmenü die Welt verdeckt, nichts berechnen (hält den Quest-Browser flüssig)
+  if (!frame && menu.style.display !== 'none' && !debugForceTick) return;
+  try { tick(dt, frame); }
+  catch(e){ reportError(e); try { renderer.render(scene, camera); } catch(e2){} }
 });
+
+/* Alle Grafik-Programme schon im Menü vorbereiten, damit der VR-Start nicht hängt */
+var shadersReady = false, debugForceTick = false;
+var warmupMs = 0, warmupProgress = 0;
+
+/* Grafik-Programme in kleinen Schritten vorbereiten, damit der Browser dazwischen reagiert.
+   Eine Hilfsszene mit gleich vielen Lichtern und gleichem Nebel ergibt dieselben Programme wie die echte Welt. */
+function warmupShaders(done){
+  var tw = performance.now();
+  var factories = [];
+  Object.keys(ENEMY_DEF).forEach(function(k){ factories.push(function(){ return makeEnemyMesh(k, false); }); });
+  Object.keys(ANIMAL_DEF).forEach(function(k){ factories.push(function(){ return makeAnimalMesh(k); }); });
+  Object.keys(BUILDABLE).forEach(function(k){ factories.push(function(){ return BUILDABLE[k].make(); }); });
+  Object.keys(PICKUP).forEach(function(k){ var d = PICKUP[k]; if (d.geo) factories.push(function(){ return new THREE.Mesh(d.geo, new THREE.MeshPhongMaterial({ color: d.color, emissive: d.color, emissiveIntensity: 0.3, shininess: 40 })); }); });
+  factories.push(function(){ return makeChestMesh(false); }, function(){ return makeChestMesh(true); }, function(){ return makeCrateMesh(); });
+  Object.keys(SHOT_LOOK).forEach(function(k){ factories.push(function(){ return new THREE.Mesh(SHOT_LOOK[k][0], SHOT_LOOK[k][1]); }); });
+  factories.push(function(){ return new THREE.Mesh(projGeo, new THREE.MeshBasicMaterial({ color: 0xffffff })); });
+  factories.push(function(){ return new THREE.Mesh(burstGeo, new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true })); });
+
+  var tmp = new THREE.Scene();
+  tmp.fog = scene.fog;
+  var counts = { hemi: 0, dir: 0, point: 0, spot: 0 };
+  scene.traverseVisible(function(o){
+    if (o.isHemisphereLight) counts.hemi++;
+    else if (o.isDirectionalLight) counts.dir++;
+    else if (o.isPointLight) counts.point++;
+    else if (o.isSpotLight) counts.spot++;
+  });
+  var i;
+  for (i = 0; i < counts.hemi; i++) tmp.add(new THREE.HemisphereLight(0xffffff, 0x444444, 0));
+  for (i = 0; i < counts.dir; i++) tmp.add(new THREE.DirectionalLight(0xffffff, 0));
+  for (i = 0; i < counts.point; i++) tmp.add(new THREE.PointLight(0xffffff, 0));
+  for (i = 0; i < counts.spot; i++){ var sl = new THREE.SpotLight(0xffffff, 0); tmp.add(sl, sl.target); }
+
+  /* Danach die Welt selbst stückweise (ohne Lichter und ohne den Spieler mit der Kamera) */
+  var worldParts = scene.children.filter(function(o){
+    var hasLight = false;
+    o.traverse(function(c){ if (c.isLight || c.isCamera) hasLight = true; });
+    return !hasLight;
+  });
+  var worldIdx = 0, WORLD_BATCH = 12;
+  factories.push(null);
+
+  var idx = 0, BATCH = 4;
+  function step(){
+    try {
+      if (factories[idx] === null){
+        var part = worldParts.slice(worldIdx, worldIdx + WORLD_BATCH);
+        part.forEach(function(o){ tmp.add(o); });
+        renderer.compile(tmp, camera);
+        part.forEach(function(o){ scene.add(o); });
+        worldIdx += WORLD_BATCH;
+        if (worldIdx >= worldParts.length) idx++;
+      } else {
+        var group = new THREE.Group();
+        for (var k = 0; k < BATCH && idx < factories.length && factories[idx] !== null; k++, idx++){ var m = factories[idx](); if (m) group.add(m); }
+        tmp.add(group);
+        renderer.compile(tmp, camera);
+        tmp.remove(group);
+      }
+    } catch(e){ reportError(e); idx = factories.length; worldParts.forEach(function(o){ if (o.parent !== scene) scene.add(o); }); }
+    var total = factories.length - 1 + Math.ceil(worldParts.length / WORLD_BATCH);
+    var doneSteps = Math.min(idx, factories.length - 1) + (idx >= factories.length - 1 ? Math.min(Math.ceil(worldIdx / WORLD_BATCH), Math.ceil(worldParts.length / WORLD_BATCH)) : 0);
+    warmupProgress = Math.round(doneSteps / total * 95);
+    vrBtn.textContent = 'Spiel wird vorbereitet … ' + warmupProgress + ' %';
+    if (idx < factories.length){ setTimeout(step, 0); return; }
+    setTimeout(function(){
+      try { renderer.compile(scene, camera); } catch(e){ reportError(e); }
+      shadersReady = true;
+      warmupProgress = 100;
+      warmupMs = Math.round(performance.now() - tw);
+      updateHeldTool();
+      if (done) done();
+    }, 0);
+  }
+  step();
+}
+
+(function prepare(){
+  var lastErr = null;
+  try { lastErr = localStorage.getItem('waldwacht-lasterror'); localStorage.removeItem('waldwacht-lasterror'); } catch(e){}
+  if (lastErr) statusEl.textContent = 'Beim letzten Spielen gab es einen Fehler: ' + lastErr + ' — sag das bitte Claude.';
+  desktopBtn.disabled = true;
+  updateVrButton();
+  setTimeout(function(){
+    warmupShaders(function(){
+      desktopBtn.disabled = false;
+      updateVrButton();
+    });
+  }, 60);
+})();
 
 
 BL.debug = {
@@ -12328,6 +12472,9 @@ BL.debug = {
   forceSize: function(w, h){ lastW = w; lastH = h; camera.aspect = w / h; camera.updateProjectionMatrix(); renderer.setSize(w, h, false); },
   tick: function(dt, steps){ for (var i = 0; i < (steps || 1); i++) tick(dt || 0.016, null); },
   setVR: function(on){ debugVR = !!on; },
+  forceTick: function(on){ debugForceTick = !!on; },
+  shadersReady: function(){ return shadersReady; },
+  warmup: function(){ return { ms: warmupMs, programs: renderer.info.programs ? renderer.info.programs.length : -1 }; },
   noRender: function(on){ debugNoRender = !!on; },
   renderInfo: function(){ return renderer.info.render; },
   fakeHand: fakeHand,
@@ -12339,7 +12486,7 @@ BL.debug = {
     smithArrive: smithArrive, grantWish: grantWish, lightningStrike: lightningStrike, useFarm: useFarm, collectProduce: collectProduce, teleportFrom: teleportFrom,
     addStructure: addStructure, createEnemy: createEnemy, createAnimal: createAnimal, craft: function(id){ return craft(RECIPE_BY_ID[id]); }, useItem: useItem,
     eatItem: eatItem, newDaily: newDaily, unlockVault: unlockVault, throwItem: throwItem, swing: swing, onNewDay: onNewDay, launchShot: launchShot,
-    explode: explode, animalInteract: animalInteract, gestureTabData: gestureTabData, uiState: uiState, recipesForTab: recipesForTab, trade: trade };
+    explode: explode, animalInteract: animalInteract, reportError: reportError, gestureTabData: gestureTabData, uiState: uiState, recipesForTab: recipesForTab, trade: trade };
     return fns[name].apply(null, args); }
 };
 
