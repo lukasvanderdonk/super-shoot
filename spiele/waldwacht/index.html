@@ -148,7 +148,7 @@ input[type="range"]{flex:1 1 140px;accent-color:var(--accent);min-width:0;}
 <div id="keys" hidden>
   <b>PC-Modus</b><br>
   WASD laufen · Shift rennen · Pfeiltasten / rechte Maus umsehen · Q / E drehen<br>
-  Linke Maus benutzen / Block setzen · <b>X Block abbauen</b> · Mausrad oder 1–0 Hotbar · ^ Hotbar-Seite · R nachladen<br>
+  Linke Maus benutzen / Block setzen · <b>X Block abbauen</b> · <b>I Inventar</b> · Mausrad oder 1–9 Hotbar, 0 Hand · R nachladen<br>
   <b>Menüs:</b> nach unten schauen, Fadenkreuz auf ein Feld, linke Maus<br>
   Tab / Shift+Tab Menü-Kategorie · Bild↑/↓ blättern · Esc Pause · F essen · G trinken · H Medipack<br>
   Leertaste Jetpack / Leiter / Gleiter · Strg schleichen · B Pferd · V Fackel links · T Zauber wechseln
@@ -223,7 +223,9 @@ input[type="range"]{flex:1 1 140px;accent-color:var(--accent);min-width:0;}
       <ul>
         <li><b>Laufen:</b> linke Hand zeigen und pinchen. <b>Drehen:</b> Pfeile an der Hotbar oder offene linke Hand wischen.</li>
         <li><b>Abbauen:</b> rechts pinchen und halten — oder mit Werkzeug oder Faust in den Block schlagen. Jeder Block geht kaputt, auch der Boden.</li>
-        <li><b>Bauen:</b> Block in der Hotbar wählen, hinzeigen, pinchen. Pinch halten setzt mehrere Blöcke hintereinander.</li>
+        <li><b>Bauen:</b> Block in der Hotbar wählen, hinzeigen, pinchen. Pinch halten setzt mehrere Blöcke. Ist die Hand nah an einem Block, kommt der neue genau an deine Hand.</li>
+        <li><b>Inventar wie in Minecraft:</b> Tasche an der Hotbar, im Handmenü oder links über die Schulter greifen. Stapel mit dem Finger antippen und ziehen, links antippen = halber Stapel, doppelt tippen = schnell verschieben, wegschleudern = werfen.</li>
+        <li><b>Crafting-Feld:</b> 2 × 2 im Inventar, 3 × 3 an der Werkbank. Zutaten hineinlegen, Ergebnis antippen (gedrückt halten = mehrmals). Truhen und Ofen öffnest du mit Pinch.</li>
         <li><b>Benutzen:</b> rechts pinchen — oder echt zuschlagen, werfen, den Bogen spannen, die Angel auswerfen.</li>
         <li><b>Körper:</b> über die Schulter greifen = Fernwaffe, Hüfte = Werkzeug, Hand zum Mund = essen, Handfläche hoch = Handmenü.</li>
         <li><b>Bewegen:</b> Leitern hochklettern, Jetpack mit der Faust nach unten, beim Fallen Arme ausbreiten = gleiten, schwimmen, reiten.</li>
@@ -235,6 +237,7 @@ input[type="range"]{flex:1 1 140px;accent-color:var(--accent);min-width:0;}
       <div class="block-title">Was dich erwartet</div>
       <ul>
         <li><b>Blockwelt:</b> fast 1 km groß, zehnmal so groß wie früher. 35 Blockarten, Erze tief im Stein (Kohle, Eisen, Gold, Kristall, Rubin, Smaragd), Grundgestein ganz unten.</li>
+        <li><b>Neu:</b> Truhen, Ofen, Werkbank-Block, TNT, Leitern, Verliese mit Monster-Käfigen und Schatztruhen, Setzlinge, Bau-Zauberstab, Bohrer, Erzsucher, Feuerzeug, Saphir und Amethyst, über 70 Blockarten.</li>
         <li><b>Monster im Dunkeln:</b> keine Wellen mehr. Nachts, in Höhlen und unter Dächern kommen manchmal Monster. Fackeln und Leuchtblöcke halten sie fern.</li>
         <li><b>Aufgaben</b>, Erfolge, Tagesaufgaben, 10 Skills, Ränge bis Mythos und ein großes Bestiarium.</li>
         <li><b>Welt:</b> Wald, Pilzwälder, Lavafelder, Wüste mit Tempel, Berge mit Schnee, Seen, über 40 Höhlen, Ruinen, Banditenlager, vergrabene Schätze.</li>
@@ -386,9 +389,53 @@ defVox(32, 'gruenblock',  { c: 0x4fae4a, drop: 'gruenblock', hard: 3, label: 'Gr
 defVox(33, 'gelbblock',   { c: 0xf2d23c, drop: 'gelbblock', hard: 3, label: 'Gelb' });
 defVox(34, 'weissblock',  { c: 0xeef0f4, drop: 'weissblock', hard: 3, label: 'Weiß' });
 defVox(35, 'schwarzblock',{ c: 0x2a2a30, drop: 'schwarzblock', hard: 3, label: 'Schwarz' });
+/* 200er-Update: Blöcke zum Benutzen */
+defVox(36, 'truhe',       { c: 0x9a6a36, top: 0x7a4f2a, drop: 'truhe', hard: 3, tool: 'axt', use: 'truhe', label: 'Truhe' });
+defVox(37, 'ofenblock',   { c: 0x6f7278, top: 0x55585e, drop: 'ofenblock', hard: 5, tool: 'spitzhacke', use: 'ofen', label: 'Ofen' });
+defVox(38, 'werkbankblock',{ c: 0x9a6e42, top: 0xc9a26a, drop: 'werkbankblock', hard: 3, tool: 'axt', use: 'werkbank', label: 'Werkbank' });
+defVox(39, 'tnt',         { c: 0xd23a2a, top: 0xeeeeee, drop: 'tnt', hard: 1, use: 'tnt', label: 'TNT' });
+defVox(40, 'leiter',      { c: 0xa87a44, top: 0x8a5f36, drop: 'leiter', hard: 2, tool: 'axt', ladder: true, label: 'Leiter' });
+defVox(41, 'spawner',     { c: 0x2a3440, top: 0x3a4a5a, hard: 12, tool: 'spitzhacke', need: 'spitzhacke', xp: 40, label: 'Monster-Käfig' });
+/* Neue Gesteine und Erden */
+defVox(42, 'tiefenstein', { c: 0x50535c, drop: 'tiefenstein', hard: 8, tool: 'spitzhacke', label: 'Tiefenstein' });
+defVox(43, 'lehm',        { c: 0x9aa6b4, drop: 'lehm', hard: 2, tool: 'schaufel', label: 'Lehm' });
+defVox(44, 'kies',        { c: 0x827c76, drop: 'kies', hard: 2, tool: 'schaufel', label: 'Kies' });
+defVox(45, 'moosstein',   { c: 0x6f8a5f, drop: 'moosstein', hard: 5, tool: 'spitzhacke', label: 'Moosstein' });
+defVox(46, 'glattstein',  { c: 0xaeb2b8, drop: 'glattstein', hard: 5, tool: 'spitzhacke', label: 'Glattstein' });
+/* Neue Baublöcke */
+defVox(47, 'buecherregal',{ c: 0x8a4a3a, top: 0xb8864e, drop: 'buecherregal', hard: 3, tool: 'axt', label: 'Bücherregal' });
+defVox(48, 'kuerbislaterne',{ c: 0xf08a2b, glow: true, light: true, drop: 'kuerbislaterne', hard: 2, label: 'Kürbislaterne' });
+defVox(49, 'heuballen',   { c: 0xd9b84a, top: 0xc4a032, drop: 'heuballen', hard: 1, label: 'Heuballen' });
+defVox(50, 'packeis',     { c: 0x9cc4ea, drop: 'packeis', hard: 4, tool: 'spitzhacke', label: 'Packeis' });
+defVox(51, 'kristallblock',{ c: 0x7ae6f2, glow: true, light: true, drop: 'kristallblock', hard: 5, tool: 'spitzhacke', label: 'Kristallblock' });
+defVox(52, 'rubinblock',  { c: 0xc8203e, drop: 'rubinblock', hard: 8, tool: 'spitzhacke', label: 'Rubinblock' });
+defVox(53, 'smaragdblock',{ c: 0x2fbf6e, drop: 'smaragdblock', hard: 8, tool: 'spitzhacke', label: 'Smaragdblock' });
+defVox(54, 'eisenblock',  { c: 0xd8dde4, drop: 'eisenblock', hard: 8, tool: 'spitzhacke', label: 'Eisenblock' });
+defVox(55, 'kupferblock', { c: 0xd47a44, drop: 'kupferblock', hard: 7, tool: 'spitzhacke', label: 'Kupferblock' });
+defVox(56, 'kohleblock',  { c: 0x1e1e22, drop: 'kohleblock', hard: 6, tool: 'spitzhacke', label: 'Kohleblock' });
+defVox(57, 'knochenblock',{ c: 0xe8e2cc, top: 0xd8d0b4, drop: 'knochenblock', hard: 4, tool: 'spitzhacke', label: 'Knochenblock' });
+defVox(58, 'honigblock',  { c: 0xf2a82e, drop: 'honigblock', hard: 1, label: 'Honigblock' });
+defVox(59, 'magmablock',  { c: 0xb8421a, glow: true, drop: 'magmablock', hard: 5, tool: 'spitzhacke', label: 'Magmablock' });
+defVox(60, 'pilzblock',   { c: 0xe8e0d0, top: 0xc8342e, drop: 'pilzblock', hard: 1, tool: 'axt', label: 'Pilzblock' });
+defVox(61, 'glasrot',     { c: 0xff9a9a, trans: true, drop: 'glasrot', hard: 1, label: 'Rotes Glas' });
+defVox(62, 'glasblau',    { c: 0x9ab8ff, trans: true, drop: 'glasblau', hard: 1, label: 'Blaues Glas' });
+defVox(63, 'glasgruen',   { c: 0x9affaa, trans: true, drop: 'glasgruen', hard: 1, label: 'Grünes Glas' });
+defVox(64, 'wolleweiss',  { c: 0xf0eee6, drop: 'wolleweiss', hard: 1, label: 'Weiße Wolle' });
+defVox(65, 'wollerosa',   { c: 0xf0a0c0, drop: 'wollerosa', hard: 1, label: 'Rosa Wolle' });
+defVox(66, 'wolleorange', { c: 0xf0a040, drop: 'wolleorange', hard: 1, label: 'Orange Wolle' });
+defVox(67, 'wollelila',   { c: 0xa070d8, drop: 'wollelila', hard: 1, label: 'Lila Wolle' });
+defVox(68, 'wollehellblau',{ c: 0x80c8f0, drop: 'wollehellblau', hard: 1, label: 'Hellblaue Wolle' });
+defVox(69, 'wollebraun',  { c: 0x8a5a36, drop: 'wollebraun', hard: 1, label: 'Braune Wolle' });
+defVox(70, 'saphirerz',   { c: 0x3f6fe8, glow: true, drop: 'saphir', hard: 10, tool: 'spitzhacke', need: 'spitzhacke', xp: 9, ore: true, label: 'Saphir' });
+defVox(71, 'amethysterz', { c: 0xa45ae0, glow: true, drop: 'amethyst', hard: 8, tool: 'spitzhacke', need: 'spitzhacke', xp: 6, ore: true, label: 'Amethyst' });
+defVox(72, 'sternenblock',{ c: 0xfff3b0, glow: true, light: true, drop: 'sternenblock', hard: 3, label: 'Sternenblock' });
+defVox(73, 'saphirblock', { c: 0x2f5fd8, drop: 'saphirblock', hard: 8, tool: 'spitzhacke', label: 'Saphirblock' });
+defVox(74, 'amethystblock',{ c: 0x9a50d8, glow: true, light: true, drop: 'amethystblock', hard: 6, tool: 'spitzhacke', label: 'Amethystblock' });
 
 var AIR = 0, GRAS = 1, ERDE = 2, STEIN = 3, SAND = 4, SCHNEE = 5, BEDROCK = 6, OBSIDIAN = 14, BASALT = 15, LAVA = 16,
-    MYZEL = 17, SANDSTEIN = 19, STEINZIEGEL = 20, MOOSZIEGEL = 21, GOLDBLOCK = 27, LEUCHT = 28;
+    MYZEL = 17, SANDSTEIN = 19, STEINZIEGEL = 20, MOOSZIEGEL = 21, GOLDBLOCK = 27, LEUCHT = 28,
+    TRUHE = 36, SPAWNER = 41, TIEFENSTEIN = 42, LEHM = 43, KIES = 44, MOOSSTEIN = 45;
+function isLightType(t){ return !!(VOX[t] && VOX[t].light); }
 
 var TRANS = new Uint8Array(256), GLOW = new Uint8Array(256);
 var COLR = new Float32Array(256), COLG = new Float32Array(256), COLB = new Float32Array(256);
@@ -405,6 +452,11 @@ VOX.forEach(function(v){
 /* Erze stecken im Stein; welche, hängt vom Ort ab — so kostet die Erzeugung kaum Zeit */
 function oreAt(x, y, z){
   if (y > 24) return 0;
+  /* ganz tief unten: kleine Lavataschen */
+  if (y < -28 && ihash(x >> 2, y >> 1, (z >> 2) + 4242) < 0.010 && ihash(x, y, z + 77) < 0.8) return LAVA;
+  var deep = ihash(x >> 1, y >> 1, (z >> 1) + 9191);
+  if (y < -20 && deep < 0.004) return 70;
+  if (y < -10 && deep > 0.996) return 71;
   var cl = ihash(x >> 1, y >> 1, (z >> 1) + 7777);
   if (cl > 0.072) return 0;
   if (ihash(x, y, z + 31) > 0.62) return 0;
@@ -948,7 +1000,10 @@ function genChunk(cx, cz){
       var sl = Math.max(Math.abs(hs[(lz + 1) * HW + lx + 2] - hs[(lz + 1) * HW + lx]), Math.abs(hs[(lz + 2) * HW + lx + 1] - hs[lz * HW + lx + 1])) * 0.5;
       var kind = surfaceKind(wx + 0.5, wz + 0.5, h);
       var topT = GRAS, subT = ERDE, subN = 3, desert = false;
-      if (T <= -2){ topT = T > -5 ? SAND : ERDE; subT = SAND; }
+      if (T <= -2){
+        var lk = ihash(wx >> 2, 5, wz >> 2);
+        topT = lk < 0.22 ? LEHM : (lk < 0.4 ? KIES : (T > -5 ? SAND : ERDE)); subT = SAND;
+      }
       else if (kind === 'lava'){ topT = BASALT; subT = BASALT; }
       else if (kind === 'pilzwald'){ topT = MYZEL; }
       else if (kind === 'schnee'){ topT = SCHNEE; subT = STEIN; subN = 1; }
@@ -962,7 +1017,7 @@ function genChunk(cx, cz){
         if (dp === 0) t = topT;
         else if (dp <= subN) t = subT;
         else if (desert && dp <= subN + 3) t = SANDSTEIN;
-        else t = STEIN;
+        else t = L < -20 - ((wx * 7 + wz * 13) & 3) ? TIEFENSTEIN : STEIN;
         d[base + L - MIN_Y] = t;
       }
       c.nat[col] = T;
@@ -1005,6 +1060,8 @@ function genChunk(cx, cz){
       }
     }
   });
+  /* Verliese mit Monster-Käfig und Schatztruhen tief im Stein */
+  genDungeon(c);
   /* Ruinen und Tempel */
   var st = stamps.get(c.key);
   if (st){
@@ -1018,6 +1075,37 @@ function genChunk(cx, cz){
   if (em) em.forEach(function(t, idx){ d[idx] = t; });
   for (var k = 0; k < CH * CH; k++) computeCol(c, k);
   return c;
+}
+
+/* Verlies: 7 × 7 × 5 Raum aus Moosstein, in der Mitte ein Monster-Käfig, in den Ecken Truhen */
+var lootChests = new Set(), spawnerList = new Map();
+function genDungeon(c){
+  if (Math.hypot(c.x0 + 16, c.z0 + 16) > FIELD_R - 30) return;
+  if (ihash(c.cx, c.cz, 901) > 0.2) return;
+  var lx0 = 4 + Math.floor(ihash(c.cx, c.cz, 902) * 20), lz0 = 4 + Math.floor(ihash(c.cx, c.cz, 903) * 20);
+  var minTop = 999;
+  for (var a = 0; a < 7; a++) for (var b = 0; b < 7; b++) minTop = Math.min(minTop, c.nat[(lz0 + b) * CH + lx0 + a]);
+  var y0 = Math.min(minTop - 8, -6 - Math.floor(ihash(c.cx, c.cz, 904) * 22));
+  if (y0 < MIN_Y + 3) return;
+  var d = c.data;
+  for (var x = 0; x < 7; x++){
+    for (var z = 0; z < 7; z++){
+      var base = ((lz0 + z) * CH + lx0 + x) * H;
+      for (var y = 0; y < 5; y++){
+        var edge = x === 0 || x === 6 || z === 0 || z === 6 || y === 0 || y === 4;
+        d[base + y0 + y - MIN_Y] = edge ? (ihash(x + c.x0, y + y0, z + c.z0) < 0.45 ? MOOSSTEIN : STEINZIEGEL) : AIR;
+      }
+    }
+  }
+  var sx = c.x0 + lx0 + 3, sz = c.z0 + lz0 + 3, sy = y0 + 1;
+  d[((lz0 + 3) * CH + lx0 + 3) * H + sy - MIN_Y] = SPAWNER;
+  spawnerList.set(sx + ',' + sy + ',' + sz, { x: sx, y: sy, z: sz, cd: 4 });
+  [[1, 1], [5, 5], [1, 5]].forEach(function(p, i){
+    if (i === 2 && ihash(c.cx, c.cz, 905) < 0.5) return;
+    var cxl = lx0 + p[0], czl = lz0 + p[1];
+    d[(czl * CH + cxl) * H + sy - MIN_Y] = TRUHE;
+    lootChests.add((c.x0 + cxl) + ',' + sy + ',' + (c.z0 + czl));
+  });
 }
 
 function getChunk(cx, cz, create){
@@ -1054,7 +1142,7 @@ function rawAt(ix, iy, iz){
 /* Blockart mit Erzen */
 function typeAt(ix, iy, iz){
   var t = rawAt(ix, iy, iz);
-  if (t === STEIN){ var o = oreAt(ix, iy, iz); if (o) return o; }
+  if (t === STEIN || t === TIEFENSTEIN){ var o = oreAt(ix, iy, iz); if (o) return o; }
   return t;
 }
 
@@ -1077,8 +1165,8 @@ function setVoxel(ix, iy, iz, t){
   if (before === t) return false;
   c.data[idx] = t;
   recordEdit(c, idx, t);
-  if (before === LEUCHT) glowList = glowList.filter(function(g){ return !(g.x === ix && g.y === iy && g.z === iz); });
-  if (t === LEUCHT) glowList.push({ x: ix, y: iy, z: iz });
+  if (isLightType(before)) glowList = glowList.filter(function(g){ return !(g.x === ix && g.y === iy && g.z === iz); });
+  if (isLightType(t)) glowList.push({ x: ix, y: iy, z: iz });
   computeCol(c, col);
   markDirty(c);
   if (lx === 0) markDirty(chunks.get(ckey(cx - 1, cz)));
@@ -1119,7 +1207,7 @@ function importEdits(arr){
     if (!em){ em = new Map(); editsByChunk.set(key, em); }
     if (!em.has(idx)) editTotal++;
     em.set(idx, t);
-    if (t === LEUCHT) glowList.push({ x: ix, y: iy, z: iz });
+    if (isLightType(t)) glowList.push({ x: ix, y: iy, z: iz });
     var c = chunks.get(key);
     if (c){ c.data[idx] = t; computeCol(c, idx / H | 0); markDirty(c); }
   }
@@ -1186,6 +1274,8 @@ function isWater(x, z){ return lakeNatural(x, z) && height(x, z) <= -2; }
 function isDry(x, z, refY){
   if (insideCave(x, z, refY) || inTrench(x, z)) return true;
   if (natTop(Math.floor(x), Math.floor(z)) > -2) return true;
+  /* tief unter dem Seeboden (Tunnel, Verlies) ist es trocken */
+  if (refY !== undefined && refY < natTop(Math.floor(x), Math.floor(z)) - 0.5) return true;
   return floorAt(x, z, refY) >= WATER_Y + 0.15;
 }
 
@@ -1204,7 +1294,7 @@ function raycast(o, dir, maxDist){
   var ox = o.x, oy = o.y, oz = o.z, dx = dir.x, dy = dir.y, dz = dir.z;
   var ix = Math.floor(ox), iy = Math.floor(oy), iz = Math.floor(oz);
   var t0 = rawAt(ix, iy, iz);
-  if (t0) return { ix: ix, iy: iy, iz: iz, raw: t0, type: t0 === STEIN ? (oreAt(ix, iy, iz) || STEIN) : t0, nx: 0, ny: dy < 0 ? 1 : -1, nz: 0, dist: 0 };
+  if (t0) return { ix: ix, iy: iy, iz: iz, raw: t0, type: (t0 === STEIN || t0 === TIEFENSTEIN) ? (oreAt(ix, iy, iz) || t0) : t0, nx: 0, ny: dy < 0 ? 1 : -1, nz: 0, dist: 0 };
   var stepX = dx > 0 ? 1 : -1, stepY = dy > 0 ? 1 : -1, stepZ = dz > 0 ? 1 : -1;
   var tdx = dx !== 0 ? Math.abs(1 / dx) : Infinity, tdy = dy !== 0 ? Math.abs(1 / dy) : Infinity, tdz = dz !== 0 ? Math.abs(1 / dz) : Infinity;
   var tmx = dx !== 0 ? (dx > 0 ? ix + 1 - ox : ox - ix) * tdx : Infinity;
@@ -1218,7 +1308,7 @@ function raycast(o, dir, maxDist){
     if (t > maxDist) return null;
     if (iy >= MAX_Y && dy > 0) return null;
     var r = rawAt(ix, iy, iz);
-    if (r) return { ix: ix, iy: iy, iz: iz, raw: r, type: r === STEIN ? (oreAt(ix, iy, iz) || STEIN) : r, nx: nx, ny: ny, nz: nz, dist: t };
+    if (r) return { ix: ix, iy: iy, iz: iz, raw: r, type: (r === STEIN || r === TIEFENSTEIN) ? (oreAt(ix, iy, iz) || r) : r, nx: nx, ny: ny, nz: nz, dist: t };
   }
   return null;
 }
@@ -1705,7 +1795,7 @@ function buildMesh(c){
         var li = base + (L - MIN_Y);
         var raw = d[li];
         if (!raw) continue;
-        var t = raw === STEIN ? (oreAt(wx, L, wz) || STEIN) : raw;
+        var t = (raw === STEIN || raw === TIEFENSTEIN) ? (oreAt(wx, L, wz) || raw) : raw;
         var trans = TRANS[t], glow = GLOW[t];
         for (var f = 0; f < 6; f++){
           var nt, cover;
@@ -2130,6 +2220,7 @@ var W = BL.world = {
   VOX: VOX, VT: VT, rawAt: rawAt, typeAt: typeAt, setVoxel: setVoxel, raycast: raycast, solidAt: solidAt,
   skyCovered: skyCovered, glowNear: glowNear, exportEdits: exportEdits, importEdits: importEdits,
   editCount: function(){ return editTotal; }, onVoxelChange: null,
+  isLootChest: function(key){ return lootChests.has(key); }, spawners: spawnerList, isEdited: isEdited,
   stats: function(){ var m = 0; chunks.forEach(function(c){ if (c.meshed) m++; }); return { chunks: chunks.size, meshed: m, nodes: nodes.length, needed: needed.length, edits: editTotal, caves: caves.length }; }
 };
 BL.NODE_DEF = NODE_DEF;
@@ -2218,7 +2309,26 @@ var SIMPLE = {
   steinziegel: ['cube', '#9b958a', '#b0aa9e'], sandstein: ['cube', '#d9b778', '#e8cc92'], schnee: ['cube', '#dfe6ee', '#ffffff'],
   laub: ['cube', '#3f8f45', '#55a95a'], leuchtblock: ['cube', '#ffd46a', '#fff2c0'], goldblock: ['cube', '#e6b52e', '#ffd966'],
   rotblock: ['cube', '#d2433f', '#e25e5a'], blaublock: ['cube', '#3f6fd8', '#5c88ea'], gruenblock: ['cube', '#4fae4a', '#68c462'],
-  gelbblock: ['cube', '#e8c830', '#ffe060'], weissblock: ['cube', '#dfe3ea', '#ffffff'], schwarzblock: ['cube', '#2a2a30', '#46464e']
+  gelbblock: ['cube', '#e8c830', '#ffe060'], weissblock: ['cube', '#dfe3ea', '#ffffff'], schwarzblock: ['cube', '#2a2a30', '#46464e'],
+  truhe: ['chestbox', '#9a6a36', '#f2c33c'], ofenblock: ['cube', '#6f7278', '#55585e'], werkbankblock: ['cube', '#9a6e42', '#c9a26a'],
+  tnt: ['cube', '#d23a2a', '#eeeeee'], leiter: ['ladder', '#a87a44'], tiefenstein: ['cube', '#50535c', '#63666f'],
+  lehm: ['cube', '#9aa6b4', '#aeb8c4'], kies: ['cube', '#827c76', '#968f88'], moosstein: ['cube', '#6f8a5f', '#83a070'],
+  glattstein: ['cube', '#aeb2b8', '#c4c8ce'], buecherregal: ['cube', '#8a4a3a', '#b8864e'], kuerbislaterne: ['cube', '#f08a2b', '#ffd060'],
+  heuballen: ['cube', '#d9b84a', '#c4a032'], packeis: ['cube', '#9cc4ea', '#bcdcf8'], kristallblock: ['cube', '#5ad8ea', '#9af0fa'],
+  rubinblock: ['cube', '#c8203e', '#e04860'], smaragdblock: ['cube', '#2fbf6e', '#58da8c'], eisenblock: ['cube', '#c8cdd4', '#eef1f5'],
+  kupferblock: ['cube', '#d47a44', '#e89a66'], kohleblock: ['cube', '#1e1e22', '#38383e'], knochenblock: ['cube', '#e8e2cc', '#d8d0b4'],
+  honigblock: ['cube', '#f2a82e', '#ffc85a'], magmablock: ['cube', '#b8421a', '#ff7a2a'], pilzblock: ['cube', '#e8e0d0', '#c8342e'],
+  glasrot: ['pane', '#ff9a9a'], glasblau: ['pane', '#9ab8ff'], glasgruen: ['pane', '#9affaa'],
+  wolleweiss: ['cube', '#f0eee6', '#ffffff'], wollerosa: ['cube', '#f0a0c0', '#ffc0d8'], wolleorange: ['cube', '#f0a040', '#ffc060'],
+  wollelila: ['cube', '#a070d8', '#c090f0'], wollehellblau: ['cube', '#80c8f0', '#a8dcff'], wollebraun: ['cube', '#8a5a36', '#a87448'],
+  sternenblock: ['cube', '#ffe890', '#fff8d8'], saphirblock: ['cube', '#2f5fd8', '#5a82f0'], amethystblock: ['cube', '#9a50d8', '#c080f0'],
+  saphir: ['gem', '#3f6fe8'], amethyst: ['gem', '#a45ae0'], stock: ['stick', '#b8864e'], feuerstein: ['gem', '#4a4a52'],
+  feuerzeug: ['lighter', '#c9ced6'], bauzauberstab: ['staff', '#7bd389'], bohrer: ['drill', '#aab4c4'], erzsucher: ['radar', '#f2c14e'],
+  eisen: ['bar', '#c8ccd4'], kupfer: ['bar', '#d2763f'], gold: ['bar', '#f2c33c'], kohle: ['pile', '#2e2e34'], kristall: ['gem', '#59d7e8'], rubin: ['gem', '#d8284a'],
+  knochen: ['stick', '#efe8d6'], leder: ['bar', '#8a5a33'], perle: ['ball', '#f6f0ff'], blume: ['berries', '#f5d547'], pilz: ['shroom', '#d8c0a8'], fliegenpilz: ['shroom', '#d8302a'],
+  kaktus: ['sticks', '#4f8f3e'], ei: ['egg', '#f5d547'], fleisch: ['ball', '#c0564a'], fisch: ['feather', '#8fb8d0'], apfel: ['ball', '#e23b2e'], beeren: ['berries', '#d2433f'], kuerbis: ['ball', '#e9832b'],
+  setzling: ['sapling', '#5fae4a'],
+  tasche: ['bag', '#c9a36a'], muell: ['trash', '#e4452e'], wegwerfen: ['arrowdown', '#f2c14e'], sortieren: ['sort', '#7bd389']
 };
 
 function simpleIcon(ctx, shape, s, col, col2){
@@ -2233,6 +2343,19 @@ function simpleIcon(ctx, shape, s, col, col2){
       poly([[0,-0.02],[0.76,-0.42],[0.76,0.46],[0,0.86]]);
       ctx.fillStyle = 'rgba(0,0,0,0.28)'; poly([[0,-0.02],[0.76,-0.42],[0.76,0.46],[0,0.86]]);
       break;
+    case 'chestbox':
+      ctx.fillRect(-s*0.72, -s*0.3, s*1.44, s*0.9); ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fillRect(-s*0.72, -s*0.3, s*1.44, s*0.14);
+      ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(-s*0.72, -s*0.3); ctx.lineTo(-s*0.6, -s*0.7); ctx.lineTo(s*0.6, -s*0.7); ctx.lineTo(s*0.72, -s*0.3); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = col2 || '#f2c33c'; ctx.fillRect(-s*0.1, -s*0.34, s*0.2, s*0.26); break;
+    case 'ladder': ctx.lineWidth = s*0.14; line(-0.4, -0.85, -0.4, 0.85); line(0.4, -0.85, 0.4, 0.85); ctx.lineWidth = s*0.1; for (var ld2 = -0.55; ld2 < 0.8; ld2 += 0.35) line(-0.4, ld2, 0.4, ld2); break;
+    case 'sapling': ctx.fillStyle = '#8a5a33'; ctx.fillRect(-s*0.07, -s*0.1, s*0.14, s*0.85); ctx.fillStyle = col; circle(-0.25, -0.3, 0.3); circle(0.25, -0.35, 0.3); circle(0, -0.62, 0.3); break;
+    case 'stick': ctx.lineWidth = s*0.2; line(-0.55, 0.65, 0.55, -0.65); break;
+    case 'lighter': ctx.fillRect(-s*0.35, -s*0.2, s*0.7, s*0.9); ctx.fillStyle = '#ff9b3d'; poly([[0,-0.9],[0.22,-0.35],[-0.22,-0.35]]); break;
+    case 'drill': ctx.fillRect(-s*0.7, -s*0.25, s*0.8, s*0.5); ctx.fillRect(-s*0.5, s*0.2, s*0.25, s*0.6); ctx.fillStyle = '#e8eef6'; poly([[0.1,-0.25],[0.9,0],[0.1,0.25]]); break;
+    case 'radar': ctx.lineWidth = s*0.1; ctx.beginPath(); ctx.arc(0, 0, s*0.65, 0, Math.PI*2); ctx.stroke(); ctx.beginPath(); ctx.arc(0, 0, s*0.3, 0, Math.PI*2); ctx.stroke(); line(0, 0, 0.45, -0.45); circle(0.35, 0.25, 0.1); break;
+    case 'bag': poly([[-0.62,-0.2],[0.62,-0.2],[0.72,0.8],[-0.72,0.8]]); ctx.lineWidth = s*0.1; ctx.beginPath(); ctx.arc(0, -s*0.2, s*0.36, Math.PI, 0); ctx.stroke(); ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fillRect(-s*0.62, s*0.1, s*1.24, s*0.12); break;
+    case 'trash': poly([[-0.5,-0.4],[0.5,-0.4],[0.4,0.8],[-0.4,0.8]]); ctx.fillRect(-s*0.62, -s*0.62, s*1.24, s*0.14); ctx.fillRect(-s*0.16, -s*0.8, s*0.32, s*0.18); break;
+    case 'sort': [-0.5, 0, 0.5].forEach(function(o, i){ ctx.fillRect(-s*0.7, s*o - s*0.1, s*(0.6 + i*0.4), s*0.2); }); break;
     case 'gem': poly([[0,-0.75],[0.6,-0.2],[0.35,0.7],[-0.35,0.7],[-0.6,-0.2]]); ctx.fillStyle = 'rgba(255,255,255,0.35)'; poly([[0,-0.75],[0.2,-0.2],[-0.2,-0.2]]); break;
     case 'pile': poly([[-0.8,0.6],[-0.4,-0.1],[0,-0.4],[0.4,-0.1],[0.8,0.6]]); break;
     case 'pane': ctx.globalAlpha = 0.7; ctx.fillRect(-s*0.6, -s*0.7, s*1.2, s*1.4); ctx.globalAlpha = 1; ctx.strokeStyle = '#eef3ff'; line(-0.3, -0.4, 0.2, 0.1); break;
@@ -2650,16 +2773,7 @@ function createHotbar(){
       ctx.font = '12px Rubik, sans-serif';
       ctx.fillText(String((i + 1) % 10), x + 6, y + 18);
     }
-    var px = cellX(HOT_PER_PAGE + 1);
-    ctx.fillStyle = pages > 1 ? 'rgba(123,211,137,0.15)' : 'rgba(255,255,255,0.03)';
-    roundRect(ctx, px, y, w, h, 12); ctx.fill();
-    ctx.textAlign = 'center';
-    ctx.fillStyle = pages > 1 ? '#7bd389' : 'rgba(238,243,255,0.25)';
-    ctx.font = 'bold 34px Rubik, sans-serif';
-    ctx.fillText('›', px + w/2, 78);
-    ctx.font = '14px Rubik, sans-serif';
-    ctx.fillText((page + 1) + '/' + pages, px + w/2, HOT_H - 21);
-    ctx.textAlign = 'left';
+    sideButton(HOT_PER_PAGE + 1, 'tasche', state.invOpen ? 'schließen' : 'Inventar', 'inv:open');
     sideButton(HOT_PER_PAGE + 2, 'turn-right', 'drehen', 'turn:right');
     texture.needsUpdate = true;
   }
@@ -2670,7 +2784,7 @@ function createHotbar(){
     if (u < 0 || u > 1 || v < 0 || v > 1) return null;
     var idx = Math.floor((u * HOT_W - pad) / cell);
     if (idx === 0) return 'turn:left';
-    if (idx === HOT_PER_PAGE + 1) return 'hotpage';
+    if (idx === HOT_PER_PAGE + 1) return 'inv:open';
     if (idx === HOT_PER_PAGE + 2) return 'turn:right';
     if (idx < 1 || idx > HOT_PER_PAGE) return null;
     return 'hot:' + (idx - 1);
@@ -3150,6 +3264,188 @@ function createCraftPanel(){
   return { mesh: mesh, draw: function(s){ remember(s); draw(s); }, regionAt: regionAt, TABS: TABS };
 }
 
+/* ------------------------------------------------------------ Inventar mit Crafting-Feld, Truhe und Ofen */
+
+var IW = 1024, IH = 1024, INV_PW = 0.62;
+var CELL = 100, GAP = 6, STEP = CELL + GAP, IX0 = 35;
+
+function createInventoryPanel(){
+  var canvas = document.createElement('canvas');
+  canvas.width = IW; canvas.height = IH;
+  var ctx = canvas.getContext('2d');
+  var texture = new THREE.CanvasTexture(canvas); texture.generateMipmaps = false; texture.minFilter = THREE.LinearFilter;
+  var mesh = new THREE.Mesh(new THREE.PlaneGeometry(INV_PW, INV_PW), new THREE.MeshBasicMaterial({ map: texture, transparent: true, side: THREE.DoubleSide }));
+  mesh.visible = false;
+  var regions = [];
+
+  function add(id, x, y, w, h){ regions.push({ id: id, x: x, y: y, w: w, h: h }); }
+
+  function slotBox(id, x, y, item, hover, opts){
+    opts = opts || {};
+    var size = opts.size || CELL;
+    ctx.fillStyle = opts.bg || (hover === id ? 'rgba(123,211,137,0.28)' : 'rgba(255,255,255,0.07)');
+    roundRect(ctx, x, y, size, size, 12); ctx.fill();
+    ctx.strokeStyle = opts.sel ? '#7bd389' : (hover === id ? 'rgba(255,255,255,0.75)' : 'rgba(255,255,255,0.14)');
+    ctx.lineWidth = opts.sel ? 5 : (hover === id ? 4 : 2);
+    roundRect(ctx, x, y, size, size, 12); ctx.stroke();
+    if (item){
+      icon(ctx, item.id, x + size / 2, y + size / 2 - 4, size * 0.3, opts.dim ? 'rgba(207,217,238,0.35)' : '#cfd9ee');
+      if (item.n > 1 || opts.showOne){
+        ctx.font = 'bold 24px Rubik, sans-serif';
+        ctx.textAlign = 'right';
+        ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillText(String(item.n), x + size - 7, y + size - 7);
+        ctx.fillStyle = opts.dim ? 'rgba(242,193,78,0.5)' : '#f2c14e'; ctx.fillText(String(item.n), x + size - 9, y + size - 9);
+        ctx.textAlign = 'left';
+      }
+    } else if (opts.emptyIcon){
+      icon(ctx, opts.emptyIcon, x + size / 2, y + size / 2 - 8, size * 0.26, 'rgba(207,217,238,0.3)');
+    }
+    if (opts.label){
+      ctx.font = '15px Rubik, sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(238,243,255,0.7)';
+      ctx.fillText(opts.label, x + size / 2, y + size - 8); ctx.textAlign = 'left';
+    }
+    add(id, x, y, size, size);
+  }
+
+  function button(id, x, y, w, h, text, hover, iconId, active){
+    ctx.fillStyle = active ? 'rgba(123,211,137,0.3)' : (hover === id ? 'rgba(123,211,137,0.25)' : 'rgba(255,255,255,0.08)');
+    roundRect(ctx, x, y, w, h, 12); ctx.fill();
+    ctx.strokeStyle = active ? '#7bd389' : (hover === id ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.16)'); ctx.lineWidth = 2;
+    roundRect(ctx, x, y, w, h, 12); ctx.stroke();
+    if (iconId) icon(ctx, iconId, x + 30, y + h / 2, 16, '#7bd389');
+    ctx.font = 'bold 20px Rubik, sans-serif'; ctx.textAlign = iconId ? 'left' : 'center'; ctx.fillStyle = '#eef3ff';
+    ctx.fillText(text, iconId ? x + 56 : x + w / 2, y + h / 2 + 7); ctx.textAlign = 'left';
+    add(id, x, y, w, h);
+  }
+
+  function arrow(x, y, w, ratio, ok){
+    ctx.fillStyle = 'rgba(255,255,255,0.12)';
+    ctx.beginPath(); ctx.moveTo(x, y - 14); ctx.lineTo(x + w - 30, y - 14); ctx.lineTo(x + w - 30, y - 30); ctx.lineTo(x + w, y); ctx.lineTo(x + w - 30, y + 30); ctx.lineTo(x + w - 30, y + 14); ctx.lineTo(x, y + 14); ctx.closePath(); ctx.fill();
+    if (ratio > 0){
+      ctx.save(); ctx.beginPath(); ctx.rect(x, y - 32, w * ratio, 64); ctx.clip();
+      ctx.fillStyle = ok ? '#7bd389' : '#f2c14e';
+      ctx.beginPath(); ctx.moveTo(x, y - 14); ctx.lineTo(x + w - 30, y - 14); ctx.lineTo(x + w - 30, y - 30); ctx.lineTo(x + w, y); ctx.lineTo(x + w - 30, y + 30); ctx.lineTo(x + w - 30, y + 14); ctx.lineTo(x, y + 14); ctx.closePath(); ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  function draw(s){
+    regions = [];
+    ctx.clearRect(0, 0, IW, IH);
+    ctx.fillStyle = 'rgba(16,22,38,0.94)';
+    roundRect(ctx, 0, 0, IW, IH, 28); ctx.fill();
+    ctx.strokeStyle = 'rgba(123,211,137,0.5)'; ctx.lineWidth = 4;
+    roundRect(ctx, 3, 3, IW - 6, IH - 6, 26); ctx.stroke();
+    var hv = s.hover;
+
+    /* Titelzeile */
+    ctx.font = 'bold 32px Rubik, sans-serif'; ctx.fillStyle = '#eef3ff'; ctx.textAlign = 'left';
+    ctx.fillText(s.title, 36, 58);
+    if (s.creative){
+      button('invtab:katalog', 380, 18, 180, 52, 'Katalog', hv, null, s.mode === 'katalog');
+      button('invtab:craft', 572, 18, 180, 52, 'Crafting', hv, null, s.mode !== 'katalog');
+    }
+    button('inv:close', IW - 96, 18, 62, 52, '✕', hv);
+
+    var y0 = 96;
+    if (s.mode === 'chest'){
+      for (var ci = 0; ci < 27; ci++){
+        var cx = IX0 + (ci % 9) * STEP, cy = y0 + Math.floor(ci / 9) * STEP;
+        slotBox('chest:' + ci, cx, cy, s.chest[ci], hv);
+      }
+    } else if (s.mode === 'ofen'){
+      var o = s.ofen;
+      ctx.font = '20px Rubik, sans-serif'; ctx.fillStyle = 'rgba(238,243,255,0.75)';
+      ctx.fillText('Rohstoff', 120, y0 + 26); ctx.fillText('Brennstoff', 120, y0 + 236);
+      slotBox('fur:in', 250, y0, o.in, hv, { emptyIcon: 'sand' });
+      slotBox('fur:fuel', 250, y0 + 210, o.fuel, hv, { emptyIcon: 'kohle' });
+      ctx.fillStyle = o.burn > 0 ? '#ff9b3d' : 'rgba(255,255,255,0.12)';
+      ctx.beginPath(); ctx.moveTo(300, y0 + 196); ctx.quadraticCurveTo(270, y0 + 150, 300, y0 + 115); ctx.quadraticCurveTo(330, y0 + 150, 300, y0 + 196); ctx.fill();
+      arrow(390, y0 + 155, 200, o.prog, true);
+      slotBox('fur:out', 620, y0 + 95, o.out, hv, { size: 120 });
+      ctx.font = '18px Rubik, sans-serif'; ctx.fillStyle = 'rgba(159,176,208,0.9)';
+      wrap(ctx, o.hint || 'Sand → Glas, Lehm → Ziegel, Fleisch → Braten, Holz → Kohle. Brennt mit Kohle, Holz oder Brettern.', 780, y0 + 30, 210, 24, 11);
+    } else if (s.mode === 'katalog'){
+      var cat = s.catalog || [];
+      for (var k = 0; k < 27; k++){
+        var it = cat[k];
+        var kx = IX0 + (k % 9) * STEP, ky = y0 + Math.floor(k / 9) * STEP;
+        if (it) slotBox('cat:' + it.id, kx, ky, it, hv);
+      }
+      button('catpage:prev', IX0, y0 + 3 * STEP + 2, 140, 40, '‹ zurück', hv);
+      button('catpage:next', IX0 + 8 * STEP - 40, y0 + 3 * STEP + 2, 140, 40, 'weiter ›', hv);
+      ctx.font = '18px Rubik, sans-serif'; ctx.fillStyle = 'rgba(159,176,208,0.9)'; ctx.textAlign = 'center';
+      ctx.fillText('Seite ' + (s.catPage + 1) + ' / ' + s.catPages + ' — antippen = 64 Stück in die Hand', IW / 2, y0 + 3 * STEP + 28); ctx.textAlign = 'left';
+    } else {
+      var gs = s.gridSize, gx = 60, gy = y0 + (gs === 3 ? 4 : 57);
+      for (var g = 0; g < 9; g++){
+        var r = Math.floor(g / 3), cc = g % 3;
+        if (gs === 2 && (r > 1 || cc > 1)) continue;
+        slotBox('grid:' + g, gx + cc * STEP, gy + r * STEP, s.grid[g], hv);
+      }
+      var res = s.result;
+      arrow(gx + 3 * STEP + 6, y0 + 160, 110, res ? 1 : 0, res && res.ok);
+      slotBox('result', gx + 3 * STEP + 130, y0 + 100, res, hv, { size: 120, dim: res && !res.ok, showOne: true });
+      ctx.font = '18px Rubik, sans-serif'; ctx.fillStyle = res && !res.ok ? '#f2c14e' : 'rgba(159,176,208,0.9)';
+      wrap(ctx, res ? (res.ok ? res.title + ' — antippen zum Craften' : res.title + ': ' + res.why) : (gs === 3 ? 'Werkbank: 3 × 3 Feld. Lege Zutaten hinein.' : '2 × 2 Feld. An einer Werkbank wird es 3 × 3.'), gx + 3 * STEP + 6, y0 + 262, 250, 22, 3);
+      slotBox('drop', 760, y0, null, hv, { emptyIcon: 'wegwerfen', label: 'Wegwerfen' });
+      slotBox('trash', 880, y0, null, hv, { emptyIcon: 'muell', label: 'Müll' });
+      button('sort', 760, y0 + 118, 220, 56, 'Sortieren', hv, 'sortieren');
+      ctx.font = '17px Rubik, sans-serif'; ctx.fillStyle = 'rgba(159,176,208,0.85)';
+      wrap(ctx, s.hint || '', 760, y0 + 206, 230, 22, 5);
+    }
+
+    /* Rucksack */
+    var by = 452;
+    ctx.font = 'bold 22px Rubik, sans-serif'; ctx.fillStyle = 'rgba(238,243,255,0.8)';
+    ctx.fillText('Rucksack' + (s.pages > 1 ? '  ' + (s.page + 1) + ' / ' + s.pages : ''), 36, by - 8);
+    if (s.pages > 1){ button('invpage:prev', IW - 250, by - 38, 100, 40, '‹', hv); button('invpage:next', IW - 140, by - 38, 100, 40, '›', hv); }
+    for (var rr = 0; rr < 4; rr++){
+      for (var c2 = 0; c2 < 9; c2++){
+        var idx = (1 + s.page * 4 + rr) * 9 + c2;
+        if (idx >= s.slots.length) continue;
+        slotBox('inv:' + idx, IX0 + c2 * STEP, by + rr * STEP, s.slots[idx], hv);
+      }
+    }
+    /* Hotbar */
+    var hy = by + 4 * STEP + 18;
+    ctx.fillStyle = 'rgba(123,211,137,0.08)';
+    roundRect(ctx, IX0 - 8, hy - 8, 9 * STEP + 10, CELL + 16, 16); ctx.fill();
+    for (var hb = 0; hb < 9; hb++) slotBox('inv:' + hb, IX0 + hb * STEP, hy, s.slots[hb], hv, { sel: s.selSlot === hb });
+    if (s.tooltip){
+      ctx.font = 'bold 20px Rubik, sans-serif';
+      var tw = ctx.measureText(s.tooltip).width + 30;
+      ctx.fillStyle = 'rgba(8,12,22,0.92)';
+      roundRect(ctx, IW / 2 - tw / 2, by - 44, tw, 36, 10); ctx.fill();
+      ctx.fillStyle = '#f2c14e'; ctx.textAlign = 'center'; ctx.fillText(s.tooltip, IW / 2, by - 19); ctx.textAlign = 'left';
+    }
+    texture.needsUpdate = true;
+  }
+
+  function regionAt(localX, localY){
+    var u = (localX + INV_PW / 2) / INV_PW, v = 1 - (localY + INV_PW / 2) / INV_PW;
+    if (u < 0 || u > 1 || v < 0 || v > 1) return null;
+    var px = u * IW, py = v * IH;
+    for (var i = regions.length - 1; i >= 0; i--){
+      var r = regions[i];
+      if (px >= r.x && px <= r.x + r.w && py >= r.y && py <= r.y + r.h) return r.id;
+    }
+    return 'panel';
+  }
+
+  function iconCanvas(id, n){
+    var c = document.createElement('canvas');
+    c.width = c.height = 128;
+    var g = c.getContext('2d');
+    g.fillStyle = 'rgba(16,22,38,0.75)'; roundRect(g, 4, 4, 120, 120, 20); g.fill();
+    icon(g, id, 64, 60, 36, '#eef3ff');
+    if (n > 1){ g.font = 'bold 34px Rubik, sans-serif'; g.textAlign = 'right'; g.fillStyle = '#f2c14e'; g.fillText(String(n), 118, 118); }
+    return c;
+  }
+
+  return { mesh: mesh, draw: draw, regionAt: regionAt, iconCanvas: iconCanvas, SIZE: INV_PW };
+}
+
 /* ------------------------------------------------------------ Handmenü über der Handfläche */
 
 var HM_W = 640, HM_H = 170, HM_PW = 0.24, HM_PH = HM_PW * HM_H / HM_W;
@@ -3323,6 +3619,7 @@ BL.ui = {
   createFloatingText: createFloatingText,
   createHandMenu: createHandMenu,
   createInfoLabel: createInfoLabel,
+  createInventoryPanel: createInventoryPanel,
   icon: icon
 };
 })();
@@ -4156,7 +4453,7 @@ window.addEventListener('keydown', function(e){
   if (!desktopMode) return;
   if (e.code.indexOf('Digit') === 0){
     var d = parseInt(e.code.slice(5), 10);
-    selectVisibleSlot(d === 0 ? 9 : d - 1);
+    selectVisibleSlot(d === 0 ? 0 : d);
   }
   if (e.code === 'Tab'){
     e.preventDefault();
@@ -4164,7 +4461,7 @@ window.addEventListener('keydown', function(e){
     uiUrgent = true;
   }
   if (e.code === 'KeyR') startReload();
-  if (e.code === 'Backquote') doAction('hotpage');
+  if (e.code === 'Backquote' || e.code === 'KeyI') toggleInventory();
   if (e.code === 'Escape') doAction('pause');
   if (e.code === 'KeyQ') doAction('turn:left');
   if (e.code === 'KeyE') doAction('turn:right');
@@ -4182,11 +4479,8 @@ window.addEventListener('keydown', function(e){
 window.addEventListener('keyup', function(e){ keysDown[e.code] = false; });
 window.addEventListener('wheel', function(e){
   if (!desktopMode) return;
-  var items = hotbarItems();
-  var idx = items.findIndex(function(it){ return it.id === state.selected; });
-  idx = (idx + (e.deltaY > 0 ? 1 : -1) + items.length) % items.length;
-  selectSlot(items[idx].id);
-  state.hotbarPage = Math.floor(idx / hotbar.PER_PAGE);
+  var cur = state.selSlot >= 0 ? state.selSlot + 1 : 0;
+  selectVisibleSlot((cur + (e.deltaY > 0 ? 1 : -1) + 10) % 10);
 }, { passive: true });
 
 canvas.addEventListener('contextmenu', function(e){ e.preventDefault(); });
@@ -4319,7 +4613,7 @@ function tryMoveOnce(dx, dz){
     return true;
   }
   if (wet && riding) return false;
-  if (W.blocked(hx, hz, 0.34, ry)) return false;
+  if (W.blocked(hx, hz, 0.34, ry)){ if (ladderAhead(hx, hz, ry)) ladderPush = 0.25; return false; }
   if (structureBlocked(hx, hz, 0.34, true, ry)) return false;
   var here = playerFloor(_v3.x, _v3.z, ry);
   if (floor - here > 1.6 && !(air.active && ry > floor - 0.2)) return false;
@@ -5113,8 +5407,8 @@ var MELEE = {
 function swing(power){
   if (swingCd > 0 || state.dead || sleeping) return;
   var tool = state.selected;
+  if (!MELEE[tool]) tool = 'hand';
   var m = MELEE[tool];
-  if (!m) return;
   swingCd = m.cd;
   power = power || 1;
   var h = toolHand();
@@ -5146,6 +5440,7 @@ function swing(power){
     if (tool === 'eimer' && s.kind === 'farmbeet') return waterFarm(s);
     if (tool === 'sichel' && s.kind === 'farmbeet') return sickleHarvest(s);
     if (structureUse(tool, s)) return;
+    if (s.kind === 'werkbank' && !power){ benchCache.t = 0; return openInventory('bench'); }
     if (tool === 'hand'){
       if (s.kind === 'bett') return useBed(s);
       if (s.kind === 'zelt'){ state.spawn = { x: s.x, z: s.z, y: s.y }; return say('Zelt ist jetzt dein Startpunkt'); }
@@ -5192,7 +5487,10 @@ function swing(power){
     if (Math.random() < luckBonus()) amount += 1;
     give(reward.gives, amount, true);
     var text = '+' + amount + ' ' + reward.label;
-    if (reward.kind === 'tree' || reward.kind === 'apfelbaum' || reward.kind === 'pine'){ give('laub', 2, true); text += ' + 2 Laub'; }
+    if (reward.kind === 'tree' || reward.kind === 'apfelbaum' || reward.kind === 'pine'){
+      give('laub', 2, true); text += ' + 2 Laub';
+      if (Math.random() < 0.35){ give('setzling', 1, true); text += ' + Setzling'; }
+    }
     if (reward.kind === 'bienenstock' && Math.random() < 0.35 && !creative()){ damagePlayer(1); text += ' — autsch, eine Biene!'; }
     if (reward.extra && Math.random() < reward.extra[2]){
       give(reward.extra[0], reward.extra[1], true);
@@ -7156,6 +7454,7 @@ function pickEnemyKind(n){
   var r = Math.random();
   if (eclipseActive && r < 0.3) return 'schatten';
   if (nightFactor > 0.5){
+    if (n >= 3 && Math.random() < 0.12) return 'kriecher';
     if (n >= 2 && r < 0.14) return 'skelett';
     if (n >= 3 && r < 0.24) return 'geist';
     if (r < 0.4) return 'zombie';
@@ -7172,8 +7471,11 @@ function pickEnemyKind(n){
   return 'crawler';
 }
 
-function pickUndergroundKind(){
+function pickUndergroundKind(y){
   var r = Math.random();
+  if (y < -12 && r < 0.1) return 'hoehlentroll';
+  if (r < 0.26) return 'grubenwurm';
+  r = Math.random();
   return r < 0.28 ? 'spinne' : (r < 0.48 ? 'crawler' : (r < 0.62 ? 'skelett' : (r < 0.76 ? 'fledermaus' : (r < 0.9 ? 'jumper' : 'golem'))));
 }
 
@@ -7190,7 +7492,7 @@ function trySpawnDark(head, feet){
     if (!darkAt(x, fy, z) || isLitSpot(x, fy, z)) continue;
     if (structures.some(function(s){ return Math.hypot(s.x - x, s.z - z) < 2.5; })) continue;
     var underground = W.skyCovered(x, fy + 1.2, z) || !!W.caveAt(x, z, fy);
-    var kind = (underground && nightFactor < 0.55) ? pickUndergroundKind() : pickEnemyKind(wave.n);
+    var kind = (underground && nightFactor < 0.55) ? pickUndergroundKind(fy) : pickEnemyKind(wave.n);
     var def = ENEMY_DEF[kind];
     if (!def || (def.flying && underground && !def.caveOk)) kind = 'crawler';
     var e = createEnemy(kind, x, z, wave.n, false, fy);
@@ -7913,6 +8215,8 @@ var TIPS = {
   start:  ['Alles ist aus Blöcken: pinchen = abbauen.', 'Block in der Hotbar wählen = bauen.'],
   night:  ['Monster kommen nur im Dunkeln!', 'Fackeln und Leuchtblöcke halten sie fern.'],
   blocks: ['Pinch halten = mehrere Blöcke setzen.', 'Faust in einen Block schlagen = abbauen.'],
+  inventar: ['Inventar: Tasche an der Hotbar, Handmenü', 'oder links über die Schulter greifen.'],
+  handbau: ['Hand nah an einem Block?', 'Dann landet der neue Block genau an deiner Hand.'],
   cave:   ['In Höhlen ist es dunkel.', 'Halte eine Fackel in der Hand.'],
   hunger: ['Du wirst hungrig.', 'Beeren, Äpfel oder gebratenes Fleisch helfen.'],
   thirst: ['Du hast Durst.', 'Mit leerer Hand aufs Wasser zeigen und pinchen.'],
@@ -7937,6 +8241,8 @@ var QUESTS = [
   { title:'Sammle 4 Holz',                 goal: 4, val: function(){ return gotCount('holz'); }, reward: [['stein', 2]], xp: 8, target: 'tree' },
   { title:'Baue 10 Blöcke ab',             goal: 10, val: function(){ return S().blocksMined || 0; }, reward: [['fackel', 2]], xp: 10 },
   { title:'Setze 10 Blöcke',               goal: 10, val: function(){ return S().blocksPlaced || 0; }, reward: [['bretter', 12]], xp: 10 },
+  { title:'Crafte im Inventar: 2 Bretter übereinander = Stöcke', goal: 1, val: function(){ return S().gridCrafts || 0; }, reward: [['kohle', 2]], xp: 12 },
+  { title:'Baue eine Truhe (8 Bretter im Kreis)', goal: 1, val: function(){ return S().chestsPlaced || 0; }, reward: [['stock', 8]], xp: 15 },
   { title:'Baue eine Spitzhacke',          goal: 1, val: function(){ return state.owned.spitzhacke ? 1 : 0; }, reward: [['beeren', 2]], xp: 10 },
   { title:'Betritt eine Höhle',            goal: 1, val: function(){ return S().caves.length; }, reward: [['fackel', 2]], xp: 15, target: 'cave' },
   { title:'Baue 4 Eisen ab',               goal: 4, val: function(){ return gotCount('eisen'); }, reward: [['kristall', 1]], xp: 12, target: 'cave' },
@@ -7948,6 +8254,9 @@ var QUESTS = [
   { title:'Überlebe 2 Nächte',             goal: 2, val: function(){ return S().nights || 0; }, reward: [['turm', 1]], xp: 20 },
   { title:'Stelle ein Bett auf',           goal: 1, val: function(){ return S().bedPlaced; }, reward: [['laterne', 1]], xp: 15 },
   { title:'Mach Licht: 4 Fackeln oder Leuchtblöcke', goal: 4, val: function(){ return S().torches || 0; }, reward: [['leuchtblock', 4]], xp: 15 },
+  { title:'Pflanze einen Setzling und lass ihn wachsen', goal: 1, val: function(){ return S().treesGrown || 0; }, reward: [['apfel', 3]], xp: 20 },
+  { title:'Schmelze etwas im Ofen',        goal: 1, val: function(){ return S().smelted || 0; }, reward: [['kohle', 4]], xp: 15 },
+  { title:'Klettere 5 m an einer Leiter',  goal: 5, val: function(){ return Math.floor(S().climbed || 0); }, reward: [['leiter', 6]], xp: 15 },
   { title:'Baue einen Turm: 8 Blöcke hoch',goal: 8, val: function(){ return S().maxTower || 0; }, reward: [['goldblock', 2]], xp: 25 },
   { title:'Baue 3 Gold ab',                goal: 3, val: function(){ return gotCount('gold'); }, reward: [['granate', 2]], xp: 20, target: 'cave' },
   { title:'Stelle eine Werkbank auf',      goal: 1, val: function(){ return structures.some(function(s){ return s.kind === 'werkbank'; }) ? 1 : 0; }, reward: [['eisen', 3]], xp: 15 },
@@ -7964,6 +8273,10 @@ var QUESTS = [
   { title:'Baue einen Blitzturm',          goal: 1, val: function(){ return structures.some(function(s){ return s.kind === 'blitzturm'; }) ? 1 : 0; }, reward: [['gold', 2]], xp: 25 },
   { title:'Betritt die Tiefenhöhle',       goal: 1, val: function(){ return S().deepCave; }, reward: [['nachtsicht', 1]], xp: 30, target: 'deep' },
   { title:'Besiege 3 Elite-Gegner',        goal: 3, val: function(){ return S().eliteKills; }, reward: [['rubin', 1]], xp: 30 },
+  { title:'Finde ein Verlies und öffne die Schatztruhe', goal: 1, val: function(){ return S().lootChests || 0; }, reward: [['tnt', 2]], xp: 30 },
+  { title:'Zerstöre einen Monster-Käfig',  goal: 1, val: function(){ return S().spawnersBroken || 0; }, reward: [['leuchtblock', 6]], xp: 40 },
+  { title:'Sprenge 3 TNT',                 goal: 3, val: function(){ return S().tntExploded || 0; }, reward: [['feuerstein', 2]], xp: 25 },
+  { title:'Finde Saphir oder Amethyst',    goal: 1, val: function(){ return gotCount('saphir') + gotCount('amethyst'); }, reward: [['kristall', 2]], xp: 30 },
   { title:'Grabe tief: bis Höhe -20',      goal: 1, val: function(){ return (S().deepest || 0) <= -20 ? 1 : 0; }, reward: [['rubin', 1]], xp: 40 },
   { title:'Baue 200 Blöcke ab',            goal: 200, val: function(){ return S().blocksMined || 0; }, reward: [['kristall', 3]], xp: 40 },
   { title:'Überlebe 7 Nächte',             goal: 7, val: function(){ return S().nights || 0; }, reward: [['medipackxl', 1]], xp: 50 },
@@ -8012,7 +8325,23 @@ var ACHIEVEMENTS = [
   { id:'turm15',  title:'Himmelsturm',      test: function(){ return (S().maxTower || 0) >= 15; } },
   { id:'tief',    title:'Bis zum Grundgestein', test: function(){ return (S().deepest || 0) <= W.MIN_Y + 3; } },
   { id:'nacht10', title:'Nachtwächter',     test: function(){ return (S().nights || 0) >= 10; } },
-  { id:'licht',   title:'Lichtbringer',     test: function(){ return (S().torches || 0) >= 20; } }
+  { id:'licht',   title:'Lichtbringer',     test: function(){ return (S().torches || 0) >= 20; } },
+  { id:'crafter', title:'Crafter',          test: function(){ return (S().gridCrafts || 0) >= 10; } },
+  { id:'crafter2',title:'Meister-Crafter',  test: function(){ return (S().gridCrafts || 0) >= 100; } },
+  { id:'ofen',    title:'Ofenmeister',      test: function(){ return (S().smelted || 0) >= 25; } },
+  { id:'truhen',  title:'Ordnung muss sein',test: function(){ return (S().chestsPlaced || 0) >= 3; } },
+  { id:'tnt',     title:'Sprengmeister',    test: function(){ return (S().tntExploded || 0) >= 10; } },
+  { id:'kaefig',  title:'Verlies-Jäger',    test: function(){ return (S().spawnersBroken || 0) >= 3; } },
+  { id:'leiter',  title:'Kletteraffe',      test: function(){ return (S().climbed || 0) >= 30; } },
+  { id:'zauber',  title:'Architekt',        test: function(){ return (S().wandUses || 0) >= 20; } },
+  { id:'bohrer',  title:'Tunnelbohrer',     test: function(){ return (S().drilled || 0) >= 150; } },
+  { id:'erz',     title:'Erzspürnase',      test: function(){ return (S().oreScans || 0) >= 10; } },
+  { id:'kriecher',title:'Kriecher-Jäger',   test: function(){ return (S().kinds.kriecher || 0) >= 5; } },
+  { id:'troll',   title:'Trolljäger',       test: function(){ return (S().kinds.hoehlentroll || 0) >= 1; } },
+  { id:'saphir',  title:'Saphirfinder',     test: function(){ return gotCount('saphir') >= 5; } },
+  { id:'wolle',   title:'Regenbogen-Bauer', test: function(){ return (S().woolPlaced || 0) >= 30; } },
+  { id:'verlies', title:'Schatz im Verlies',test: function(){ return (S().lootChests || 0) >= 3; } },
+  { id:'foerster',title:'Förster',          test: function(){ return (S().treesGrown || 0) >= 5; } }
 ];
 
 var progressClock = 0;
@@ -8187,7 +8516,9 @@ function saveGame(){
       chests: state.openedChests.slice(),
       nests: nests.map(function(n){ return n.hp > 0 ? 1 : 0; }),
       x150: extraSaveData(),
-      vox: W.exportEdits()
+      vox: W.exportEdits(),
+      inv2: { slots: state.slots, chests: state.chestStore, furnaces: state.furnaces, sel: state.selSlot, saplings: state.saplings,
+              pending: [state.cursor].concat(state.grid).filter(function(x){ return !!x; }) }
     };
     localStorage.setItem(SAVE_KEY, JSON.stringify(data));
     saveFlag = false;
@@ -8246,6 +8577,15 @@ function applySave(data){
     if (!alive && nests[i]){ nests[i].hp = 0; scene.remove(nests[i].mesh); W.removeObstacleNear(nests[i].x, nests[i].z, 1.5); }
   });
   applyExtraSave(data);
+  if (data.inv2){
+    if (!tracked) buildTracked();
+    state.slots = (data.inv2.slots || []).map(function(s){ return (s && s.id && s.n > 0 && tracked.indexOf(s.id) >= 0) ? { id: s.id, n: s.n } : null; });
+    state.chestStore = data.inv2.chests || {};
+    state.furnaces = data.inv2.furnaces || {};
+    state.selSlot = typeof data.inv2.sel === 'number' ? data.inv2.sel : -1;
+    state.saplings = (data.inv2.saplings || []).filter(function(s){ return s && typeof s.x === 'number'; });
+    (data.inv2.pending || []).forEach(function(p){ if (p && p.id && p.n > 0) collectDrop(p); });
+  }
   recalcMaxHp();
   if (data.maxHp && data.maxHp > state.maxHp) state.maxHp = data.maxHp;
   refreshBodyLook();
@@ -8295,18 +8635,9 @@ var HOTBAR_DEFS = [
   ['brunnen','Brunnen','stack'], ['banner','Banner','stack'], ['bett','Bett','stack'], ['zelt','Zelt','stack']
 ];
 
-function hotbarItems(){
-  var out = [];
-  HOTBAR_DEFS.forEach(function(d){
-    if (d[0] === 'hand') out.push({ id: 'hand', label: d[1] });
-    else if (d[2] === 'tool' && (state.owned[d[0]] || creative())) out.push({ id: d[0], label: d[1] });
-    else if (d[2] === 'stack' && ((state.inv[d[0]] || 0) > 0 || creative())) out.push({ id: d[0], label: d[1], count: creative() ? '∞' : state.inv[d[0]] });
-  });
-  return out;
-}
-
-function selectSlot(id){
-  if (state.selected === id) return;
+function selectSlot(id, slot){
+  state.selSlot = slot !== undefined ? slot : (id === 'hand' ? -1 : hotbarIndexOf(id));
+  if (state.selected === id){ uiUrgent = true; return; }
   state.selected = id;
   uiUrgent = true;
   if (WEAPONS[id] && state.ammo > weaponMag()){ state.reserve += state.ammo - weaponMag(); state.ammo = weaponMag(); }
@@ -8317,11 +8648,6 @@ function selectSlot(id){
   tone(620, 0.05, 'triangle', 0.04);
 }
 
-function selectVisibleSlot(i){
-  var items = hotbarItems();
-  var idx = state.hotbarPage * hotbar.PER_PAGE + i;
-  if (items[idx]) selectSlot(items[idx].id);
-}
 
 /* ================================================================ Rezepte */
 
@@ -8600,6 +8926,7 @@ function doAction(id){
     }
     else if (what === 'heal'){ if (has('heiltrank', 1) && state.hp < state.maxHp - 5) useItem('heiltrank'); else if (has('medipack', 1)) useItem('medipack'); else if (has('heiltrank', 1)) useItem('heiltrank'); }
     else if (what === 'dismount') dismountHorse();
+    else if (what === 'inv') toggleInventory();
     uiDirty = true;
     return;
   }
@@ -8641,12 +8968,7 @@ function doAction(id){
   }
   if (id === 'turn:left'){ snapTurn(1); return; }
   if (id === 'turn:right'){ snapTurn(-1); return; }
-  if (id === 'hotpage'){
-    var pages = Math.max(1, Math.ceil(hotbarItems().length / hotbar.PER_PAGE));
-    state.hotbarPage = (state.hotbarPage + 1) % pages;
-    uiDirty = true;
-    return;
-  }
+  if (id === 'hotpage' || id === 'inv:open'){ toggleInventory(); return; }
   if (id.indexOf('hot:') === 0){ selectVisibleSlot(parseInt(id.slice(4), 10)); return; }
   if (id.indexOf('skill:') === 0){ learnSkill(id.slice(6)); uiDirty = true; return; }
   if (id.indexOf('trade:') === 0){ trade(id); return; }
@@ -8655,6 +8977,7 @@ function doAction(id){
   if (id.indexOf('use:') === 0){ useItem(id.slice(4)); return; }
   var r = RECIPE_BY_ID[id];
   if (!r) return;
+  if (fillGridFromRecipe(r)) return;
   if (r.use && (state.inv[r.use] || 0) > 0){
     var st = recipeState(r);
     if (st.cost.indexOf('Benutzen') === 0) return useItem(r.use);
@@ -8711,8 +9034,8 @@ function updateInteraction(dt){
 
   if (renderer.xr.isPresenting || debugVR){
     var uh = uiHand();
-    if (uh.active) region = panelRegion(hotbar, uh.tip) || panelRegion(craftPanel, uh.tip);
-    uiHandOnPanel = !!region;
+    if (uh.active) region = (inv.open ? null : panelRegion(hotbar, uh.tip)) || panelRegion(craftPanel, uh.tip);
+    uiHandOnPanel = !!region || invUiHandOnPanel;
     if (region && uh.pinch && !uh.pinchPrev) doAction(region);
   } else if (desktopMode){
     region = desktopPanelRegion();
@@ -8725,6 +9048,8 @@ function updateInteraction(dt){
   }
   if (region === 'panel') region = null;
   if (region !== state.hover){ state.hover = region; uiUrgent = true; }
+  /* Finger oder Mauszeiger im Inventar: keine Aktion in der Welt */
+  if (invPointerOnPanel){ if (rawPressed) pressLock = true; pressed = false; justPressed = false; }
 
   updateGhost();
   if (sleeping || state.dead || state.paused){ bowCharge = 0; return; }
@@ -8733,6 +9058,8 @@ function updateInteraction(dt){
   var ownedTool = state.owned[sel] || creative();
   var ctx = { h: th, pressed: pressed, justPressed: justPressed, dt: dt };
   if (sel === 'granate' || sel === 'speer' || sel === 'bumerang'){ handleThrowable(sel, th, pressed, justPressed); return; }
+  /* Truhe, Ofen, Werkbank und TNT mit Pinch benutzen */
+  if (justPressed && sel !== 'feuerzeug' && !WEAPONS[sel] && !RANGED[sel] && sel !== 'feuerstab' && tryUseVoxel(th)){ pressLock = true; return; }
   if (EXTRA_TOOLS[sel]){
     if (ownedTool || (state.inv[sel] || 0) > 0) EXTRA_TOOLS[sel](ctx);
     else if (justPressed) say('Erst craften', true);
@@ -8754,6 +9081,10 @@ function updateInteraction(dt){
     if (ownedTool) useRod(justPressed);
   } else if (BLOCK_ITEMS[sel]){
     updateBlockHand(ctx);
+  } else if (sel === 'setzling'){
+    if (justPressed){ plantSapling(th); pressLock = true; }
+  } else if (FOOD[sel]){
+    if (justPressed){ eatItem(sel); pressLock = true; }
   } else if (USE_ITEMS[sel]){
     if (justPressed){ useItem(sel); pressLock = true; }
   } else if (BUILDABLE[sel]){
@@ -8821,7 +9152,7 @@ function uiState(){
     infoLine: state.waveText + '  ·  ' + state.clock + '  ·  Tag ' + state.day + (weatherText ? '  ·  ' + weatherText : '') + '  ·  ' + diff().label,
     level: state.level, rank: rankName(state.level), xp: state.xp, xpNext: xpNeeded(state.level), xpRatio: state.xp / xpNeeded(state.level),
     skillPoints: state.skillPoints,
-    hotbarItems: hotbarItems(), hotbarPage: state.hotbarPage, selected: sel,
+    hotbarItems: hotbarItems(), hotbarPage: 0, selected: sel, invOpen: inv.open,
     recipes: tabRecipes,
     message: state.message, tooltip: tooltip,
     resLines: creative() ? ['Kreativmodus: alles ist unbegrenzt — bau, was du willst!'] : [
@@ -8893,7 +9224,8 @@ function mapState(){
 }
 
 function drawUI(skipPanel){
-  if (!hotbarItems().some(function(it){ return it.id === state.selected; })) state.selected = 'hand';
+  reconcileInv();
+  hotbar.mesh.visible = !inv.open;
   var s = uiState();
   hotbar.draw(s);
   if (!skipPanel) craftPanel.draw(s);
@@ -9136,6 +9468,7 @@ function tick(dt, frame){
   if (frame){ updateXRInput(frame); }
   else if (desktopMode && !debugVR){ updateMovementDesktop(dt); updateDesktopHands(); }
   updateGestures(dt);
+  if (gameStarted) updateInventory(dt);
   if (frame || debugVR) updateMovementVR(dt);
 
   var seat = (renderer.xr.isPresenting && settings.seated) ? 0.45 : 0;
@@ -9170,6 +9503,7 @@ function tick(dt, frame){
     updateProgress2(dt);
     updateDayNight(dt);
     updateEvents2(dt);
+    updateBlocks2(dt);
   } else if (!gameStarted){
     updateAnimals(dt);
     updateDayNight(dt * 0.3);
@@ -9538,6 +9872,7 @@ var hm = { t: 0, open: false, cd: 0, key: '', hover: null };
 
 function handMenuButtons(){
   var list = [];
+  list.push({ id: 'hm:inv', icon: 'tasche', label: inv.open ? 'Zu' : 'Inventar', ok: true });
   list.push({ id: 'hm:eat', icon: 'essen', label: 'Essen', ok: !!bestFood() && state.hunger < state.maxHunger });
   list.push({ id: 'hm:drink', icon: 'trinken', label: 'Trinken', ok: thirstOn() && state.thirst < state.maxThirst && (state.water > 0 || nearWell || !!state.bucketWater) });
   list.push({ id: 'hm:torch', icon: 'lichtan', label: state.offTorch ? 'Licht aus' : 'Fackel', ok: !!state.offTorch || has('fackel', 1) });
@@ -9616,6 +9951,11 @@ function describeTarget(origin, dir){
   if (st){
     var s = st.obj;
     offer(st.dist, structName(s.kind), 'Haltbarkeit ' + Math.max(0, Math.ceil(s.hp)) + ' / ' + s.maxHp, '#7bd389', _g2.set(s.x, s.mesh.position.y + 1.4, s.z));
+  }
+  var vh = W.raycast(origin, dir, 14);
+  if (vh && vh.dist > 0){
+    var vd = W.VOX[vh.type];
+    if (vd) offer(vh.dist, vd.label, blockInfoText(vh.type), '#cfd9ee', _g2.set(vh.ix + 0.5, vh.iy + 1.4, vh.iz + 0.5));
   }
   var ch = rayChestOrCrate(origin, dir, 30);
   if (ch){
@@ -10036,6 +10376,7 @@ function updateVertical(dt, seat){
   if (swimming && !wasSwim){ sfx.splash(); markGesture('schwimmen'); }
   if (swimming){ state.stats.swimTime = (state.stats.swimTime || 0) + dt; }
 
+  if (ladderVertical(dt, feet, seat, lift, _head.x, _head.z)) return;
   if (!climb.active && (renderer.xr.isPresenting || debugVR)) { if (!tryStartClimb(hands.left)) tryStartClimb(hands.right); }
   desktopClimbCheck();
   if (climb.active){ air.active = false; air.vy = 0; updateClimb(dt, seat); jetting = gliding = false; return; }
@@ -10150,7 +10491,21 @@ var GESTURE_LIST = [
   ['reiten', 'pferd', 'Reiten', 'Pferd mit Äpfeln zähmen, an den Sattel fassen und pinchen'],
   ['schwimmen', 'trinken', 'Schwimmen', 'Einfach ins Wasser laufen'],
   ['blockbau', 'erde', 'Blöcke bauen', 'Block in der Hotbar wählen, zeigen, pinchen — halten setzt mehrere'],
-  ['blockab', 'spitzhacke', 'Blöcke abbauen', 'Pinchen und halten, mit Werkzeug schlagen oder mit der Faust boxen']
+  ['blockab', 'spitzhacke', 'Blöcke abbauen', 'Pinchen und halten, mit Werkzeug schlagen oder mit der Faust boxen'],
+  ['inventar', 'tasche', 'Inventar öffnen', 'Tasche an der Hotbar oder im Handmenü antippen'],
+  ['rucksack', 'tasche', 'Rucksack-Griff', 'Linke Hand über die Schulter nach hinten, dann pinchen'],
+  ['crafting', 'werkbankblock', 'Crafting-Feld', 'Zutaten mit den Fingern ins Feld legen, Ergebnis antippen'],
+  ['wegwerfen', 'wegwerfen', 'Wegschleudern', 'Stapel nehmen und die Hand schnell vom Fenster wegziehen'],
+  ['truhe', 'truhe', 'Truhe öffnen', 'Auf die Truhe zeigen und pinchen'],
+  ['handbau', 'erde', 'Hand-Bauen', 'Hand nah an einen Block halten: der neue Block kommt genau dorthin'],
+  ['leiter', 'leiter', 'Leiter klettern', 'Einfach gegen die Leiter laufen'],
+  ['tnt', 'tnt', 'TNT zünden', 'Mit Pinch oder dem Feuerzeug — dann schnell weg!'],
+  ['bauzauber', 'bauzauberstab', 'Bau-Zauber', 'Mit dem Zauberstab auf eine Fläche: bis zu 9 Blöcke auf einmal'],
+  ['erzsucher', 'erzsucher', 'Erz suchen', 'Erzsucher halten: er piept und zeigt das nächste Erz'],
+  ['halbieren', 'tasche', 'Stapel halbieren', 'Im Inventar mit der linken Hand antippen: nimmt die Hälfte'],
+  ['schnellsortieren', 'sortieren', 'Doppeltippen', 'Stapel doppelt antippen: springt zwischen Hotbar, Rucksack und Truhe'],
+  ['dauercraften', 'werkbankblock', 'Dauer-Craften', 'Ergebnis gedrückt halten: craftet immer weiter'],
+  ['pflanzen', 'setzling', 'Setzling pflanzen', 'Setzling halten, auf Gras zeigen und pinchen']
 ];
 
 function gestureTabData(){
@@ -12193,6 +12548,8 @@ function nearLightSource(pos, r){
 /* Liefert true, wenn der Gegner in diesem Bild komplett selbst gesteuert wurde */
 function enemyCustom(e, def, dt, px, pz, dist, nx, nz, active, target){
   var pos = e.mesh.position;
+  if (def.creeper && creeperUpdate(e, dt, dist, active)) return true;
+  if (e.mesh.userData.segs) e.mesh.userData.segs.forEach(function(s, i){ s.position.x = Math.sin(e.anim * 0.9 + i * 1.2) * 0.09; });
   var slowF = e.slowT > 0 ? 0.4 : 1;
   if (def.kraken){
     pos.y = W.WATER_Y + def.off + Math.sin(e.anim * 0.2) * 0.1;
@@ -13193,8 +13550,22 @@ function blockTarget(h, maxDist){
   return hit;
 }
 
-/* Feld, in das ein neuer Block käme */
+/* Feld, in das ein neuer Block käme. Ist die Hand nah an einem Block, kommt er genau an die Hand. */
+var _hpp = new THREE.Vector3();
 function placeCell(h){
+  if (vrLike() && h.hasJoints){
+    var hp = pinchPoint(h, _hpp);
+    var cx = Math.floor(hp.x), cy = Math.floor(hp.y), cz = Math.floor(hp.z);
+    if (!W.rawAt(cx, cy, cz)){
+      var fx = hp.x - cx, fy = hp.y - cy, fz = hp.z - cz, lim = 0.42;
+      if ((fx < lim && W.rawAt(cx - 1, cy, cz)) || (fx > 1 - lim && W.rawAt(cx + 1, cy, cz)) ||
+          (fy < lim && W.rawAt(cx, cy - 1, cz)) || (fy > 1 - lim && W.rawAt(cx, cy + 1, cz)) ||
+          (fz < lim && W.rawAt(cx, cy, cz - 1)) || (fz > 1 - lim && W.rawAt(cx, cy, cz + 1))){
+        var hc = { x: cx, y: cy, z: cz, hand: true };
+        if (!whyNotPlace(hc)) return hc;
+      }
+    }
+  }
   var hit = W.raycast(h.wrist, h.dir, 6);
   if (h.dir.y < -0.001 && h.wrist.y > W.WATER_Y){
     var tw = (W.WATER_Y - h.wrist.y) / h.dir.y;
@@ -13250,10 +13621,15 @@ function placeBlock(h, repeat){
   W.setVoxel(cell.x, cell.y, cell.z, vt);
   if (!creative()) state.inv[item]--;
   state.stats.blocksPlaced = (state.stats.blocksPlaced || 0) + 1;
+  if (item === 'truhe') state.stats.chestsPlaced = (state.stats.chestsPlaced || 0) + 1;
+  if (item.indexOf('wolle') === 0) state.stats.woolPlaced = (state.stats.woolPlaced || 0) + 1;
+  if (W.VOX[vt].light) state.stats.torches = (state.stats.torches || 0) + (item === 'leuchtblock' ? 0 : 1);
+  if (cell.hand){ markGesture('handbau'); tip('handbau'); }
+  spawnBurst(_bt.set(cell.x + 0.5, cell.y + 0.1, cell.z + 0.5), W.VOX[vt].c, 5, 1.2, { life: 0.4 });
   if (item === 'leuchtblock') state.stats.torches = (state.stats.torches || 0) + 1;
   var tower = cell.y + 1 - Math.round(W.surfaceHeight(cell.x + 0.5, cell.z + 0.5));
   if (tower > (state.stats.maxTower || 0)) state.stats.maxTower = tower;
-  sfx.place();
+  blockSound(W.VOX[vt], 'place');
   pulse(h, 0.35, 25);
   markGesture('blockbau');
   if (!blockTipShown){ blockTipShown = true; tip('blocks'); }
@@ -13287,6 +13663,7 @@ function updateBlockHand(ctx){
 var mineState = { key: null, dmg: 0, t: 0, hit: null };
 
 function toolMult(def, tool){
+  if (tool === 'bohrer') return def.hard < 12 ? 3.5 : 1;
   if (def.tool && def.tool === tool) return 4 * ((tool === 'spitzhacke' || tool === 'axt') ? upgradeMult(tool) : 1);
   if (tool === 'schwert' || tool === 'energieschwert' || tool === 'hammer') return 1.4;
   return 1;
@@ -13297,7 +13674,7 @@ function mineVoxel(hit, tool, power){
   if (!def) return;
   _bt.set(hit.ix + 0.5, hit.iy + 0.5, hit.iz + 0.5);
   if (def.hard === Infinity){ say('Grundgestein ist unzerstörbar — tiefer geht es nicht', true); sfx.mine(); return; }
-  if (def.need && def.need !== tool && !creative()){ say(def.label + ': dafür brauchst du eine Spitzhacke', true); sfx.mine(); return; }
+  if (def.need && def.need !== tool && tool !== 'bohrer' && !creative()){ say(def.label + ': dafür brauchst du eine Spitzhacke', true); sfx.mine(); return; }
   var key = hit.ix + ',' + hit.iy + ',' + hit.iz;
   if (mineState.key !== key){ mineState.key = key; mineState.dmg = 0; }
   mineState.t = 1.8;
@@ -13305,7 +13682,7 @@ function mineVoxel(hit, tool, power){
   var dmg = creative() ? 999 : toolMult(def, tool) * (1 + state.skills.bergbau * 0.25) * Math.min(1.6, power || 1) * (state.strengthT > 0 ? 1.5 : 1);
   mineState.dmg += dmg;
   spawnBurst(_bt, def.c, 4, 2);
-  if (def.tool === 'axt') sfx.chop(); else sfx.mine();
+  blockSound(def, 'hit');
   pulse(toolHand(), 0.45, 30);
   markGesture('blockab');
   if (mineState.dmg < def.hard){
@@ -13334,10 +13711,12 @@ function breakVoxel(hit, def, tool){
       state.stats.ores++;
       gainXP(def.xp || 2, _bt);
     }
-    give(def.drop, amount, true);
+    dropOrGive(def.drop, amount, _bt.clone(), true);
     text = '+' + amount + ' ' + (BLOCK_LABELS[def.drop] || def.label);
+    if (def.name === 'kies' && Math.random() < 0.15){ give('feuerstein', 1, true); text += ' + 1 Feuerstein'; }
     if (def.name === 'laub' && Math.random() < 0.12){ give('apfel', 1, true); text += ' + 1 Apfel'; }
     if (def.name === 'laub' && Math.random() < 0.08){ give('samen', 1, true); text += ' + 1 Samen'; }
+    if (def.name === 'laub' && Math.random() < 0.1){ give('setzling', 1, true); text += ' + 1 Setzling'; }
     if (tool === 'schaufel' && (def.name === 'gras' || def.name === 'erde')){
       var r = Math.random();
       if (r < 0.1){ give('kohle', 1, true); text += ' + 1 Kohle'; }
@@ -13347,8 +13726,9 @@ function breakVoxel(hit, def, tool){
       else if (r < 0.28){ give('muenzen', 3, true); text += ' + 3 alte Münzen!'; }
     }
   }
+  if (tool === 'bohrer') drillExtra(hit);
   if (text) say(text, true);
-  sfx.pick();
+  blockSound(def, 'break');
   /* Vergrabener Schatz direkt unter der Oberfläche */
   if (wasTop && (def.name === 'gras' || def.name === 'erde' || def.name === 'sand' || def.name === 'schnee')){
     var ts = null;
@@ -13361,7 +13741,8 @@ function breakVoxel(hit, def, tool){
 }
 
 /* Granaten und Raketen sprengen Blöcke weg (Obsidian und Grundgestein halten) */
-function blastBlocks(pos, r){
+function blastBlocks(pos, r, opts){
+  opts = opts || {};
   var n = 0;
   for (var x = Math.floor(pos.x - r); x <= Math.floor(pos.x + r); x++){
     for (var y = Math.floor(pos.y - r); y <= Math.floor(pos.y + r); y++){
@@ -13369,11 +13750,13 @@ function blastBlocks(pos, r){
         if (Math.hypot(x + 0.5 - pos.x, y + 0.5 - pos.y, z + 0.5 - pos.z) > r) continue;
         var t = W.typeAt(x, y, z);
         if (!t) continue;
+        if (t === W.VT.tnt){ igniteTnt(x, y, z, 0.4 + Math.random() * 0.6); continue; }
         var def = W.VOX[t];
         if (!def || def.hard >= 12) continue;
+        if (opts.keepBuilt && W.isEdited(x, y, z)) continue;
         W.setVoxel(x, y, z, 0);
         n++;
-        if (def.drop && Math.random() < 0.3) give(def.drop, 1, true);
+        if (def.drop && Math.random() < 0.3) dropOrGive(def.drop, 1, _bt.set(x + 0.5, y + 0.5, z + 0.5), true);
       }
     }
   }
@@ -13428,14 +13811,16 @@ function updateBlocks(dt){
   if (mineState.t > 0){ mineState.t -= dt; if (mineState.t <= 0){ mineState.key = null; crackMesh.visible = false; } }
 
   /* Vorschau beim Bauen */
+  active = active && !invPointerOnPanel;
   var isBlock = !!BLOCK_ITEMS[sel] && has(sel, 1);
   var cell = active && isBlock ? placeCell(th) : null;
   if (cell){
     var bad = whyNotPlace(cell);
     blockGhost.visible = true;
     blockGhost.position.set(cell.x + 0.5, cell.y + 0.5, cell.z + 0.5);
-    ghostBox.material.color.setHex(bad ? 0xe4452e : 0x7bd389);
-    ghostEdges.material.color.setHex(bad ? 0xe4452e : 0x7bd389);
+    var gcol = bad ? 0xe4452e : (cell.hand ? 0xf2c14e : 0x7bd389);
+    ghostBox.material.color.setHex(gcol);
+    ghostEdges.material.color.setHex(gcol);
   } else blockGhost.visible = false;
 
   /* Rahmen um den Block, den man abbauen würde */
@@ -13490,6 +13875,1521 @@ function isLitSpot(x, y, z){
     if (Math.hypot(gl[k].x + 0.5 - x, gl[k].z + 0.5 - z, (gl[k].y - y) * 0.7) < 7.5) return true;
   }
   return false;
+}
+
+/* ================================================================ Inventar wie in Minecraft: Stapel, Hotbar, Crafting-Feld, Truhen, Ofen */
+
+var STACK = 64;
+var INV_BASE_ROWS = 5, INV_MAX_ROWS = 12;
+
+/* Neue Gegenstände des 200er-Updates */
+var NEW200_ITEMS = ['truhe','ofenblock','werkbankblock','tnt','leiter','tiefenstein','lehm','kies','moosstein','glattstein','buecherregal',
+  'kuerbislaterne','heuballen','packeis','kristallblock','rubinblock','smaragdblock','eisenblock','kupferblock','kohleblock','knochenblock',
+  'honigblock','magmablock','pilzblock','glasrot','glasblau','glasgruen','wolleweiss','wollerosa','wolleorange','wollelila','wollehellblau',
+  'wollebraun','sternenblock','saphirblock','amethystblock','saphir','amethyst','stock','feuerstein','setzling'];
+var NEW200_TOOLS = ['feuerzeug','bauzauberstab','bohrer','erzsucher'];
+NEW200_ITEMS.forEach(function(k){ if (ITEM_KEYS.indexOf(k) < 0) ITEM_KEYS.push(k); if (state.inv[k] === undefined) state.inv[k] = 0; });
+NEW200_TOOLS.forEach(function(k){ if (OWNED_KEYS.indexOf(k) < 0) OWNED_KEYS.push(k); if (state.owned[k] === undefined) state.owned[k] = false; });
+
+/* Jeder neue Block ist auch ein Gegenstand, der ihn setzt */
+['truhe','ofenblock','werkbankblock','tnt','leiter','tiefenstein','lehm','kies','moosstein','glattstein','buecherregal','kuerbislaterne',
+ 'heuballen','packeis','kristallblock','rubinblock','smaragdblock','eisenblock','kupferblock','kohleblock','knochenblock','honigblock',
+ 'magmablock','pilzblock','glasrot','glasblau','glasgruen','wolleweiss','wollerosa','wolleorange','wollelila','wollehellblau','wollebraun',
+ 'sternenblock','saphirblock','amethystblock'].forEach(function(k){ BLOCK_ITEMS[k] = k; BLOCK_LABELS[k] = W.VOX[W.VT[k]].label; });
+BLOCK_LABELS.setzling = 'Setzling'; BLOCK_LABELS.saphir = 'Saphir'; BLOCK_LABELS.amethyst = 'Amethyst'; BLOCK_LABELS.stock = 'Stock'; BLOCK_LABELS.feuerstein = 'Feuerstein';
+
+var ITEM_NAMES = {
+  holz: 'Holz', stein: 'Stein', kohle: 'Kohle', eisen: 'Eisen', kupfer: 'Kupfer', gold: 'Gold', kristall: 'Kristall', rubin: 'Rubin',
+  eis: 'Eis', knochen: 'Knochen', perle: 'Perle', beeren: 'Beeren', fleisch: 'Fleisch', braten: 'Braten', fisch: 'Fisch',
+  fischbraten: 'Fischbraten', apfel: 'Apfel', kuerbis: 'Kürbis', ei: 'Ei', suppe: 'Suppe', kuchen: 'Kuchen', pilz: 'Pilz',
+  fliegenpilz: 'Fliegenpilz', blume: 'Blume', kaktus: 'Kaktus', leder: 'Leder', samen: 'Samen', pfeil: 'Pfeile', muenzen: 'Münzen',
+  obsidian: 'Obsidian', smaragd: 'Smaragd', sand: 'Sand', glas: 'Glas', stahl: 'Stahl', honig: 'Honig', wolle: 'Wolle', milch: 'Milch',
+  feder: 'Feder', bambus: 'Bambus', leuchtpilz: 'Leuchtpilz', blaubeeren: 'Blaubeeren', weizen: 'Weizen', karotte: 'Karotte',
+  weizensamen: 'Weizensamen', karottensamen: 'Karottensamen', knochenmehl: 'Dünger', schatzkarte: 'Schatzkarte', schluessel: 'Schlüssel',
+  panzer: 'Panzer', rakete: 'Rakete', bolzen: 'Bolzen', brot: 'Brot', saft: 'Saft'
+};
+function itemLabel(id){
+  if (id === 'hand') return 'Hand';
+  for (var i = 0; i < HOTBAR_DEFS.length; i++) if (HOTBAR_DEFS[i][0] === id) return HOTBAR_DEFS[i][1];
+  return BLOCK_LABELS[id] || ITEM_NAMES[id] || (id.charAt(0).toUpperCase() + id.slice(1));
+}
+
+/* ---------------------------------------------------------------- Wer was ist */
+
+var TOOL_ITEMS = null, tracked = null, HOTBAR_FIRST = {};
+function buildTracked(){
+  TOOL_ITEMS = {};
+  HOTBAR_DEFS.forEach(function(d){ if (d[2] === 'tool' && d[0] !== 'hand') TOOL_ITEMS[d[0]] = true; });
+  NEW200_TOOLS.forEach(function(k){ TOOL_ITEMS[k] = true; });
+  var seen = {}, list = [];
+  function push(id){ if (!seen[id]){ seen[id] = true; list.push(id); } }
+  HOTBAR_DEFS.forEach(function(d){ if (TOOL_ITEMS[d[0]]) push(d[0]); });
+  NEW200_TOOLS.forEach(push);
+  Object.keys(BLOCK_ITEMS).forEach(push);
+  HOTBAR_DEFS.forEach(function(d){ if (d[2] === 'stack') push(d[0]); });
+  ITEM_KEYS.forEach(push);
+  tracked = list;
+  list.forEach(function(id){ if (TOOL_ITEMS[id] || BLOCK_ITEMS[id]) HOTBAR_FIRST[id] = true; });
+  ['fackel','medipack','granate','heiltrank','speer','setzling'].forEach(function(k){ HOTBAR_FIRST[k] = true; });
+}
+function isTool(id){ if (!TOOL_ITEMS) buildTracked(); return !!TOOL_ITEMS[id]; }
+function stackOf(id){ return isTool(id) ? 1 : (id === 'muenzen' ? 999 : (id === 'pfeil' || id === 'bolzen' ? 128 : STACK)); }
+function countOf(id){ return isTool(id) ? (state.owned[id] ? 1 : 0) : (state.inv[id] || 0); }
+function countAdd(id, n){
+  if (isTool(id)){ if (n > 0) state.owned[id] = true; else if (n < 0) state.owned[id] = false; }
+  else state.inv[id] = Math.max(0, (state.inv[id] || 0) + n);
+  uiDirty = true;
+}
+
+/* ---------------------------------------------------------------- Stapel mit den Zählern abgleichen */
+
+function ensureRows(rows){ while (state.slots.length < rows * 9) state.slots.push(null); }
+var _sums = {};
+function reconcileInv(){
+  if (!tracked) buildTracked();
+  if (!state.slots) state.slots = [];
+  ensureRows(INV_BASE_ROWS);
+  var slots = state.slots, i, k;
+  for (k in _sums) _sums[k] = 0;
+  for (i = 0; i < slots.length; i++){
+    var sl = slots[i];
+    if (!sl) continue;
+    if (!(sl.n > 0)){ slots[i] = null; continue; }
+    _sums[sl.id] = (_sums[sl.id] || 0) + sl.n;
+  }
+  var changed = false;
+  for (var t = 0; t < tracked.length; t++){
+    var id = tracked[t], want = countOf(id), have = _sums[id] || 0;
+    if (want === have) continue;
+    changed = true;
+    if (want < have) takeFromSlots(id, have - want);
+    else addToSlots(id, want - have);
+  }
+  if (changed){ syncSelection(); inv.dirty = true; }
+}
+
+function takeFromSlots(id, n){
+  var slots = state.slots;
+  function takeAt(i){
+    var sl = slots[i];
+    if (!sl || sl.id !== id || n <= 0) return;
+    var d = Math.min(n, sl.n);
+    sl.n -= d; n -= d;
+    if (sl.n <= 0) slots[i] = null;
+  }
+  if (state.selSlot >= 0) takeAt(state.selSlot);
+  for (var i = slots.length - 1; i >= 0 && n > 0; i--) takeAt(i);
+}
+
+function addToSlots(id, n){
+  var slots = state.slots, max = stackOf(id), i;
+  for (i = 0; i < slots.length && n > 0; i++){
+    var sl = slots[i];
+    if (sl && sl.id === id && sl.n < max){ var d = Math.min(n, max - sl.n); sl.n += d; n -= d; }
+  }
+  var guard = 0;
+  while (n > 0 && guard++ < 200){
+    var idx = emptySlot(HOTBAR_FIRST[id]);
+    if (idx < 0){
+      if (state.slots.length >= INV_MAX_ROWS * 9){ inv.full = true; return; }
+      ensureRows(state.slots.length / 9 + 1);
+      continue;
+    }
+    var put = Math.min(n, max);
+    slots[idx] = { id: id, n: put };
+    n -= put;
+  }
+}
+
+function emptySlot(hotbarFirst){
+  var slots = state.slots, i;
+  if (hotbarFirst){ for (i = 0; i < 9; i++) if (!slots[i]) return i; }
+  for (i = 9; i < slots.length; i++) if (!slots[i]) return i;
+  if (!hotbarFirst){ for (i = 0; i < 9; i++) if (!slots[i]) return i; }
+  return -1;
+}
+
+function hotbarIndexOf(id){
+  for (var i = 0; i < 9; i++) if (state.slots[i] && state.slots[i].id === id) return i;
+  return -2;
+}
+
+function syncSelection(){
+  if (state.selSlot >= 0){
+    var sl = state.slots[state.selSlot];
+    var id = sl ? sl.id : 'hand';
+    if (state.selected !== id) selectSlot(id, state.selSlot);
+  } else if (state.selected !== 'hand' && countOf(state.selected) <= 0) selectSlot('hand', -1);
+  else if (state.selSlot === -2){ var hi = hotbarIndexOf(state.selected); if (hi >= 0) state.selSlot = hi; }
+}
+
+/* ---------------------------------------------------------------- Rezepte für das Crafting-Feld */
+
+var GRID_RECIPES = [];
+function GR(out, n, pattern, key, opts){ GRID_RECIPES.push(Object.assign({ out: out, n: n, pattern: pattern, key: key }, opts || {})); }
+function GS(out, n, items, opts){ GRID_RECIPES.push(Object.assign({ out: out, n: n, items: items }, opts || {})); }
+
+GR('stock', 4, ['B', 'B'], { B: 'bretter' });
+GR('werkbankblock', 1, ['BB', 'BB'], { B: 'bretter' });
+GR('fackel', 4, ['K', 'S'], { K: 'kohle', S: 'stock' });
+GR('spitzhacke', 1, ['SSS', ' T ', ' T '], { S: 'stein', T: 'stock' }, { unique: true });
+GR('axt', 1, ['SS', 'ST', ' T'], { S: 'stein', T: 'stock' }, { unique: true });
+GR('schaufel', 1, ['E', 'T', 'T'], { E: 'eisen', T: 'stock' }, { unique: true });
+GR('schwert', 1, ['E', 'E', 'T'], { E: 'eisen', T: 'stock' }, { unique: true });
+GR('hammer', 1, ['EEE', 'ETE', ' T '], { E: 'eisen', T: 'stock' }, { unique: true });
+GR('bogen', 1, [' TL', 'T L', ' TL'], { T: 'stock', L: 'leder' }, { unique: true });
+GR('pfeil', 8, ['K', 'T', 'F'], { K: 'knochen', T: 'stock', F: 'feder' });
+GR('pfeil', 4, ['K', 'T'], { K: 'knochen', T: 'stock' });
+GR('truhe', 1, ['BBB', 'B B', 'BBB'], { B: 'bretter' });
+GR('ofenblock', 1, ['SSS', 'S S', 'SSS'], { S: 'stein' });
+GR('leiter', 3, ['T T', 'TTT', 'T T'], { T: 'stock' });
+GR('tnt', 1, ['KSK', 'SKS', 'KSK'], { K: 'kohle', S: 'sand' });
+GR('tuer', 1, ['BB', 'BB', 'BB'], { B: 'bretter' });
+GR('zaun', 3, ['BTB', 'BTB'], { B: 'bretter', T: 'stock' });
+GR('bett', 1, ['LLL', 'BBB'], { L: 'leder', B: 'bretter' });
+GR('schild', 1, ['BEB', 'BBB', ' B '], { B: 'bretter', E: 'eisen' }, { unique: true });
+GR('eimer', 1, ['E E', ' E '], { E: 'eisen' }, { unique: true });
+GR('schere', 1, [' E', 'E '], { E: 'eisen' }, { unique: true });
+GR('steinziegel', 4, ['SS', 'SS'], { S: 'stein' });
+GR('sandstein', 2, ['SS', 'SS'], { S: 'sand' });
+GR('glattstein', 4, ['SS', 'SS'], { S: 'steinziegel' });
+GR('moosstein', 2, ['SL', 'LS'], { S: 'stein', L: 'laub' });
+GR('buecherregal', 1, ['BBB', 'LLL', 'BBB'], { B: 'bretter', L: 'leder' });
+GR('kuerbislaterne', 1, ['K', 'F'], { K: 'kuerbis', F: 'fackel' });
+GR('heuballen', 1, ['WWW', 'WWW', 'WWW'], { W: 'weizen' });
+GR('packeis', 1, ['EE', 'EE'], { E: 'eis' });
+GR('kristallblock', 1, ['KK', 'KK'], { K: 'kristall' });
+GR('rubinblock', 1, ['RR', 'RR'], { R: 'rubin' });
+GR('smaragdblock', 1, ['SS', 'SS'], { S: 'smaragd' });
+GR('eisenblock', 1, ['EE', 'EE'], { E: 'eisen' });
+GR('kupferblock', 1, ['KK', 'KK'], { K: 'kupfer' });
+GR('kohleblock', 1, ['KK', 'KK'], { K: 'kohle' });
+GR('goldblock', 1, ['GG', 'GG'], { G: 'gold' });
+GR('knochenblock', 1, ['KK', 'KK'], { K: 'knochen' });
+GR('honigblock', 1, ['HH', 'HH'], { H: 'honig' });
+GR('saphirblock', 1, ['SS', 'SS'], { S: 'saphir' });
+GR('amethystblock', 1, ['AA', 'AA'], { A: 'amethyst' });
+GR('sternenblock', 2, ['AK', 'KA'], { A: 'amethyst', K: 'kristall' });
+GR('magmablock', 1, ['OK', 'KO'], { O: 'obsidian', K: 'kohle' });
+GR('pilzblock', 1, ['PP', 'PP'], { P: 'pilz' });
+GR('wolleweiss', 1, ['WW', 'WW'], { W: 'wolle' });
+GR('brot', 1, ['WWW'], { W: 'weizen' });
+GR('feuerzeug', 1, ['E ', ' F'], { E: 'eisen', F: 'feuerstein' }, { unique: true });
+GR('bauzauberstab', 1, ['  K', ' T ', 'T  '], { K: 'kristall', T: 'stock' }, { unique: true });
+GR('bohrer', 1, ['EEE', 'EKE', ' T '], { E: 'eisen', K: 'kristall', T: 'stock' }, { unique: true });
+GR('erzsucher', 1, [' G ', 'GKG', ' G '], { G: 'gold', K: 'kristall' }, { unique: true });
+GS('wollerosa', 1, { wolleweiss: 1, blume: 1 });
+GS('wolleorange', 1, { wolleweiss: 1, karotte: 1 });
+GS('wollelila', 1, { wolleweiss: 1, blaubeeren: 1 });
+GS('wollehellblau', 1, { wolleweiss: 1, eis: 1 });
+GS('wollebraun', 1, { wolleweiss: 1, erde: 1 });
+GS('glasrot', 1, { glas: 1, blume: 1 });
+GS('glasblau', 1, { glas: 1, blaubeeren: 1 });
+GS('glasgruen', 1, { glas: 1, laub: 1 });
+
+/* ---------------------------------------------------------------- Ofen */
+
+var SMELT = {
+  sand: { out: 'glas', n: 1 }, lehm: { out: 'ziegel', n: 2 }, erde: { out: 'ziegel', n: 1 }, stein: { out: 'glattstein', n: 1 },
+  tiefenstein: { out: 'glattstein', n: 1 }, fleisch: { out: 'braten', n: 1 }, fisch: { out: 'fischbraten', n: 1 }, holz: { out: 'kohle', n: 1 },
+  kaktus: { out: 'gruenblock', n: 1 }, kies: { out: 'glas', n: 1 }, eis: { out: 'packeis', n: 1 }, kartoffel: { out: 'brot', n: 1 },
+  weizen: { out: 'brot', n: 1 }, laub: { out: 'kohle', n: 1 }
+};
+var FUEL = { kohle: 8, kohleblock: 72, holz: 2, bretter: 2, stock: 0.5, laub: 0.5, bambus: 1, heuballen: 3 };
+var SMELT_TIME = 4;
+
+function freshFurnace(){ return { in: null, fuel: null, out: null, burn: 0, burnMax: 0, prog: 0 }; }
+
+function updateFurnaces(dt){
+  var fs = state.furnaces;
+  for (var key in fs){
+    var f = fs[key];
+    var rec = f.in && SMELT[f.in.id];
+    var canOut = !!rec && (!f.out || (f.out.id === rec.out && f.out.n + rec.n <= STACK));
+    if (f.burn <= 0 && canOut && f.fuel && FUEL[f.fuel.id]){
+      f.burnMax = f.burn = FUEL[f.fuel.id] * SMELT_TIME;
+      f.fuel.n--; if (f.fuel.n <= 0) f.fuel = null;
+      if (inv.open && inv.furKey === key) inv.dirty = true;
+    }
+    if (f.burn > 0){
+      f.burn -= dt;
+      if (canOut){
+        f.prog += dt / SMELT_TIME;
+        if (f.prog >= 1){
+          f.prog = 0;
+          f.in.n--; if (f.in.n <= 0) f.in = null;
+          if (f.out) f.out.n += rec.n; else f.out = { id: rec.out, n: rec.n };
+          state.stats.smelted = (state.stats.smelted || 0) + 1;
+          if (inv.open && inv.furKey === key) inv.dirty = true;
+        }
+      } else f.prog = 0;
+      if (Math.random() < dt * 3){
+        var p = key.split(',');
+        _v.set(+p[0] + 0.5, +p[1] + 1.05, +p[2] + 0.5);
+        if (_v.distanceTo(headWorld(_v4)) < 20) spawnBurst(_v, 0x9aa0aa, 1, 0.5, { gravity: -1.5, life: 1.2 });
+      }
+    } else if (f.prog > 0) f.prog = Math.max(0, f.prog - dt * 0.5);
+    if (inv.open && inv.furKey === key && f.burn > 0 && Math.random() < dt * 4) inv.dirty = true;
+  }
+}
+
+/* ---------------------------------------------------------------- Truhen */
+
+function chestLoot(){
+  var arr = []; for (var i = 0; i < 27; i++) arr.push(null);
+  var drops = rollLoot(true, 2);
+  drops.push(['fackel', 4 + Math.floor(Math.random() * 5)]);
+  if (Math.random() < 0.6) drops.push(['stock', 6]);
+  if (Math.random() < 0.4) drops.push(['saphir', 1 + Math.floor(Math.random() * 2)]);
+  if (Math.random() < 0.4) drops.push(['amethyst', 2]);
+  if (Math.random() < 0.35) drops.push(['tnt', 2]);
+  if (Math.random() < 0.3) drops.push(['leuchtblock', 4]);
+  if (Math.random() < 0.25) drops.push(['feuerstein', 2]);
+  if (Math.random() < 0.2) drops.push(['muenzen', 12]);
+  drops.forEach(function(d){
+    for (var tries = 0; tries < 20; tries++){
+      var k = Math.floor(Math.random() * 27);
+      if (!arr[k]){ arr[k] = { id: d[0], n: d[1] }; break; }
+    }
+  });
+  return arr;
+}
+function chestFor(key){
+  if (!state.chestStore[key]){
+    if (W.isLootChest(key)){ state.chestStore[key] = chestLoot(); state.stats.lootChests = (state.stats.lootChests || 0) + 1; banner('SCHATZTRUHE!', ['Eine alte Truhe im Verlies'], '#f2c14e'); sfx.chest(); }
+    else { var a = []; for (var i = 0; i < 27; i++) a.push(null); state.chestStore[key] = a; }
+  }
+  return state.chestStore[key];
+}
+
+/* Wird eine Truhe oder ein Ofen abgebaut, fällt der Inhalt heraus */
+var prevVoxelHook = W.onVoxelChange;
+W.onVoxelChange = function(ix, iy, iz, before, after){
+  if (prevVoxelHook) prevVoxelHook(ix, iy, iz, before, after);
+  var key = ix + ',' + iy + ',' + iz;
+  if (before === W.VT.truhe && after !== W.VT.truhe){
+    var arr = state.chestStore[key] || (W.isLootChest(key) ? chestLoot() : null);
+    if (arr) arr.forEach(function(sl){ if (sl) spawnItemDrop(sl.id, sl.n, _v.set(ix + 0.5, iy + 0.6, iz + 0.5), null, { fly: true }); });
+    delete state.chestStore[key];
+    if (inv.open && inv.chestKey === key) closeInventory();
+  }
+  if (before === W.VT.ofenblock && after !== W.VT.ofenblock){
+    var f = state.furnaces[key];
+    if (f) ['in', 'fuel', 'out'].forEach(function(k){ if (f[k]) spawnItemDrop(f[k].id, f[k].n, _v.set(ix + 0.5, iy + 0.6, iz + 0.5), null, { fly: true }); });
+    delete state.furnaces[key];
+    if (inv.open && inv.furKey === key) closeInventory();
+  }
+};
+
+/* ---------------------------------------------------------------- Gegenstände in der Welt (fallen lassen, werfen, einsammeln) */
+
+var drops = [];
+var dropGeo = new THREE.BoxGeometry(0.22, 0.22, 0.22);
+var dropMats = {}, dropTex = {};
+var invPanel = BL.ui.createInventoryPanel();
+scene.add(invPanel.mesh);
+
+function dropMaterial(id){
+  var vt = BLOCK_ITEMS[id] ? W.VT[BLOCK_ITEMS[id]] : undefined;
+  if (vt !== undefined){
+    if (!dropMats[id]) dropMats[id] = new THREE.MeshLambertMaterial({ color: W.VOX[vt].c });
+    return { cube: true, mat: dropMats[id] };
+  }
+  if (!dropTex[id]){
+    var tex = new THREE.CanvasTexture(invPanel.iconCanvas(id, 1));
+    tex.generateMipmaps = false; tex.minFilter = THREE.LinearFilter;
+    dropTex[id] = new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false });
+  }
+  return { cube: false, mat: dropTex[id] };
+}
+
+function spawnItemDrop(id, n, pos, vel, opts){
+  opts = opts || {};
+  if (drops.length > 60){ collectDrop({ id: id, n: n, gathered: opts.gathered }); return; }
+  var m = dropMaterial(id);
+  var mesh = m.cube ? new THREE.Mesh(dropGeo, m.mat) : new THREE.Sprite(m.mat);
+  if (!m.cube) mesh.scale.setScalar(0.3);
+  mesh.position.copy(pos);
+  scene.add(mesh);
+  var v = vel ? vel.clone() : new THREE.Vector3((Math.random() - 0.5) * 1.6, 2.2 + Math.random(), (Math.random() - 0.5) * 1.6);
+  drops.push({ id: id, n: n, mesh: mesh, vel: v, age: 0, delay: opts.delay !== undefined ? opts.delay : (opts.fly ? 0.35 : 1.0), fly: !!opts.fly, gathered: !!opts.gathered, life: 300 });
+}
+
+/* Blöcke springen beim Abbauen heraus und fliegen zu dir */
+function dropOrGive(id, n, pos, gathered){
+  if (drops.length > 40) return collectDrop({ id: id, n: n, gathered: gathered });
+  spawnItemDrop(id, n, pos, null, { fly: true, gathered: gathered, delay: 0.3 });
+}
+
+function collectDrop(d){
+  if (isTool(d.id)) countAdd(d.id, 1);
+  else give(d.id, d.n, !!d.gathered);
+  uiDirty = true;
+}
+
+var _dp = new THREE.Vector3();
+function updateDrops(dt){
+  if (!drops.length) return;
+  headWorld(_v3);
+  var chestY = _v3.y - 0.45;
+  for (var i = drops.length - 1; i >= 0; i--){
+    var d = drops[i], p = d.mesh.position;
+    d.age += dt; d.life -= dt;
+    _dp.set(_v3.x - p.x, chestY - p.y, _v3.z - p.z);
+    var dist = _dp.length();
+    var attract = d.age > d.delay && !state.dead && (d.fly ? dist < 14 : dist < 2.2 || (state.owned.magnet && dist < 6));
+    if (attract){
+      var sp = Math.min(dist / Math.max(dt, 0.001), 7 + d.age * 6);
+      p.addScaledVector(_dp.normalize(), sp * dt);
+      if (dist < 0.4){
+        collectDrop(d);
+        sfx.pick();
+        scene.remove(d.mesh);
+        drops.splice(i, 1);
+        continue;
+      }
+    } else {
+      d.vel.y -= 9.8 * dt;
+      p.addScaledVector(d.vel, dt);
+      var floor = W.floorAt(p.x, p.z, p.y + 0.2);
+      if (p.y < floor + 0.12){ p.y = floor + 0.12; d.vel.y = Math.abs(d.vel.y) * 0.25; d.vel.x *= 0.6; d.vel.z *= 0.6; }
+      if (W.solidAt(p.x, p.y, p.z)){ d.vel.x *= -0.3; d.vel.z *= -0.3; p.y += 0.3; }
+    }
+    d.mesh.rotation.y += dt * 2;
+    if (d.life <= 0){ scene.remove(d.mesh); drops.splice(i, 1); }
+  }
+}
+
+/* ---------------------------------------------------------------- Inventar-Fenster */
+
+var inv = { open: false, mode: 'inv', chestKey: null, furKey: null, gridSize: 2, page: 0, catPage: 0, hover: null, dirty: true,
+  dragFrom: null, pressT: 0, pressHand: null, full: false, tipText: '', benchT: 0 };
+var invPointerOnPanel = false, invUiHandOnPanel = false;
+var cursorSprite = new THREE.Sprite(new THREE.SpriteMaterial({ transparent: true, depthTest: false }));
+cursorSprite.renderOrder = 998;
+cursorSprite.scale.setScalar(0.07);
+cursorSprite.visible = false;
+scene.add(cursorSprite);
+var cursorKey = '';
+
+function initInvState(){
+  if (!state.slots) state.slots = [];
+  if (!state.chestStore) state.chestStore = {};
+  if (!state.furnaces) state.furnaces = {};
+  if (!state.grid || state.grid.length !== 9) state.grid = [null, null, null, null, null, null, null, null, null];
+  if (state.cursor === undefined) state.cursor = null;
+  if (state.selSlot === undefined) state.selSlot = -1;
+  if (!state.saplings) state.saplings = [];
+}
+initInvState();
+
+var CATALOG = null;
+function catalogList(){
+  if (!CATALOG){
+    if (!tracked) buildTracked();
+    var blocks = Object.keys(BLOCK_ITEMS), tools = Object.keys(TOOL_ITEMS);
+    var rest = tracked.filter(function(id){ return blocks.indexOf(id) < 0 && tools.indexOf(id) < 0; });
+    CATALOG = blocks.concat(tools, rest);
+  }
+  return CATALOG;
+}
+
+function openInventory(mode, key){
+  if (!tracked) buildTracked();
+  initInvState();
+  if (inv.open) returnLoose();
+  inv.open = true;
+  inv.mode = mode || (creative() ? 'katalog' : 'inv');
+  inv.chestKey = mode === 'chest' ? key : null;
+  inv.furKey = mode === 'ofen' ? key : null;
+  if (mode === 'ofen' && !state.furnaces[key]) state.furnaces[key] = freshFurnace();
+  if (mode === 'chest') chestFor(key);
+  inv.gridSize = (mode === 'bench' || benchNear()) ? 3 : 2;
+  inv.dirty = true;
+  state.invOpen = true;
+  headWorld(_v3);
+  camera.getWorldDirection(_v4);
+  _v4.y = 0;
+  if (_v4.lengthSq() < 0.001) _v4.set(0, 0, -1);
+  _v4.normalize();
+  var dist = desktopMode ? 0.8 : 0.47;
+  invPanel.mesh.position.set(_v3.x + _v4.x * dist, _v3.y - (desktopMode ? 0.08 : 0.2), _v3.z + _v4.z * dist);
+  invPanel.mesh.lookAt(_v3.x, _v3.y + 0.1, _v3.z);
+  invPanel.mesh.visible = true;
+  sfx.chest();
+  markGesture('inventar');
+  uiUrgent = true;
+}
+
+/* Hand-Inhalt und Crafting-Feld zurück ins Inventar */
+function returnLoose(){
+  if (state.cursor){ collectDrop(state.cursor); state.cursor = null; }
+  for (var i = 0; i < 9; i++){ if (state.grid[i]){ collectDrop(state.grid[i]); state.grid[i] = null; } }
+}
+
+function closeInventory(){
+  if (!inv.open) return;
+  returnLoose();
+  inv.open = false;
+  state.invOpen = false;
+  invPanel.mesh.visible = false;
+  cursorSprite.visible = false;
+  inv.dragFrom = null;
+  tone(520, 0.06, 'triangle', 0.04);
+  uiUrgent = true;
+}
+
+function toggleInventory(mode, key){ if (inv.open && (!mode || inv.mode === mode)) closeInventory(); else openInventory(mode, key); }
+
+/* Werkbank in der Nähe (als Bauwerk oder als Block) */
+var benchCache = { t: 0, v: false };
+function benchNear(){
+  if (performance.now() - benchCache.t < 500) return benchCache.v;
+  benchCache.t = performance.now();
+  var v = !!nearStructure('werkbank', 4.5);
+  if (!v){
+    headWorld(_v3);
+    var hx = Math.floor(_v3.x), hy = Math.floor(dolly.position.y), hz = Math.floor(_v3.z);
+    search: for (var x = -4; x <= 4; x++) for (var z = -4; z <= 4; z++) for (var y = -2; y <= 3; y++){
+      if (W.rawAt(hx + x, hy + y, hz + z) === W.VT.werkbankblock){ v = true; break search; }
+    }
+  }
+  benchCache.v = v;
+  return v;
+}
+
+/* ---------------------------------------------------------------- Felder lesen und schreiben */
+
+function curChest(){ return inv.chestKey ? chestFor(inv.chestKey) : null; }
+function curFurnace(){ return inv.furKey ? state.furnaces[inv.furKey] : null; }
+
+function refGet(ref){
+  var p = ref.split(':'), i = +p[1];
+  if (p[0] === 'inv') return state.slots[i] || null;
+  if (p[0] === 'grid') return state.grid[i] || null;
+  if (p[0] === 'chest'){ var c = curChest(); return c ? c[i] : null; }
+  if (p[0] === 'fur'){ var f = curFurnace(); return f ? f[p[1]] : null; }
+  return null;
+}
+function refSet(ref, val){
+  var p = ref.split(':'), i = +p[1];
+  if (val && !(val.n > 0)) val = null;
+  if (p[0] === 'inv'){
+    var old = state.slots[i];
+    if (old) countAdd(old.id, -old.n);
+    state.slots[i] = val ? { id: val.id, n: val.n } : null;
+    if (val) countAdd(val.id, val.n);
+  } else if (p[0] === 'grid') state.grid[i] = val ? { id: val.id, n: val.n } : null;
+  else if (p[0] === 'chest'){ var c = curChest(); if (c) c[i] = val ? { id: val.id, n: val.n } : null; }
+  else if (p[0] === 'fur'){ var f = curFurnace(); if (f) f[p[1]] = val ? { id: val.id, n: val.n } : null; }
+  inv.dirty = true;
+}
+function isSlotRef(r){ return !!r && (r.indexOf('inv:') === 0 || r.indexOf('grid:') === 0 || r.indexOf('chest:') === 0 || r.indexOf('fur:') === 0); }
+
+/* Hand leer: Stapel aufnehmen. Hand voll: ablegen (im Crafting-Feld je 1 Stück), sonst tauschen */
+function pressSlot(ref, h){
+  var cur = state.cursor, content = refGet(ref);
+  var now = performance.now();
+  /* Doppeltippen: Stapel sofort in den anderen Bereich (Hotbar ↔ Rucksack, Truhe ↔ Inventar) */
+  if (cur && inv.dragFrom === ref && now - inv.pressT < 380 && ref.indexOf('fur:') !== 0 && ref.indexOf('grid:') !== 0){
+    quickMove(ref);
+    inv.dragFrom = null;
+    return;
+  }
+  /* Mit der linken Hand (UI-Hand) nimmt man nur die Hälfte */
+  if (!cur && content && content.n > 1 && h && h === uiHand() && vrLike() && ref !== 'fur:out'){
+    var half = Math.ceil(content.n / 2);
+    state.cursor = { id: content.id, n: half };
+    refSet(ref, { id: content.id, n: content.n - half });
+    inv.dragFrom = ref; inv.pressT = now;
+    tone(620, 0.04, 'triangle', 0.04);
+    markGesture('halbieren');
+    return;
+  }
+  if (ref === 'fur:out'){
+    if (!content) return;
+    if (!cur){ state.cursor = { id: content.id, n: content.n }; refSet(ref, null); }
+    else if (cur.id === content.id && cur.n + content.n <= stackOf(cur.id)){ cur.n += content.n; refSet(ref, null); }
+    tone(700, 0.04, 'triangle', 0.04);
+    return;
+  }
+  if (!cur){
+    if (!content) return;
+    state.cursor = { id: content.id, n: content.n };
+    refSet(ref, null);
+    inv.dragFrom = ref;
+    inv.pressT = performance.now();
+    tone(660, 0.04, 'triangle', 0.04);
+    return;
+  }
+  placeInto(ref, ref.indexOf('grid:') === 0);
+  inv.dragFrom = null;
+}
+
+function placeInto(ref, one){
+  var cur = state.cursor;
+  if (!cur) return;
+  if (ref === 'fur:fuel' && !FUEL[cur.id]){ say('Das brennt nicht — nimm Kohle, Holz oder Bretter', true); return; }
+  var content = refGet(ref), max = stackOf(cur.id);
+  if (!content){
+    var n = one ? 1 : Math.min(cur.n, max);
+    refSet(ref, { id: cur.id, n: n });
+    cur.n -= n;
+  } else if (content.id === cur.id){
+    var add = Math.min(one ? 1 : cur.n, max - content.n);
+    if (add > 0){ refSet(ref, { id: content.id, n: content.n + add }); cur.n -= add; }
+  } else {
+    refSet(ref, { id: cur.id, n: cur.n });
+    state.cursor = { id: content.id, n: content.n };
+    cur = null;
+  }
+  if (cur && cur.n <= 0) state.cursor = null;
+  tone(560, 0.04, 'triangle', 0.04);
+  inv.dirty = true;
+}
+
+/* ---------------------------------------------------------------- Crafting-Feld auswerten */
+
+function gridIds(){
+  var size = inv.gridSize, rows = [];
+  for (var r = 0; r < size; r++){
+    var row = [];
+    for (var c = 0; c < size; c++){ var g = state.grid[r * 3 + c]; row.push(g ? g.id : null); }
+    rows.push(row);
+  }
+  var r0 = size, r1 = -1, c0 = size, c1 = -1;
+  for (r = 0; r < size; r++) for (c = 0; c < size; c++) if (rows[r][c]){ r0 = Math.min(r0, r); r1 = Math.max(r1, r); c0 = Math.min(c0, c); c1 = Math.max(c1, c); }
+  if (r1 < 0) return null;
+  var out = [];
+  for (r = r0; r <= r1; r++){ var line = []; for (c = c0; c <= c1; c++) line.push(rows[r][c]); out.push(line); }
+  return { cells: out, r0: r0, c0: c0 };
+}
+
+function patternFits(rec, trim, mirror){
+  var pat = rec.pattern, h = pat.length, w = pat[0].length;
+  if (trim.cells.length !== h || trim.cells[0].length !== w) return false;
+  for (var r = 0; r < h; r++){
+    for (var c = 0; c < w; c++){
+      var ch = pat[r].charAt(mirror ? w - 1 - c : c);
+      var want = ch === ' ' ? null : rec.key[ch];
+      if ((trim.cells[r][c] || null) !== want) return false;
+    }
+  }
+  return true;
+}
+
+var BOOK_SHAPELESS = null;
+function bookShapeless(){
+  if (BOOK_SHAPELESS) return BOOK_SHAPELESS;
+  BOOK_SHAPELESS = [];
+  Object.keys(RECIPES).forEach(function(tab){
+    (RECIPES[tab] || []).forEach(function(r){
+      if (r.special || !r.cost || !Object.keys(r.cost).length) return;
+      BOOK_SHAPELESS.push(r);
+    });
+  });
+  BOOK_SHAPELESS.sort(function(a, b){ return Object.keys(b.cost).length - Object.keys(a.cost).length; });
+  return BOOK_SHAPELESS;
+}
+
+function recipeTitle(rec){ return rec.title || ((rec.n > 1 ? rec.n + ' ' : '') + itemLabel(rec.out)); }
+
+/* Was ergibt das Feld gerade? */
+function matchGrid(){
+  var trim = gridIds();
+  if (!trim) return null;
+  var i, rec;
+  for (i = 0; i < GRID_RECIPES.length; i++){
+    rec = GRID_RECIPES[i];
+    if (!rec.pattern) continue;
+    if (patternFits(rec, trim, false) || patternFits(rec, trim, true)){
+      var cost = {};
+      for (var g = 0; g < 9; g++) if (state.grid[g] && inGrid(g)) cost[state.grid[g].id] = (cost[state.grid[g].id] || 0) + 1;
+      return { kind: 'shaped', rec: rec, cost: cost, perCell: true };
+    }
+  }
+  var totals = {}, ids = [];
+  for (g = 0; g < 9; g++){
+    var cell = state.grid[g];
+    if (!cell || !inGrid(g)) continue;
+    if (!totals[cell.id]){ totals[cell.id] = 0; ids.push(cell.id); }
+    totals[cell.id] += cell.n;
+  }
+  function fits(items){
+    var keys = Object.keys(items);
+    if (keys.length !== ids.length) return false;
+    for (var k = 0; k < keys.length; k++) if (!(totals[keys[k]] >= items[keys[k]])) return false;
+    return true;
+  }
+  for (i = 0; i < GRID_RECIPES.length; i++){
+    rec = GRID_RECIPES[i];
+    if (rec.items && fits(rec.items)) return { kind: 'shapeless', rec: rec, cost: rec.items };
+  }
+  var book = bookShapeless();
+  for (i = 0; i < book.length; i++){
+    if (fits(book[i].cost)) return { kind: 'book', rec: book[i], cost: book[i].cost };
+  }
+  return null;
+}
+
+function inGrid(g){ return inv.gridSize === 3 || (g % 3 < 2 && g < 6); }
+
+/* Ergebnis als Rezept für craft() */
+function asRecipe(m){
+  if (m.kind === 'book') return m.rec;
+  var rec = m.rec;
+  var r = { id: rec.unique ? rec.out : ('g_' + rec.out), title: recipeTitle(rec), cost: m.cost, info: rec.info };
+  if (rec.unique) r.unique = true; else r.out = [rec.out, rec.n];
+  return r;
+}
+
+function recipeWhy(r){
+  if (r.unique && state.owned[r.id]) return 'hast du schon';
+  if (r.bench && inv.gridSize !== 3 && !creative()) return 'nur an der Werkbank (3 × 3)';
+  if (r.station && !nearStation(r.station) && !creative()) return 'nur an ' + labelOf(r.station);
+  if (r.fire && !campfireWarmth && !creative()) return 'nur am Lagerfeuer';
+  return null;
+}
+
+function craftFromGrid(){
+  var m = matchGrid();
+  if (!m){ say('Das ergibt nichts — probier ein anderes Muster', true); sfx.empty(); return; }
+  var r = asRecipe(m), why = recipeWhy(r);
+  if (why){ say(r.title + ': ' + why, true); sfx.empty(); return; }
+  /* Zutaten aus dem Feld nehmen und craft() bezahlen lassen */
+  if (m.perCell){
+    for (var g = 0; g < 9; g++){
+      var c = state.grid[g];
+      if (!c || !inGrid(g)) continue;
+      countAdd(c.id, 1);
+      c.n--; if (c.n <= 0) state.grid[g] = null;
+    }
+  } else {
+    Object.keys(m.cost).forEach(function(id){
+      var need = m.cost[id];
+      for (var g2 = 0; g2 < 9 && need > 0; g2++){
+        var c2 = state.grid[g2];
+        if (!c2 || c2.id !== id || !inGrid(g2)) continue;
+        var d = Math.min(need, c2.n);
+        c2.n -= d; need -= d; countAdd(id, d);
+        if (c2.n <= 0) state.grid[g2] = null;
+      }
+    });
+  }
+  var before = state.stats.crafted;
+  craft(r);
+  if (state.stats.crafted > before){
+    state.stats.gridCrafts = (state.stats.gridCrafts || 0) + 1;
+    markGesture('crafting');
+    _v.copy(invPanel.mesh.position); spawnBurst(_v, 0xf2c14e, 8, 1.2, { life: 0.5 });
+  }
+  inv.dirty = true;
+}
+
+/* ---------------------------------------------------------------- Sortieren, Wegwerfen */
+
+function sortInventory(){
+  var order = {};
+  tracked.forEach(function(id, i){ order[id] = i; });
+  var items = [];
+  for (var i = 9; i < state.slots.length; i++) if (state.slots[i]) items.push(state.slots[i]);
+  var merged = {};
+  items.forEach(function(s){ merged[s.id] = (merged[s.id] || 0) + s.n; });
+  var ids = Object.keys(merged).sort(function(a, b){ return (order[a] || 0) - (order[b] || 0); });
+  for (i = 9; i < state.slots.length; i++) state.slots[i] = null;
+  var k = 9;
+  ids.forEach(function(id){
+    var n = merged[id], max = stackOf(id);
+    while (n > 0 && k < state.slots.length){ var put = Math.min(n, max); state.slots[k++] = { id: id, n: put }; n -= put; }
+  });
+  inv.dirty = true;
+  sfx.craft();
+}
+
+var _thr = new THREE.Vector3();
+function throwCursor(h, vel){
+  var c = state.cursor;
+  if (!c) return;
+  state.cursor = null;
+  if (h && h.active){ _thr.copy(h.hasJoints ? h.joints[9] : h.tip); }
+  else { _thr.copy(invPanel.mesh.position); }
+  var v = vel ? vel.clone() : new THREE.Vector3();
+  if (!vel){ camera.getWorldDirection(v); v.multiplyScalar(3); v.y += 1.5; }
+  spawnItemDrop(c.id, c.n, _thr, v, { delay: 1.2 });
+  sfx.throwIt();
+  markGesture('wegwerfen');
+  inv.dirty = true;
+}
+
+/* ---------------------------------------------------------------- Knöpfe und Felder antippen */
+
+function invPress(region, h){
+  if (!region || region === 'panel') return;
+  if (region === 'inv:close'){ closeInventory(); return; }
+  if (region.indexOf('invtab:') === 0){ inv.mode = region === 'invtab:katalog' ? 'katalog' : 'inv'; inv.dirty = true; tone(700, 0.04, 'triangle', 0.03); return; }
+  if (region === 'invpage:prev' || region === 'invpage:next'){
+    var pages = Math.max(1, Math.ceil((state.slots.length / 9 - 1) / 4));
+    inv.page = (inv.page + (region === 'invpage:next' ? 1 : pages - 1)) % pages; inv.dirty = true; return;
+  }
+  if (region === 'catpage:prev' || region === 'catpage:next'){
+    var cp = Math.ceil(catalogList().length / 27);
+    inv.catPage = (inv.catPage + (region === 'catpage:next' ? 1 : cp - 1)) % cp; inv.dirty = true; return;
+  }
+  if (region === 'sort'){ sortInventory(); return; }
+  if (region.indexOf('cat:') === 0){
+    var id = region.slice(4);
+    state.cursor = { id: id, n: stackOf(id) };
+    tone(760, 0.04, 'triangle', 0.04);
+    inv.dirty = true;
+    return;
+  }
+  if (region === 'drop'){ if (state.cursor) throwCursor(h, null); return; }
+  if (region === 'trash'){ if (state.cursor){ state.cursor = null; noiseBurst(0.15, 0.05, 1500); say('Weggeworfen', true); inv.dirty = true; } return; }
+  if (region === 'result'){ craftFromGrid(); return; }
+  if (isSlotRef(region)) pressSlot(region, h);
+}
+
+/* Ziel für Doppeltippen suchen und den Stapel dorthin legen */
+function quickMove(ref){
+  var targets = [];
+  var p = ref.split(':'), i = +p[1];
+  if (inv.mode === 'chest'){
+    if (p[0] === 'chest'){ for (var a = 0; a < state.slots.length; a++) targets.push('inv:' + a); }
+    else { for (var b = 0; b < 27; b++) targets.push('chest:' + b); }
+  } else if (p[0] === 'inv'){
+    if (i < 9){ for (var c = 9; c < state.slots.length; c++) targets.push('inv:' + c); }
+    else { for (var e = 0; e < 9; e++) targets.push('inv:' + e); }
+  }
+  var cur = state.cursor;
+  targets.forEach(function(t){ if (state.cursor){ var cn = refGet(t); if (cn && cn.id === state.cursor.id) placeInto(t, false); } });
+  targets.forEach(function(t){ if (state.cursor && !refGet(t)) placeInto(t, false); });
+  if (state.cursor) placeInto(ref, false);
+  markGesture('schnellsortieren');
+}
+
+/* Rezept aus dem Rezeptbuch (Bauch-Menü) antippen, während das Inventar offen ist: Zutaten ins Feld legen */
+function fillGridFromRecipe(r){
+  if (!inv.open || (inv.mode !== 'inv' && inv.mode !== 'bench') || r.special || !r.cost) return false;
+  var keys = Object.keys(r.cost);
+  var cells = [];
+  for (var g = 0; g < 9; g++) if (inGrid(g)) cells.push(g);
+  if (!keys.length || keys.length > cells.length) return false;
+  if (!canPay(r.cost)){ say('Dir fehlt: ' + keys.filter(function(k){ return !has(k, r.cost[k]); }).map(function(k){ return (r.cost[k] - (state.inv[k] || 0)) + ' ' + itemLabel(k); }).join(', '), true); return true; }
+  for (g = 0; g < 9; g++){ if (state.grid[g]){ collectDrop(state.grid[g]); state.grid[g] = null; } }
+  keys.forEach(function(k, idx){
+    var n = r.cost[k];
+    if (!creative()) countAdd(k, -n);
+    state.grid[cells[idx]] = { id: k, n: n };
+  });
+  inv.dirty = true;
+  sfx.pick();
+  say('Rezept eingelegt — tippe das Ergebnis an', true);
+  return true;
+}
+
+function invRelease(region){
+  if (inv.dragFrom && state.cursor && isSlotRef(region) && region !== inv.dragFrom){
+    placeInto(region, false);
+    inv.dragFrom = null;
+  }
+}
+
+/* ---------------------------------------------------------------- Pro Bild */
+
+var _il = new THREE.Vector3(), invRay = new THREE.Raycaster(), _center = new THREE.Vector2(0, 0);
+
+function updateInventory(dt){
+  invPointerOnPanel = false;
+  invUiHandOnPanel = false;
+  reconcileInv();
+  updateFurnaces(dt);
+  updateDrops(dt);
+  if (!inv.open){ cursorSprite.visible = false; return; }
+  headWorld(_v3);
+  if (_v3.distanceTo(invPanel.mesh.position) > 2.6 || state.dead){ closeInventory(); return; }
+  var hover = null, cursorHand = null;
+  if (renderer.xr.isPresenting || debugVR){
+    ['left', 'right'].forEach(function(side){
+      var h = hands[side];
+      h.invRegion = null;
+      if (!h.active) return;
+      _il.copy(h.hasJoints ? h.joints[9] : h.tip);
+      invPanel.mesh.worldToLocal(_il);
+      var near = Math.abs(_il.z) < 0.06;
+      var region = near ? invPanel.regionAt(_il.x, _il.y) : null;
+      h.invRegion = region;
+      if (region){
+        if (h === toolHand()) invPointerOnPanel = true;
+        if (h === uiHand()) invUiHandOnPanel = true;
+        if (region !== 'panel') hover = region;
+      }
+      if (h.pinch && !h.pinchPrev && region){ inv.pressHand = h; invPress(region, h); pressLock = true; }
+      if (!h.pinch && h.pinchPrev && inv.pressHand === h) invRelease(region);
+      if (h.pinch && inv.pressHand === h && region === 'result') holdCraft(dt); else if (inv.pressHand === h) inv.holdT = 0;
+      /* Mit dem Stapel in der Hand vom Fenster weg schleudern = werfen */
+      if (state.cursor && inv.pressHand === h && !region && _il.z > 0.1 && h.speed > 1.8){
+        throwCursor(h, h.vel.clone().multiplyScalar(1.3));
+      }
+    });
+    cursorHand = inv.pressHand && inv.pressHand.active ? inv.pressHand : toolHand();
+  } else if (desktopMode){
+    invRay.setFromCamera(_center, camera);
+    var hits = invRay.intersectObject(invPanel.mesh, false);
+    var th = hands.right;
+    if (hits.length){
+      _il.copy(hits[0].point);
+      invPanel.mesh.worldToLocal(_il);
+      var reg = invPanel.regionAt(_il.x, _il.y);
+      if (reg){ invPointerOnPanel = true; if (reg !== 'panel') hover = reg; }
+      if (th.pinch && !th.pinchPrev){ inv.pressHand = th; invPress(reg, th); pressLock = true; }
+      if (!th.pinch && th.pinchPrev) invRelease(reg);
+      if (th.pinch && reg === 'result') holdCraft(dt); else inv.holdT = 0;
+      cursorSprite.position.copy(hits[0].point).addScaledVector(invRay.ray.direction, -0.03);
+    }
+  }
+  if (hover !== inv.hover){ inv.hover = hover; inv.dirty = true; }
+  /* Zeiger mit dem Stapel in der Hand */
+  if (state.cursor){
+    var key = state.cursor.id + ':' + state.cursor.n;
+    if (key !== cursorKey){
+      cursorKey = key;
+      if (cursorSprite.material.map) cursorSprite.material.map.dispose();
+      var tex = new THREE.CanvasTexture(invPanel.iconCanvas(state.cursor.id, state.cursor.n));
+      tex.generateMipmaps = false; tex.minFilter = THREE.LinearFilter;
+      cursorSprite.material.map = tex;
+      cursorSprite.material.needsUpdate = true;
+    }
+    if (cursorHand) cursorSprite.position.copy(cursorHand.hasJoints ? cursorHand.joints[9] : cursorHand.tip).addScaledVector(invPanel.mesh.getWorldDirection(_v4), 0.03);
+    cursorSprite.visible = true;
+  } else cursorSprite.visible = false;
+  if (inv.dirty) drawInventory();
+}
+
+/* Ergebnisfeld gedrückt halten: immer weiter craften */
+function holdCraft(dt){
+  inv.holdT = (inv.holdT || 0) + dt;
+  if (inv.holdT < 0.55) return;
+  inv.holdAcc = (inv.holdAcc || 0) + dt;
+  if (inv.holdAcc < 0.2) return;
+  inv.holdAcc = 0;
+  var m = matchGrid();
+  if (m && !recipeWhy(asRecipe(m))){ craftFromGrid(); markGesture('dauercraften'); }
+}
+
+function drawInventory(){
+  inv.dirty = false;
+  var m = inv.mode === 'inv' || inv.mode === 'bench' ? matchGrid() : null;
+  var result = null;
+  if (m){
+    var r = asRecipe(m), why = recipeWhy(r);
+    var outId = m.kind === 'book' ? (r.out ? r.out[0] : r.id) : m.rec.out;
+    var outN = m.kind === 'book' ? (r.out ? r.out[1] : 1) : m.rec.n;
+    result = { id: outId, n: outN, title: r.title, ok: !why, why: why };
+  }
+  var rows = state.slots.length / 9;
+  var pages = Math.max(1, Math.ceil((rows - 1) / 4));
+  if (inv.page >= pages) inv.page = pages - 1;
+  var cat = catalogList(), catPages = Math.max(1, Math.ceil(cat.length / 27));
+  var hoverItem = inv.hover && isSlotRef(inv.hover) ? refGet(inv.hover) : (inv.hover && inv.hover.indexOf('cat:') === 0 ? { id: inv.hover.slice(4) } : null);
+  var f = curFurnace();
+  var furnaceHint = null;
+  if (f){
+    furnaceHint = !f.in ? 'Leg etwas zum Schmelzen oben hinein.' : (!SMELT[f.in.id] ? itemLabel(f.in.id) + ' lässt sich nicht schmelzen.' :
+      (f.burn <= 0 && !f.fuel ? 'Unten fehlt Brennstoff: Kohle, Holz oder Bretter.' : itemLabel(f.in.id) + ' → ' + itemLabel(SMELT[f.in.id].out)));
+  }
+  var title = inv.mode === 'chest' ? 'Truhe' : (inv.mode === 'ofen' ? 'Ofen' : (inv.mode === 'katalog' ? 'Kreativ-Katalog' : (inv.gridSize === 3 ? 'Werkbank' : 'Inventar')));
+  invPanel.draw({
+    mode: inv.mode === 'bench' ? 'inv' : inv.mode, title: title, creative: creative(), hover: inv.hover,
+    slots: state.slots.map(function(s){ return s ? { id: s.id, n: s.n } : null; }), page: inv.page, pages: pages, selSlot: state.selSlot,
+    grid: state.grid, gridSize: inv.gridSize, result: result,
+    chest: inv.mode === 'chest' ? curChest() : null,
+    ofen: f ? { in: f.in, fuel: f.fuel, out: f.out, burn: f.burnMax ? f.burn / f.burnMax : 0, prog: f.prog, hint: furnaceHint } : null,
+    catalog: cat.slice(inv.catPage * 27, inv.catPage * 27 + 27).map(function(id){ return { id: id, n: stackOf(id) }; }), catPage: inv.catPage, catPages: catPages,
+    tooltip: hoverItem ? itemLabel(hoverItem.id) + (hoverItem.n > 1 ? ' × ' + hoverItem.n : '') : null,
+    hint: inv.full ? 'Inventar voll! Wirf etwas weg oder leg es in eine Truhe.' :
+      (state.cursor ? 'In der Hand: ' + itemLabel(state.cursor.id) + ' × ' + state.cursor.n + '. Tippe ein Feld zum Ablegen — im Crafting-Feld je 1 Stück.' :
+      'Tippe einen Stapel an, um ihn zu nehmen. Ziehen und loslassen legt ihn woanders ab.')
+  });
+}
+
+/* ---------------------------------------------------------------- Hotbar aus der ersten Inventarreihe */
+
+function hotbarItems(){
+  if (!tracked) reconcileInv();
+  var out = [{ id: 'hand', label: 'Hand' }];
+  for (var i = 0; i < 9; i++){
+    var s = state.slots[i];
+    out.push(s ? { id: s.id, label: itemLabel(s.id), count: isTool(s.id) ? undefined : s.n } : null);
+  }
+  return out;
+}
+
+function selectVisibleSlot(i){
+  if (i <= 0){ selectSlot('hand', -1); return; }
+  var slot = i - 1, s = state.slots[slot];
+  selectSlot(s ? s.id : 'hand', slot);
+}
+
+/* ---------------------------------------------------------------- Blöcke benutzen: Truhe, Ofen, Werkbank */
+
+function useVoxel(hit){
+  var def = W.VOX[hit.type];
+  if (!def || !def.use) return false;
+  var key = hit.ix + ',' + hit.iy + ',' + hit.iz;
+  if (def.use === 'truhe'){ openInventory('chest', key); markGesture('truhe'); return true; }
+  if (def.use === 'ofen'){ openInventory('ofen', key); return true; }
+  if (def.use === 'werkbank'){ benchCache.t = 0; openInventory('bench'); return true; }
+  if (def.use === 'tnt'){ igniteTnt(hit.ix, hit.iy, hit.iz, 3); return true; }
+  return false;
+}
+
+/* Pinch auf einen Block zum Benutzen (vor Bauen und Abbauen) */
+function tryUseVoxel(h){
+  var hit = blockTarget(h, 4.5);
+  if (!hit) return false;
+  var def = W.VOX[hit.type];
+  if (!def || !def.use) return false;
+  var cr = rayCreature(h.wrist, h.dir, hit.dist);
+  if (cr) return false;
+  return useVoxel(hit);
+}
+
+/* ================================================================ 200er-Update: TNT, Leitern, Monster-Käfige, neue Werkzeuge, neue Monster */
+
+(function(){
+  var idx = HOTBAR_DEFS.findIndex(function(d){ return d[0] === 'eimer'; });
+  HOTBAR_DEFS.splice(idx + 1, 0, ['feuerzeug', 'Feuerzeug', 'tool'], ['bauzauberstab', 'Bauzauber', 'tool'], ['bohrer', 'Bohrer', 'tool'], ['erzsucher', 'Erzsucher', 'tool']);
+})();
+
+MELEE.bohrer = { dmg: 3, range: 2.6, cd: 0.32 };
+EXTRA_TOOLS.feuerzeug = function(c){ if (c.justPressed){ useLighter(c.h); pressLock = true; } };
+EXTRA_TOOLS.bauzauberstab = function(c){ if (c.justPressed){ useBuilderWand(c.h); pressLock = true; } };
+EXTRA_TOOLS.erzsucher = function(c){ if (c.justPressed){ oreScan(true); pressLock = true; } };
+
+/* Modelle in der Hand */
+(function(){
+  function lighter(){
+    var g = new THREE.Group();
+    var body = new THREE.Mesh(new THREE.BoxGeometry(0.035, 0.07, 0.02), mat(0xc9ced6, { shininess: 70 })); body.position.set(0, 0, -0.05);
+    var flame = new THREE.Mesh(new THREE.ConeGeometry(0.012, 0.035, 6), new THREE.MeshBasicMaterial({ color: 0xff9b3d })); flame.position.set(0, 0.05, -0.05);
+    g.add(body, flame); return g;
+  }
+  function wand(){
+    var g = new THREE.Group();
+    var rod = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.01, 0.34, 6), mat(0x8a5a33)); rod.rotation.x = Math.PI / 2; rod.position.z = -0.15;
+    var gem = new THREE.Mesh(new THREE.OctahedronGeometry(0.03, 0), new THREE.MeshBasicMaterial({ color: 0x7bd389 })); gem.position.z = -0.33;
+    g.add(rod, gem); return g;
+  }
+  function drill(){
+    var g = new THREE.Group();
+    var body = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.07, 0.16), mat(0xe8b32e, { shininess: 30 })); body.position.z = -0.06;
+    var bit = new THREE.Mesh(new THREE.ConeGeometry(0.025, 0.12, 8), mat(0xc9ced6, { shininess: 80 })); bit.rotation.x = -Math.PI / 2; bit.position.z = -0.2;
+    var grip = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.08, 0.035), mat(0x2a2a30)); grip.position.set(0, -0.06, 0);
+    g.add(body, bit, grip); g.userData.bit = bit; return g;
+  }
+  function finder(){
+    var g = new THREE.Group();
+    var disc = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.015, 14), mat(0xf2c14e, { shininess: 60 })); disc.rotation.x = Math.PI / 2; disc.position.z = -0.06;
+    var glass = new THREE.Mesh(new THREE.CircleGeometry(0.036, 14), new THREE.MeshBasicMaterial({ color: 0x59d7e8 })); glass.position.set(0, 0, -0.051); glass.rotation.y = Math.PI;
+    g.add(disc, glass); g.userData.glass = glass; return g;
+  }
+  var models = { feuerzeug: lighter, bauzauberstab: wand, bohrer: drill, erzsucher: finder };
+  Object.keys(models).forEach(function(k){
+    TOOL_MODELS[k] = models[k];
+    ['left', 'right'].forEach(function(side){ var m = models[k](); m.visible = false; hands[side].group.add(m); hands[side].tools[k] = m; });
+  });
+})();
+
+/* ---------------------------------------------------------------- Geräusche je nach Material */
+
+function blockSound(def, action){
+  if (!def) return;
+  var n = def.name || '';
+  var vol = action === 'break' ? 0.07 : 0.05;
+  if (def.trans){ tone(action === 'break' ? 1500 : 1100, 0.12, 'sine', vol, 700); noiseBurst(0.08, 0.03, 6000); }
+  else if (n.indexOf('wolle') === 0 || n === 'laub' || n === 'heuballen' || n === 'honigblock'){ noiseBurst(0.1, vol * 0.8, 1200); }
+  else if (def.tool === 'axt' || n === 'bretter' || n === 'buecherregal'){ tone(action === 'place' ? 200 : 160, 0.1, 'triangle', vol, 90); }
+  else if (def.tool === 'schaufel' || n === 'sand' || n === 'schnee'){ noiseBurst(0.12, vol, 700); tone(120, 0.06, 'sine', vol * 0.5, 80); }
+  else { tone(action === 'place' ? 260 : 210, 0.08, 'square', vol, action === 'break' ? 70 : 140); noiseBurst(0.05, vol * 0.6, 2500); }
+}
+
+/* ---------------------------------------------------------------- TNT */
+
+var tntList = [];
+var tntGeo = new THREE.BoxGeometry(0.98, 0.98, 0.98);
+function igniteTnt(ix, iy, iz, fuse){
+  if (W.rawAt(ix, iy, iz) !== W.VT.tnt) return false;
+  W.setVoxel(ix, iy, iz, 0);
+  var m = new THREE.Mesh(tntGeo, new THREE.MeshLambertMaterial({ color: 0xd23a2a, emissive: 0x000000 }));
+  m.position.set(ix + 0.5, iy + 0.5, iz + 0.5);
+  scene.add(m);
+  tntList.push({ mesh: m, t: fuse || 3, vy: 0 });
+  tone(900, 0.3, 'sawtooth', 0.03, 300);
+  noiseBurst(0.4, 0.04, 3000);
+  markGesture('tnt');
+  return true;
+}
+
+function updateTnt(dt){
+  for (var i = tntList.length - 1; i >= 0; i--){
+    var e = tntList[i], p = e.mesh.position;
+    e.t -= dt;
+    var floor = W.floorAt(p.x, p.z, p.y) + 0.5;
+    if (p.y > floor){ e.vy -= 9.8 * dt; p.y = Math.max(floor, p.y + e.vy * dt); } else e.vy = 0;
+    var blink = Math.sin(e.t * (e.t < 1 ? 30 : 12)) > 0;
+    e.mesh.material.emissive.setHex(blink ? 0x777777 : 0x000000);
+    e.mesh.scale.setScalar(1 + (e.t < 0.5 ? (0.5 - e.t) * 0.3 : 0));
+    if (Math.random() < dt * 20) spawnBurst(_v.set(p.x, p.y + 0.55, p.z), 0xffb347, 1, 0.8, { gravity: -1, life: 0.4 });
+    if (e.t <= 0){
+      scene.remove(e.mesh);
+      e.mesh.material.dispose();
+      tntList.splice(i, 1);
+      tntBoom(p.clone());
+    }
+  }
+}
+
+function tntBoom(pos){
+  explode(pos, 5, 12, 'tnt');
+  blastBlocks(pos, 3.3, {});
+  state.stats.tntExploded = (state.stats.tntExploded || 0) + 1;
+  headWorld(_v3);
+  var d = _v3.distanceTo(pos);
+  if (d < 4.5 && !creative()) damagePlayer(Math.max(1, Math.ceil(8 * (1 - d / 4.5))), false);
+  if (d < 12) pulse(toolHand(), 1, 150);
+}
+
+/* ---------------------------------------------------------------- Leitern */
+
+var ladderPush = 0;
+function ladderAt(x, y, z){ return W.rawAt(Math.floor(x), Math.floor(y), Math.floor(z)) === W.VT.leiter; }
+function ladderAhead(x, z, feet){
+  var o = [[0, 0], [0.3, 0], [-0.3, 0], [0, 0.3], [0, -0.3]];
+  for (var i = 0; i < o.length; i++){
+    if (ladderAt(x + o[i][0], feet + 0.5, z + o[i][1]) || ladderAt(x + o[i][0], feet + 1.4, z + o[i][1])) return true;
+  }
+  return false;
+}
+function nearLadder(x, feet, z){
+  var o = [[0, 0], [0.6, 0], [-0.6, 0], [0, 0.6], [0, -0.6]];
+  for (var i = 0; i < o.length; i++){
+    if (ladderAt(x + o[i][0], feet + 0.3, z + o[i][1]) || ladderAt(x + o[i][0], feet + 1.2, z + o[i][1])) return true;
+  }
+  return false;
+}
+/* Gegen die Leiter laufen = hochklettern; an einer Leiter rutscht man langsam herunter */
+function ladderVertical(dt, feet, seat, lift, hx, hz){
+  if (ladderPush > 0 && !riding){
+    ladderPush -= dt;
+    air.active = false; air.vy = 0;
+    feet += 2.4 * dt;
+    dolly.position.y = feet + seat + lift;
+    state.stats.climbed = (state.stats.climbed || 0) + 2.4 * dt;
+    markGesture('leiter');
+    if (Math.random() < dt * 6) tone(300 + Math.random() * 80, 0.04, 'triangle', 0.02);
+    return true;
+  }
+  if (air.active && air.vy < -1.6 && nearLadder(hx, feet, hz)) air.vy = -1.6;
+  return false;
+}
+
+/* ---------------------------------------------------------------- Monster-Käfige in Verliesen */
+
+var spawnerClock = 0, spawnerFx = 0;
+function updateSpawners(dt){
+  spawnerClock -= dt;
+  spawnerFx -= dt;
+  if (spawnerClock > 0) return;
+  spawnerClock = 0.5;
+  if (diff().enemies === 0 || state.dead || sleeping) return;
+  headWorld(_v3);
+  W.spawners.forEach(function(sp){
+    var dx = sp.x + 0.5 - _v3.x, dz = sp.z + 0.5 - _v3.z, dy = sp.y - dolly.position.y;
+    if (dx * dx + dz * dz > 18 * 18 || Math.abs(dy) > 10) return;
+    if (W.rawAt(sp.x, sp.y, sp.z) !== W.VT.spawner) return;
+    if (isLitSpot(sp.x + 0.5, sp.y, sp.z + 0.5)) return;
+    if (Math.random() < 0.6) spawnBurst(_v.set(sp.x + 0.5, sp.y + 0.6, sp.z + 0.5), 0xb48cff, 3, 0.8, { gravity: -1, life: 0.6 });
+    sp.cd = (sp.cd || 0) - 0.5;
+    if (sp.cd > 0) return;
+    sp.kids = (sp.kids || []).filter(function(e){ return enemies.indexOf(e) >= 0; });
+    if (sp.kids.length >= 3) return;
+    sp.cd = 7 + Math.random() * 6;
+    for (var t = 0; t < 10; t++){
+      var x = sp.x + 0.5 + (Math.random() - 0.5) * 4.5, z = sp.z + 0.5 + (Math.random() - 0.5) * 4.5;
+      var fy = W.floorRaw(x, z, sp.y + 1);
+      if (fy === -Infinity || Math.abs(fy - sp.y) > 1.5 || W.blocked(x, z, 0.35, fy)) continue;
+      var kinds = ['zombie', 'skelett', 'spinne', 'crawler', 'grubenwurm'];
+      var e = createEnemy(kinds[Math.floor(Math.random() * kinds.length)], x, z, Math.max(2, wave.n), false, fy);
+      e.dark = true;
+      sp.kids.push(e);
+      spawnBurst(e.mesh.position, 0xb48cff, 12, 2);
+      noiseBurst(0.3, 0.05, 800);
+      return;
+    }
+  });
+}
+
+var prevVoxelHook2 = W.onVoxelChange;
+W.onVoxelChange = function(ix, iy, iz, before, after){
+  if (prevVoxelHook2) prevVoxelHook2(ix, iy, iz, before, after);
+  if (before === W.VT.spawner && !after){
+    state.stats.spawnersBroken = (state.stats.spawnersBroken || 0) + 1;
+    _v.set(ix + 0.5, iy + 0.5, iz + 0.5);
+    gainXP(40, _v);
+    spawnBurst(_v, 0xb48cff, 24, 4);
+    dropOrGive('kristall', 2, _v, true);
+    if (Math.random() < 0.5) dropOrGive('saphir', 1, _v, true);
+    banner('MONSTER-KÄFIG ZERSTÖRT', ['Hier kommen keine Monster mehr', '+40 XP'], '#b48cff');
+  }
+  if (before === W.VT.tnt && !after) { /* abgebaut, nicht gezündet */ }
+};
+
+/* ---------------------------------------------------------------- Feuerzeug, Bau-Zauberstab, Erzsucher */
+
+function useLighter(h){
+  var hit = blockTarget(h, 4.5);
+  if (hit && hit.type === W.VT.tnt){ igniteTnt(hit.ix, hit.iy, hit.iz, 3); say('TNT gezündet — lauf!', true); return; }
+  var cr = rayCreature(h.wrist, h.dir, 4);
+  if (cr && !cr.creature.tame){
+    cr.creature.burnT = Math.max(cr.creature.burnT || 0, 4);
+    damageCreature(cr.creature, 2, cr.creature.mesh.position, false, 'feuer', h.dir);
+    spawnBurst(cr.creature.mesh.position, 0xff8a3d, 10, 2);
+    sfx.fire();
+    return;
+  }
+  _v.copy(h.wrist).addScaledVector(h.dir, 0.3);
+  spawnBurst(_v, 0xffb347, 6, 1.2, { life: 0.4 });
+  tone(700, 0.08, 'sawtooth', 0.03, 1200);
+  say(hit ? 'Das brennt nicht. Zeig auf TNT oder einen Gegner.' : 'Klick!', true);
+}
+
+/* Legt eine neue Schicht auf alle gleichen Blöcke der angezeigten Fläche (bis 3 × 3) */
+var ITEM_FOR_VOX = null;
+function itemForVoxel(t){
+  if (!ITEM_FOR_VOX){
+    ITEM_FOR_VOX = {};
+    Object.keys(BLOCK_ITEMS).forEach(function(item){ ITEM_FOR_VOX[W.VT[BLOCK_ITEMS[item]]] = item; });
+    ITEM_FOR_VOX[W.VT.gras] = 'erde'; ITEM_FOR_VOX[W.VT.stein] = 'stein'; ITEM_FOR_VOX[W.VT.moosziegel] = 'steinziegel';
+  }
+  return ITEM_FOR_VOX[t];
+}
+function useBuilderWand(h){
+  var hit = W.raycast(h.wrist, h.dir, 7);
+  if (!hit || hit.dist === 0) return say('Zeig auf eine Blockfläche', true);
+  var item = itemForVoxel(hit.raw);
+  if (!item) return say('Diesen Block kann der Zauberstab nicht kopieren', true);
+  var ax = hit.nx !== 0 ? 'x' : (hit.ny !== 0 ? 'y' : 'z');
+  var placed = 0;
+  for (var a = -1; a <= 1; a++){
+    for (var b = -1; b <= 1; b++){
+      if (!has(item, 1)) break;
+      var ox = 0, oy = 0, oz = 0;
+      if (ax === 'x'){ oy = a; oz = b; } else if (ax === 'y'){ ox = a; oz = b; } else { ox = a; oy = b; }
+      var sx = hit.ix + ox, sy = hit.iy + oy, sz = hit.iz + oz;
+      if (W.rawAt(sx, sy, sz) !== hit.raw) continue;
+      var cell = { x: sx + hit.nx, y: sy + hit.ny, z: sz + hit.nz };
+      if (whyNotPlace(cell)) continue;
+      W.setVoxel(cell.x, cell.y, cell.z, W.VT[BLOCK_ITEMS[item]]);
+      if (!creative()) state.inv[item]--;
+      placed++;
+    }
+  }
+  if (!placed) return say(has(item, 1) ? 'Hier ist kein Platz' : 'Dir fehlen ' + itemLabel(item), true);
+  state.stats.blocksPlaced = (state.stats.blocksPlaced || 0) + placed;
+  state.stats.wandUses = (state.stats.wandUses || 0) + 1;
+  _v.set(hit.ix + 0.5 + hit.nx, hit.iy + 0.5 + hit.ny, hit.iz + 0.5 + hit.nz);
+  spawnBurst(_v, 0x7bd389, 14, 2.5);
+  tone(880, 0.12, 'sine', 0.05, 1320);
+  blockSound(W.VOX[hit.raw], 'place');
+  markGesture('bauzauber');
+  say('Bau-Zauber: ' + placed + ' × ' + itemLabel(item), true);
+  uiDirty = true; saveSoon();
+}
+
+/* Bohrer: baut die 8 Nachbarn auf derselben Fläche mit ab */
+function drillExtra(hit){
+  var ax = hit.nx !== 0 ? 'x' : (hit.ny !== 0 ? 'y' : 'z');
+  var n = 0;
+  for (var a = -1; a <= 1; a++){
+    for (var b = -1; b <= 1; b++){
+      if (!a && !b) continue;
+      var ox = 0, oy = 0, oz = 0;
+      if (ax === 'x'){ oy = a; oz = b; } else if (ax === 'y'){ ox = a; oz = b; } else { ox = a; oy = b; }
+      var x = hit.ix + ox, y = hit.iy + oy, z = hit.iz + oz;
+      var t = W.typeAt(x, y, z);
+      if (!t) continue;
+      var def = W.VOX[t];
+      if (!def || def.hard >= 12 || def.use) continue;
+      W.setVoxel(x, y, z, 0);
+      n++;
+      if (def.drop) dropOrGive(def.drop, 1, _v.set(x + 0.5, y + 0.5, z + 0.5), true);
+      if (def.ore){ state.stats.ores++; gainXP(def.xp || 2); }
+    }
+  }
+  if (n){ state.stats.blocksMined = (state.stats.blocksMined || 0) + n; state.stats.drilled = (state.stats.drilled || 0) + n + 1; }
+}
+
+/* Erzsucher: zeigt das nächste Erz im Umkreis von 8 Blöcken */
+var oreMarker = new THREE.Mesh(new THREE.BoxGeometry(1.06, 1.06, 1.06), new THREE.MeshBasicMaterial({ color: 0xffb347, transparent: true, opacity: 0.35, depthTest: false, wireframe: true }));
+oreMarker.renderOrder = 997;
+oreMarker.visible = false;
+scene.add(oreMarker);
+var oreClock = 0, oreShowT = 0;
+function oreScan(loud){
+  headWorld(_v3);
+  var cx = Math.floor(_v3.x), cy = Math.floor(_v3.y - 0.8), cz = Math.floor(_v3.z), R = 8;
+  var best = null, bd = 1e9;
+  for (var x = -R; x <= R; x++){
+    for (var z = -R; z <= R; z++){
+      for (var y = -R; y <= R; y++){
+        var d = x * x + y * y + z * z;
+        if (d >= bd || d > R * R) continue;
+        var t = W.typeAt(cx + x, cy + y, cz + z);
+        if (t && W.VOX[t] && W.VOX[t].ore){ bd = d; best = { x: cx + x, y: cy + y, z: cz + z, t: t }; }
+      }
+    }
+  }
+  if (!best){ oreMarker.visible = false; if (loud) say('Kein Erz in der Nähe', true); return null; }
+  oreMarker.position.set(best.x + 0.5, best.y + 0.5, best.z + 0.5);
+  oreMarker.material.color.setHex(W.VOX[best.t].c);
+  oreMarker.visible = true;
+  oreShowT = 2.6;
+  var dist = Math.sqrt(bd);
+  tone(1200 - dist * 80, 0.08, 'sine', 0.04);
+  if (loud){ say('Erzsucher: ' + W.VOX[best.t].label + ' in ' + dist.toFixed(0) + ' m', true); state.stats.oreScans = (state.stats.oreScans || 0) + 1; markGesture('erzsucher'); }
+  return best;
+}
+
+/* ---------------------------------------------------------------- Neue Monster der Dunkelheit */
+
+function makeCreeper(){
+  var g = new THREE.Group();
+  var skin = flat(0x4f9a3e);
+  var body = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.82, 0.32), skin); body.position.y = 0.72;
+  var head = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.46, 0.46), skin); head.position.y = 1.36;
+  var face = flat(0x14200f);
+  var e1 = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, 0.02), face); e1.position.set(-0.11, 1.42, -0.235);
+  var e2 = e1.clone(); e2.position.x = 0.11;
+  var mouth = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.14, 0.02), face); mouth.position.set(0, 1.27, -0.235);
+  g.add(body, head, e1, e2, mouth);
+  var legs = [];
+  [[-0.12, -0.1], [0.12, -0.1], [-0.12, 0.1], [0.12, 0.1]].forEach(function(p){
+    var leg = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.32, 0.16), skin); leg.position.set(p[0], 0.16, p[1]);
+    g.add(leg); legs.push(leg);
+  });
+  g.userData.body = body; g.userData.legs = legs; g.userData.head = head;
+  return g;
+}
+function makeWorm(){
+  var g = new THREE.Group();
+  var skin = flat(0xc48a7a);
+  var segs = [];
+  for (var i = 0; i < 5; i++){
+    var s = new THREE.Mesh(new THREE.SphereGeometry(0.2 - i * 0.025, 8, 6), skin);
+    s.position.set(0, 0.2, i * 0.28);
+    g.add(s); segs.push(s);
+  }
+  var mouth = new THREE.Mesh(new THREE.CircleGeometry(0.1, 8), flat(0x3a1a1a)); mouth.position.set(0, 0.2, -0.2); mouth.rotation.y = Math.PI;
+  g.add(mouth);
+  g.userData.body = segs[0]; g.userData.segs = segs;
+  return g;
+}
+function makeTroll(){
+  var g = new THREE.Group();
+  var skin = flat(0x6b7280);
+  var body = new THREE.Mesh(new THREE.BoxGeometry(1.0, 1.1, 0.7), skin); body.position.y = 1.2;
+  var head = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.5, 0.5), skin); head.position.set(0, 1.95, -0.1);
+  var eye = new THREE.MeshBasicMaterial({ color: 0xffd23a });
+  var e1 = new THREE.Mesh(new THREE.SphereGeometry(0.05, 6, 5), eye); e1.position.set(-0.13, 2.0, -0.36);
+  var e2 = e1.clone(); e2.position.x = 0.13;
+  g.add(body, head, e1, e2);
+  var arms = [];
+  [-0.65, 0.65].forEach(function(x){
+    var arm = new THREE.Group(); arm.position.set(x, 1.65, 0);
+    var a = new THREE.Mesh(new THREE.BoxGeometry(0.3, 1.1, 0.3), skin); a.position.y = -0.5; arm.add(a);
+    g.add(arm); arms.push(arm);
+  });
+  var legs = [];
+  [-0.25, 0.25].forEach(function(x){ var l = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.7, 0.34), skin); l.position.set(x, 0.35, 0); g.add(l); legs.push(l); });
+  g.userData.body = body; g.userData.arms = arms; g.userData.legs = legs; g.userData.head = head;
+  return g;
+}
+
+Object.assign(ENEMY_DEF, {
+  kriecher:     { hp: 8,  speed: 1.9, dmg: 0, off: 0,   radius: 0.45, xp: 14, bar: 1.9, creeper: true, name: 'Sprengkriecher', center: 0.9 },
+  grubenwurm:   { hp: 5,  speed: 3.0, dmg: 1, off: 0,   radius: 0.4,  xp: 8,  bar: 0.7, name: 'Grubenwurm' },
+  hoehlentroll: { hp: 32, speed: 1.1, dmg: 3, off: 0,   radius: 0.8,  xp: 32, bar: 2.6, name: 'Höhlentroll', center: 1.3 }
+});
+EXTRA_ENEMY_MESH.kriecher = makeCreeper;
+EXTRA_ENEMY_MESH.grubenwurm = makeWorm;
+EXTRA_ENEMY_MESH.hoehlentroll = makeTroll;
+BLOCK_BREAKERS.hoehlentroll = 1;
+
+BESTIARY.push(
+  { kind: 'kriecher', name: 'Sprengkriecher', info: 'nachts, zischt und explodiert', hostile: true },
+  { kind: 'grubenwurm', name: 'Grubenwurm', info: 'in Tunneln und Verliesen', hostile: true },
+  { kind: 'hoehlentroll', name: 'Höhlentroll', info: 'tief unten, schlägt Blöcke kaputt', hostile: true }
+);
+
+/* Sprengkriecher: kommt nah heran, zischt und explodiert (Gebautes bleibt heil) */
+function creeperUpdate(e, dt, dist, active){
+  var ud = e.mesh.userData;
+  if (active && dist < 2.4){
+    if (!e.fuse){ tone(260, 1.4, 'sawtooth', 0.04, 900); noiseBurst(1.3, 0.04, 5000); }
+    e.fuse = (e.fuse || 0) + dt;
+    var on = Math.sin(e.fuse * 18) > 0;
+    if (ud.body && ud.body.material.emissive) ud.body.material.emissive.setHex(on ? 0x666666 : 0x000000);
+    e.mesh.scale.setScalar(1 + e.fuse * 0.12);
+    if (e.fuse > 1.4){
+      var pos = e.mesh.position.clone(); pos.y += 0.6;
+      e.hp = 0;
+      scene.remove(e.mesh); scene.remove(e.bar);
+      var idx = enemies.indexOf(e); if (idx >= 0) enemies.splice(idx, 1);
+      explode(pos, 3.6, 7, 'kriecher');
+      blastBlocks(pos, 2.4, { keepBuilt: true });
+      headWorld(_v3);
+      var d = _v3.distanceTo(pos);
+      if (d < 3.8 && !creative()) damagePlayer(Math.max(1, Math.ceil(6 * (1 - d / 3.8))), false);
+      return true;
+    }
+    return true;
+  }
+  if (e.fuse){
+    e.fuse = Math.max(0, e.fuse - dt * 0.8);
+    e.mesh.scale.setScalar(1);
+    if (ud.body && ud.body.material.emissive) ud.body.material.emissive.setHex(0x000000);
+  }
+  if (ud.segs) ud.segs.forEach(function(s, i){ s.position.x = Math.sin(e.anim * 0.8 + i) * 0.08; });
+  return false;
+}
+
+/* ---------------------------------------------------------------- Blöcke antippen: Info beim Zeigen */
+
+function blockInfoText(t){
+  var def = W.VOX[t];
+  if (!def) return '';
+  if (def.hard === Infinity) return 'unzerstörbar';
+  var parts = [];
+  if (def.use === 'truhe') parts.push('Pinch = öffnen');
+  else if (def.use === 'ofen') parts.push('Pinch = Ofen öffnen');
+  else if (def.use === 'werkbank') parts.push('Pinch = 3 × 3 Crafting');
+  else if (def.use === 'tnt') parts.push('Pinch = zünden!');
+  if (def.need) parts.push('Spitzhacke nötig');
+  else if (def.tool) parts.push('am besten mit ' + (def.tool === 'axt' ? 'der Axt' : (def.tool === 'schaufel' ? 'der Schaufel' : 'der Spitzhacke')));
+  else parts.push('mit der Hand');
+  if (def.drop && def.drop !== def.name) parts.push('gibt ' + itemLabel(def.drop));
+  if (def.light) parts.push('leuchtet');
+  if (def.ladder) parts.push('zum Klettern');
+  return parts.join(' · ');
+}
+
+/* ---------------------------------------------------------------- Rucksack-Griff über die Schulter */
+
+var bagCd = 0, _bg = new THREE.Vector3();
+function updateBagGesture(dt){
+  bagCd -= dt;
+  if (!vrLike() || !gameStarted || state.dead) return;
+  var uh = uiHand();
+  if (!uh.active || !uh.hasJoints) return;
+  toHead(uh.wrist, _bg);
+  var behind = _bg.z < -0.02 && _bg.y > -0.3 && _bg.y < 0.3;
+  if (behind && uh.pinch && !uh.pinchPrev && bagCd <= 0){
+    bagCd = 0.8;
+    toggleInventory();
+    markGesture('rucksack');
+    pulse(uh, 0.5, 40);
+  }
+}
+
+/* ---------------------------------------------------------------- Setzlinge */
+
+var saplingMeshes = [];
+function makeSaplingMesh(){
+  var g = new THREE.Group();
+  var stem = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.03, 0.35, 5), flat(0x7a5230)); stem.position.y = 0.17;
+  var leaf = new THREE.Mesh(new THREE.IcosahedronGeometry(0.16, 0), flat(0x5fae4a)); leaf.position.y = 0.4;
+  g.add(stem, leaf);
+  return g;
+}
+function addSaplingMesh(sp){
+  var m = makeSaplingMesh();
+  m.position.set(sp.x + 0.5, sp.y, sp.z + 0.5);
+  scene.add(m);
+  saplingMeshes.push({ sp: sp, mesh: m });
+}
+function plantSapling(h){
+  var hit = W.raycast(h.wrist, h.dir, 5);
+  if (!hit || hit.ny !== 1) return say('Zeig auf Gras oder Erde', true);
+  var n = W.VOX[hit.raw] ? W.VOX[hit.raw].name : '';
+  if (n !== 'gras' && n !== 'erde' && n !== 'myzel' && n !== 'sand' && n !== 'schnee') return say('Setzlinge wachsen nur auf Gras, Erde, Sand oder Schnee', true);
+  if (W.rawAt(hit.ix, hit.iy + 1, hit.iz) || W.rawAt(hit.ix, hit.iy + 2, hit.iz)) return say('Über dem Setzling braucht es Platz', true);
+  if (state.saplings.some(function(s){ return Math.abs(s.x - hit.ix) < 2 && Math.abs(s.z - hit.iz) < 2 && Math.abs(s.y - hit.iy - 1) < 2; })) return say('Zu nah an einem anderen Setzling', true);
+  var sp = { x: hit.ix, y: hit.iy + 1, z: hit.iz, t: 0 };
+  state.saplings.push(sp);
+  addSaplingMesh(sp);
+  if (!creative()) state.inv.setzling--;
+  blockSound(W.VOX[hit.raw], 'place');
+  markGesture('pflanzen');
+  say('Setzling gepflanzt — in etwa 1,5 Minuten wächst ein Baum', true);
+  uiDirty = true; saveSoon();
+}
+function updateSaplings(dt){
+  if (!state.saplings) state.saplings = [];
+  if (saplingMeshes.length !== state.saplings.length){
+    saplingMeshes.forEach(function(e){ scene.remove(e.mesh); });
+    saplingMeshes = [];
+    state.saplings.forEach(addSaplingMesh);
+  }
+  for (var i = saplingMeshes.length - 1; i >= 0; i--){
+    var e = saplingMeshes[i], sp = e.sp;
+    sp.t += dt * (weather.rain > 0.3 ? 1.5 : 1);
+    e.mesh.scale.setScalar(0.8 + Math.min(1, sp.t / 90) * 0.8);
+    if (sp.t < 90) continue;
+    /* Nur wachsen, wenn noch Boden darunter und Platz darüber ist */
+    scene.remove(e.mesh);
+    saplingMeshes.splice(i, 1);
+    state.saplings.splice(state.saplings.indexOf(sp), 1);
+    if (!W.rawAt(sp.x, sp.y - 1, sp.z) || W.rawAt(sp.x, sp.y, sp.z)) continue;
+    var b = W.biomeAt(sp.x + 0.5, sp.z + 0.5);
+    var kind = b === 'schnee' ? 'pine' : (b === 'wueste' ? 'cactus' : (b === 'pilzwald' ? 'riesenpilz' : (Math.random() < 0.2 ? 'apfelbaum' : 'tree')));
+    W.addNodeAt(kind, sp.x + 0.5, sp.z + 0.5);
+    state.stats.treesGrown = (state.stats.treesGrown || 0) + 1;
+    spawnBurst(_v.set(sp.x + 0.5, sp.y + 1, sp.z + 0.5), 0x7bd389, 16, 2.5);
+    headWorld(_v3);
+    if (_v3.distanceTo(_v) < 40) say('Ein Baum ist gewachsen!', true);
+    saveSoon();
+  }
+}
+
+/* ---------------------------------------------------------------- Pro Bild */
+
+var lavaFootClock = 0;
+function updateBlocks2(dt){
+  updateTnt(dt);
+  updateSaplings(dt);
+  updateSpawners(dt);
+  updateBagGesture(dt);
+  /* Erzsucher in der Hand: piept regelmäßig */
+  if (state.selected === 'erzsucher' && (state.owned.erzsucher || creative())){
+    oreClock -= dt;
+    if (oreClock <= 0){ oreClock = 2.2; oreScan(false); }
+    var g = hands.right.tools.erzsucher && hands.right.tools.erzsucher.userData.glass;
+    if (g) g.material.color.setHex(oreMarker.visible ? 0xffb347 : 0x59d7e8);
+  }
+  if (oreShowT > 0){ oreShowT -= dt; if (oreShowT <= 0) oreMarker.visible = false; }
+  /* Bohrer dreht sich beim Abbauen */
+  ['left', 'right'].forEach(function(side){ var dm = hands[side].tools.bohrer; if (dm && dm.visible && hands[side].pinch) dm.userData.bit.rotation.y += dt * 30; });
+  /* Lava und Magma unter den Füßen brennen */
+  headWorld(_v3);
+  var feet = dolly.position.y;
+  var under = W.rawAt(Math.floor(_v3.x), Math.floor(feet - 0.3), Math.floor(_v3.z));
+  if ((under === W.VT.lava || under === W.VT.magmablock) && !air.active && !creative()){
+    lavaFootClock += dt;
+    if (lavaFootClock > (under === W.VT.lava ? 0.7 : 1.4)){
+      lavaFootClock = 0;
+      if (!fireImmune()){ damagePlayer(under === W.VT.lava ? 2 : 1, false); say(under === W.VT.lava ? 'Heiß! Raus aus der Lava!' : 'Der Magmablock ist heiß!', true); }
+    }
+  } else lavaFootClock = 0;
 }
 
 /* ================================================================ Start, Testzugang und Ende */
@@ -13647,7 +15547,10 @@ BL.debug = {
   forceTick: function(on){ debugForceTick = !!on; },
   shadersReady: function(){ return shadersReady; },
   warmup: function(){ return { ms: warmupMs, worldMs: worldMs, programs: renderer.info.programs ? renderer.info.programs.length : -1 }; },
-  world: W, blockTarget: blockTarget, mineVoxel: mineVoxel, placeBlock: placeBlock, updateBlocks: updateBlocks, mapState: mapState, isLitSpot: isLitSpot,
+  world: W, inv: inv, openInventory: openInventory, closeInventory: closeInventory, invPress: invPress, invRelease: invRelease,
+  matchGrid: matchGrid, craftFromGrid: craftFromGrid, reconcileInv: reconcileInv, drops: drops, igniteTnt: igniteTnt, oreScan: oreScan,
+  useBuilderWand: useBuilderWand, useVoxel: useVoxel, spawnItemDrop: spawnItemDrop, tntList: tntList, drawInventory: drawInventory,
+  blockTarget: blockTarget, mineVoxel: mineVoxel, placeBlock: placeBlock, updateBlocks: updateBlocks, mapState: mapState, isLitSpot: isLitSpot,
   trySpawnDark: function(){ headWorld(_v3); return trySpawnDark(_v3, dolly.position.y); },
   noRender: function(on){ debugNoRender = !!on; },
   renderInfo: function(){ return renderer.info.render; },
