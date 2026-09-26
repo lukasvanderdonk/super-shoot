@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lukas' Spiele</title>
+<script>
+  // Vertippte Adressen (Großbuchstaben, fehlende Zeichen) automatisch zum richtigen Spiel schicken
+  (function(){
+    var p = decodeURIComponent(location.pathname).toLowerCase().replace(/\s+/g, '');
+    var base = '/super-shoot/';
+    var games = ['leukas-strand', 'labyrinth', 'strand', 'rpg', 'room-game', 'geheim-chat'];
+    var target = null;
+    if (p.indexOf('wald') >= 0 || p.indexOf('wacht') >= 0) target = base + 'spiele/waldwacht/';
+    for (var i = 0; !target && i < games.length; i++) if (p.indexOf(games[i]) >= 0) target = base + 'spiele/' + games[i] + '/';
+    if (!target && p.indexOf('spiel') >= 0) target = base + 'spiele/';
+    if (target && target !== location.pathname) location.replace(target);
+  })();
+</script>
+<style>
+  body { background: #1a1a2e; color: #fff; font-family: Arial, sans-serif; text-align: center; padding: 60px 16px; }
+  h1 { color: #e94560; font-size: 2.2rem; margin-bottom: 12px; }
+  p { color: #aaa; margin-bottom: 36px; }
+  a.big { display: block; max-width: 420px; margin: 0 auto 20px; padding: 22px; border: 2px solid #e94560; border-radius: 14px;
+          background: #16213e; color: #fff; text-decoration: none; font-size: 1.4rem; font-weight: bold; }
+  a.big:hover { background: #e94560; }
+</style>
+</head>
+<body>
+  <h1>Hoppla, diese Seite gibt es nicht</h1>
+  <p>Vielleicht ein Tippfehler in der Adresse? Tipp einfach auf ein Spiel:</p>
+  <a class="big" href="/super-shoot/spiele/waldwacht/">🥽 Waldwacht VR spielen</a>
+  <a class="big" href="/super-shoot/spiele/">🎮 Alle Spiele</a>
+</body>
+</html>
