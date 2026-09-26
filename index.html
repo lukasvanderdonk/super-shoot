@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lukas' Spiele</title>
+<script>
+  // Auf GitHub Pages gibt es keinen Spiele-Server: dort geht es direkt zur Spiele-Übersicht.
+  // Auf dem eigenen Server (Railway) bleibt wie bisher Super Shoot die Startseite.
+  location.replace(location.hostname.endsWith('github.io') ? 'spiele/' : 'super-shoot.html');
+</script>
+</head>
+<body style="background:#1a1a2e;color:#fff;font-family:Arial,sans-serif;text-align:center;padding:60px 16px">
+  <p><a href="spiele/" style="color:#e94560">Weiter zu Lukas' Spielen</a></p>
+</body>
+</html>
