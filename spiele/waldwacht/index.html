@@ -147,6 +147,7 @@ input[type="range"]{flex:1 1 140px;accent-color:var(--accent);min-width:0;}
 }
 .crash-box b{color:#fff;font-weight:600;}
 .crash-box div{margin-top:6px;}
+.crash-box.mild{background:rgba(242,193,78,0.14);border-color:rgba(242,193,78,0.6);color:#ffe9b8;}
 
 </style>
 
@@ -4591,9 +4592,10 @@ function saveSettings(){ try { localStorage.setItem('waldwacht-settings', JSON.s
    was gerade passiert. Ist der letzte Eintrag nicht „fertig“, ist das Spiel dort hängen geblieben.
    Dann einmal melden und den sicheren VR-Modus einschalten. */
 var VRLOG_KEY = 'waldwacht-vrlog', VRSEC_KEY = 'waldwacht-vrsec';
-var vrCrash = null;
+var vrCrash = null, vrSlowInfo = null;
 try {
   var vrLog = JSON.parse((BL.prevRunLog !== undefined ? BL.prevRunLog : localStorage.getItem(VRLOG_KEY)) || 'null');
+  if (vrLog && vrLog.ok && vrLog.phase === 'VR' && vrLog.slow && vrLog.slow.ms >= 1500) vrSlowInfo = vrLog;
   if (vrLog && !vrLog.ok){
     vrCrash = vrLog;
     if (vrLog.phase === 'VR') vrCrash.sec = localStorage.getItem(VRSEC_KEY);
@@ -4611,6 +4613,7 @@ function noteSlow(name, ms){ if (ms > 250 && (!slowStep || ms > slowStep.ms)) sl
 function loadMark(step, ok){
   try {
     var info = { phase: 'Laden', step: step, ok: !!ok, t: Math.round((performance.now() - pageT0) / 100) / 10, q: quality().label };
+    if (typeof glLost !== 'undefined' && glLost) info.lost = glLost;
     if (slowStep) info.slow = slowStep;
     localStorage.setItem(VRLOG_KEY, JSON.stringify(info));
   } catch(e){}
@@ -4620,8 +4623,18 @@ loadMark('Spiel-Code startet');
 /* ================================================================ Aufbau */
 
 var canvas = document.getElementById('c');
-/* Im sicheren VR-Modus ohne Kantenglättung: spart auf der Quest viel Grafikspeicher */
-var renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: !settings.safeMode });
+/* Den Grafik-Kontext gleich VR-tauglich anlegen (xrCompatible). three.js r128 tut das nicht von selbst;
+   dann muss der Browser ihn beim VR-Start umbauen — auf der Quest werden dabei alle Grafik-Programme
+   neu übersetzt und alle Modelle neu hochgeladen, und der Browser „reagiert nicht“.
+   Im sicheren VR-Modus ohne Kantenglättung: spart auf der Quest viel Grafikspeicher. */
+var glAttrs = { alpha: false, depth: true, stencil: true, antialias: !settings.safeMode, premultipliedAlpha: true,
+  preserveDrawingBuffer: false, powerPreference: 'default', xrCompatible: true };
+var glContext = null;
+try { glContext = canvas.getContext('webgl2', glAttrs) || canvas.getContext('webgl', glAttrs); } catch(e){ glContext = null; }
+var renderer = new THREE.WebGLRenderer(glContext ? { canvas: canvas, context: glContext, antialias: glAttrs.antialias } : { canvas: canvas, antialias: glAttrs.antialias });
+/* Geht der Grafik-Kontext trotzdem verloren (dann baut der Browser alles neu), landet das im Rekorder */
+var glLost = 0;
+canvas.addEventListener('webglcontextlost', function(){ glLost++; });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, quality().pixelRatio));
 renderer.setSize(Math.max(1, window.innerWidth), Math.max(1, window.innerHeight));
 renderer.xr.enabled = true;
@@ -10324,6 +10337,7 @@ function vrMark(step, ok){
     if (performance.memory) info.mb = Math.round(performance.memory.usedJSHeapSize / 1e6);
     if (renderer.info && renderer.info.render) info.calls = renderer.info.render.calls;
     if (slowStep) info.slow = slowStep;
+    if (glLost) info.lost = glLost;
     localStorage.setItem(VRLOG_KEY, JSON.stringify(info));
   } catch(e){}
 }
@@ -10411,7 +10425,11 @@ vrBtn.addEventListener('click', function(){
       if (!renderer.xr.isPresenting) return;
       banner('VR LÄUFT', [fps + ' Bilder pro Sekunde · Grafik ' + quality().label, fps < 45 ? 'Ruckelt es? Im Menü „Grafik: Niedrig“ wählen' : 'Viel Spaß!'], fps < 45 ? '#f2c14e' : '#7bd389');
     });
-    session.addEventListener('end', function(){ vrStable = true; vrMark('VR beendet', true); menu.style.display = 'flex'; saveGame(); existingSave = readSave(); refreshMenu(); });
+    session.addEventListener('end', function(){
+      vrStable = true; vrMark('VR beendet', true);
+      menu.style.display = 'flex'; saveGame(); existingSave = readSave(); refreshMenu();
+      if (slowStep && slowStep.ms >= 1500) showCrashBox('Beim letzten VR-Start hat „' + slowStep.name + '“ ' + (slowStep.ms / 1000).toFixed(1) + ' s am Stück gedauert' + (glLost ? ' (Grafik wurde neu aufgebaut)' : '') + '.', 'Schick Claude diesen Text.', true);
+    });
   }).catch(function(err){ vrStable = true; vrMark('VR-Start abgelehnt', true); statusEl.textContent = 'VR-Start fehlgeschlagen: ' + err.message; });
 });
 
@@ -20606,20 +20624,33 @@ function warmupShaders(done){
   step();
 }
 
+/* Hinweis-Kasten oben im Startmenü (rot = hängen geblieben, gelb = nur langsam) */
+function showCrashBox(txt, hint, mild){
+  var box = el('crashBox');
+  if (!box){ statusEl.textContent = txt + ' ' + hint; return; }
+  box.textContent = '';
+  var b1 = document.createElement('b'); b1.textContent = txt;
+  var p2 = document.createElement('div'); p2.textContent = hint;
+  box.appendChild(b1); box.appendChild(p2);
+  box.classList.toggle('mild', !!mild);
+  box.hidden = false;
+}
+
 (function prepare(){
   var lastErr = null;
   try { lastErr = localStorage.getItem('waldwacht-lasterror'); localStorage.removeItem('waldwacht-lasterror'); } catch(e){}
   if (lastErr) statusEl.textContent = 'Beim letzten Spielen gab es einen Fehler: ' + lastErr + ' — sag das bitte Claude.';
   if (vrCrash){
-    var box = el('crashBox');
     var txt = (vrCrash.phase === 'Laden' ? 'Beim letzten Mal ist das Spiel beim Laden hängen geblieben' : 'Beim letzten VR-Start ist das Spiel hängen geblieben') +
       ' — bei: „' + vrCrash.step + (vrCrash.sec && vrCrash.t < 21 ? ' / ' + vrCrash.sec : '') + '“' + (vrCrash.t ? ' nach ' + vrCrash.t + ' s' : '') +
       (vrCrash.phase === 'VR' ? ' (' + (vrCrash.frames || 0) + ' Bilder' + (vrCrash.fps ? ', ' + vrCrash.fps + ' FPS' : '') + ')' : '') +
       ', Grafik ' + (vrCrash.q || '?') + '.' +
       (vrCrash.slow ? ' Langsamster Schritt: ' + vrCrash.slow.name + ' (' + vrCrash.slow.ms + ' ms).' : '');
     var hint = vrCrash.autoSafe ? 'Der sichere VR-Modus ist jetzt an. Probier es nochmal und schick Claude diesen Text.' : 'Schick Claude diesen Text.';
-    if (box){ box.textContent = ''; var b1 = document.createElement('b'); b1.textContent = txt; var p2 = document.createElement('div'); p2.textContent = hint; box.appendChild(b1); box.appendChild(p2); box.hidden = false; }
-    else statusEl.textContent = txt + ' ' + hint;
+    if (vrCrash.lost) txt += ' Die Grafik wurde ' + vrCrash.lost + '× neu aufgebaut.';
+    showCrashBox(txt, hint);
+  } else if (vrSlowInfo){
+    showCrashBox('Beim letzten VR-Start hat „' + vrSlowInfo.slow.name + '“ ' + (vrSlowInfo.slow.ms / 1000).toFixed(1) + ' s am Stück gedauert' + (vrSlowInfo.lost ? ' (Grafik wurde neu aufgebaut)' : '') + '.', 'Schick Claude diesen Text.', true);
   }
   desktopBtn.disabled = true;
   updateVrButton();
