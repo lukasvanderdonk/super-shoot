@@ -140,6 +140,14 @@ input[type="range"]{flex:1 1 140px;accent-color:var(--accent);min-width:0;}
 
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
 
+.crash-box{
+  text-align:left;font-size:14px;line-height:1.5;
+  background:rgba(228,87,46,0.16);border:1px solid rgba(228,87,46,0.6);
+  border-radius:12px;padding:12px 14px;margin:0 0 18px;color:#ffd2c4;
+}
+.crash-box b{color:#fff;font-weight:600;}
+.crash-box div{margin-top:6px;}
+
 </style>
 
 <canvas id="c"></canvas>
@@ -159,6 +167,7 @@ input[type="range"]{flex:1 1 140px;accent-color:var(--accent);min-width:0;}
 <div id="menu">
   <div id="card">
     <h1>WALD<br>WACHT</h1>
+    <div id="crashBox" class="crash-box" hidden></div>
     <p id="tagline">Eine riesige Welt aus Blöcken: alles abbauen, alles bauen, im Dunkeln überleben — nur mit deinen Händen</p>
 
     <div class="block">
@@ -269,6 +278,12 @@ input[type="range"]{flex:1 1 140px;accent-color:var(--accent);min-width:0;}
 "use strict";
 
 var BL = window.BL = window.BL || {};
+
+/* Absturz-Rekorder (siehe g01): den Eintrag vom letzten Mal aufheben, dann den ersten Ladeschritt notieren */
+try {
+  BL.prevRunLog = localStorage.getItem('waldwacht-vrlog');
+  localStorage.setItem('waldwacht-vrlog', JSON.stringify({ phase: 'Laden', step: 'Welt-Grundlagen werden berechnet', ok: false, t: 0 }));
+} catch(e){}
 
 var FIELD_R = 4800;         // Radius der Welt: fast 10 km breit
 var INNER_R = 480;          // innen liegt die von Hand geplante Startwelt
@@ -4571,17 +4586,17 @@ try {
 
 function saveSettings(){ try { localStorage.setItem('waldwacht-settings', JSON.stringify(settings)); } catch(e){} }
 
-/* Absturz-Rekorder: Ist der letzte VR-Start nicht bis „läuft stabil“ gekommen, war es ein Absturz.
+/* Absturz-Rekorder: Vor jedem schweren Schritt (Laden, VR-Start, Teile eines VR-Bildes) wird notiert,
+   was gerade passiert. Ist der letzte Eintrag nicht „fertig“, ist das Spiel dort hängen geblieben.
    Dann einmal melden und den sicheren VR-Modus einschalten. */
-var VRLOG_KEY = 'waldwacht-vrlog';
+var VRLOG_KEY = 'waldwacht-vrlog', VRSEC_KEY = 'waldwacht-vrsec';
 var vrCrash = null;
 try {
-  var vrLog = JSON.parse(localStorage.getItem(VRLOG_KEY) || 'null');
+  var vrLog = JSON.parse((BL.prevRunLog !== undefined ? BL.prevRunLog : localStorage.getItem(VRLOG_KEY)) || 'null');
   if (vrLog && !vrLog.ok){
     vrCrash = vrLog;
+    if (vrLog.phase === 'VR') vrCrash.sec = localStorage.getItem(VRSEC_KEY);
     if (!settings.safeMode){ settings.safeMode = true; vrCrash.autoSafe = true; saveSettings(); }
-    vrLog.ok = true; vrLog.reported = true;
-    localStorage.setItem(VRLOG_KEY, JSON.stringify(vrLog));
   }
 } catch(e){}
 
@@ -4589,6 +4604,17 @@ function diff(){ return DIFF[settings.difficulty] || DIFF.normal; }
 function quality(){ return settings.safeMode ? QUALITY.sicher : (QUALITY[settings.quality] || QUALITY.hoch); }
 function creative(){ return !!diff().creative; }
 function thirstOn(){ return settings.thirst && !creative(); }
+
+var pageT0 = performance.now(), slowStep = null;
+function noteSlow(name, ms){ if (ms > 250 && (!slowStep || ms > slowStep.ms)) slowStep = { name: name, ms: Math.round(ms) }; }
+function loadMark(step, ok){
+  try {
+    var info = { phase: 'Laden', step: step, ok: !!ok, t: Math.round((performance.now() - pageT0) / 100) / 10, q: quality().label };
+    if (slowStep) info.slow = slowStep;
+    localStorage.setItem(VRLOG_KEY, JSON.stringify(info));
+  } catch(e){}
+}
+loadMark('Spiel-Code startet');
 
 /* ================================================================ Aufbau */
 
@@ -10293,11 +10319,25 @@ confirmButton(newWorldBtn, 'Neue Welt erzeugen? Nochmal tippen', function(){
 var vrStartT = 0, vrFrames = 0, vrNextMark = 5, vrStable = true;
 function vrMark(step, ok){
   try {
-    var info = { step: step, ok: !!ok, t: vrStartT ? Math.round((performance.now() - vrStartT) / 100) / 10 : 0, fps: fps, q: quality().label };
+    var info = { phase: 'VR', step: step, ok: !!ok, t: vrStartT ? Math.round((performance.now() - vrStartT) / 100) / 10 : 0, fps: fps, q: quality().label, frames: vrFrames };
     if (performance.memory) info.mb = Math.round(performance.memory.usedJSHeapSize / 1e6);
     if (renderer.info && renderer.info.render) info.calls = renderer.info.render.calls;
+    if (slowStep) info.slow = slowStep;
     localStorage.setItem(VRLOG_KEY, JSON.stringify(info));
   } catch(e){}
+}
+/* Teile eines VR-Bildes: in den ersten 20 Sekunden wird vor jedem Teil notiert, welcher gerade rechnet.
+   Die Dauer jedes Teils wird immer gemessen; der langsamste landet im Rekorder. */
+var secName = null, secT = 0;
+function vrSec(name){
+  if (vrStable && !secName) return;
+  var now = performance.now();
+  if (secName){
+    var d = now - secT;
+    if (d > 250 && (!slowStep || d > slowStep.ms)){ noteSlow('VR: ' + secName, d); if (vrStable) vrMark('VR läuft', true); }
+  }
+  secName = vrStable ? null : name; secT = now;
+  if (name && !vrStable && now - vrStartT < 20000){ try { localStorage.setItem(VRSEC_KEY, name); } catch(e){} }
 }
 function vrFrameMark(){
   if (vrStable) return;
@@ -10399,12 +10439,17 @@ function syncSize(){
 window.addEventListener('resize', syncSize);
 
 function tick(dt, frame){
+  var sec = frame ? vrSec : function(){};
   syncSize();
   updateFps(dt);
+  sec('Hände lesen');
   if (frame){ updateXRInput(frame); }
   else if (desktopMode && !debugVR){ updateMovementDesktop(dt); updateDesktopHands(); }
+  sec('Gesten');
   updateGestures(dt);
+  sec('Inventar');
   if (gameStarted) updateInventory(dt);
+  sec('Bewegung');
   if (frame || debugVR) updateMovementVR(dt);
 
   var seat = (renderer.xr.isPresenting && settings.seated) ? 0.45 : 0;
@@ -10413,14 +10458,17 @@ function tick(dt, frame){
   updateBody();
   updateHeldTool();
   var live = gameStarted && !state.paused;
+  sec('Benutzen und Bauen');
   if (gameStarted){ updateInteraction(dt); updateBlocks(dt); }
   if (live){
     var wdt = dt * X3.worldSlow;
+    sec('Gegner und Tiere');
     updateEnemies(wdt);
     updateAnimals(wdt);
     updateNests(wdt);
     updateProjectiles(wdt);
     updateShots(dt);
+    sec('Welt-Ereignisse');
     updateStructures(dt);
     updateCaves(dt);
     updateWaves(dt);
@@ -10442,6 +10490,7 @@ function tick(dt, frame){
     updateEvents2(dt);
     updateBlocks2(dt);
     updateExplore(dt);
+    sec('Neue Sachen (150er-Update)');
     X3.updateArsenal(dt);
     X3.updateMine(dt);
     X3.updateNether(dt);
@@ -10449,7 +10498,9 @@ function tick(dt, frame){
     updateAnimals(dt);
     updateDayNight(dt * 0.3);
   }
+  sec('Werte und Speichern');
   if (gameStarted){ updateStats(state.paused ? 0 : dt); updateSaving(dt); }
+  sec('Wetter und Anzeigen');
   updateWeather(dt);
   updateMusic(dt);
   updateTracers(dt);
@@ -10464,8 +10515,11 @@ function tick(dt, frame){
     if (c.opened && c.lidAngle < 1.9){ c.lidAngle = Math.min(1.9, c.lidAngle + dt * 3); c.mesh.userData.lid.rotation.x = -c.lidAngle; }
   });
   headWorld(_v3);
+  sec('Welt nachladen');
   W.stream(_v3.x, _v3.z);
+  sec('Bäume und Pflanzen');
   W.refresh();
+  sec('Karte');
   if (gameStarted) mapJob(1.2);
 
   uiClock += dt;
@@ -10474,6 +10528,7 @@ function tick(dt, frame){
   panelWasSeen = panelSeen;
   if (uiUrgent || (uiDirty && uiClock > 0.35) || uiClock > 2.5){
     uiClock = 0; uiDirty = false; uiUrgent = false;
+    sec('Menüs zeichnen');
     drawUI(!panelSeen);
     panelPending = !panelSeen;
   }
@@ -10482,7 +10537,9 @@ function tick(dt, frame){
   hands.right.pinchPrev = hands.right.pinch;
   endGestureFrame();
   if (gameStarted) X3.afterTick();
+  sec('Bild zeichnen');
   if (!debugNoRender) renderer.render(scene, camera);
+  sec(null);
   if (frame) vrFrameMark();
 }
 
@@ -20477,16 +20534,27 @@ function warmupShaders(done){
     o.traverse(function(c){ if (c.isLight || c.isCamera) hasLight = true; });
     return !hasLight;
   });
-  var worldIdx = 0, WORLD_BATCH = 12;
+  var worldIdx = 0, WORLD_BATCH = 6;
   factories.push(null);
 
-  var idx = 0, BATCH = 4;
+  var idx = 0, BATCH = 2, stepNo = 0;
+  /* Was man beim Start sieht, portionsweise auf die Grafikkarte laden (in ein winziges Bild gezeichnet) */
+  var uploadTarget = new THREE.WebGLRenderTarget(4, 4);
+  function uploadPart(){
+    renderer.setRenderTarget(uploadTarget);
+    renderer.render(tmp, camera);
+    renderer.setRenderTarget(null);
+  }
   function step(){
+    var t0 = performance.now(), what = factories[idx] === null ? 'Welt' : 'Modelle';
+    stepNo++;
+    loadMark('Grafik wird vorbereitet (' + what + ', Schritt ' + stepNo + ')');
     try {
       if (factories[idx] === null){
         var part = worldParts.slice(worldIdx, worldIdx + WORLD_BATCH);
         part.forEach(function(o){ tmp.add(o); });
         renderer.compile(tmp, camera);
+        uploadPart();
         part.forEach(function(o){ scene.add(o); });
         worldIdx += WORLD_BATCH;
         if (worldIdx >= worldParts.length) idx++;
@@ -20498,15 +20566,20 @@ function warmupShaders(done){
         tmp.remove(group);
       }
     } catch(e){ reportError(e); idx = factories.length; worldParts.forEach(function(o){ if (o.parent !== scene) scene.add(o); }); }
+    noteSlow('Laden: Grafik ' + what, performance.now() - t0);
     var total = factories.length - 1 + Math.ceil(worldParts.length / WORLD_BATCH);
     var doneSteps = Math.min(idx, factories.length - 1) + (idx >= factories.length - 1 ? Math.min(Math.ceil(worldIdx / WORLD_BATCH), Math.ceil(worldParts.length / WORLD_BATCH)) : 0);
     warmupProgress = Math.round(doneSteps / total * 95);
     vrBtn.textContent = 'Spiel wird vorbereitet … ' + warmupProgress + ' %';
     if (idx < factories.length){ setTimeout(step, 0); return; }
     setTimeout(function(){
+      var tf = performance.now();
+      loadMark('Grafik wird vorbereitet (letzter Schritt)');
       try { renderer.compile(scene, camera); } catch(e){ reportError(e); }
-      /* Einmal hinter dem Menü zeichnen: alle Modelle liegen dann schon auf der Grafikkarte und das erste VR-Bild ist leicht */
+      /* Einmal hinter dem Menü zeichnen: das erste VR-Bild ist dann leicht */
       try { renderer.render(scene, camera); } catch(e){ reportError(e); }
+      uploadTarget.dispose();
+      noteSlow('Laden: letzter Grafik-Schritt', performance.now() - tf);
       shadersReady = true;
       warmupProgress = 100;
       warmupMs = Math.round(performance.now() - tw);
@@ -20522,10 +20595,15 @@ function warmupShaders(done){
   try { lastErr = localStorage.getItem('waldwacht-lasterror'); localStorage.removeItem('waldwacht-lasterror'); } catch(e){}
   if (lastErr) statusEl.textContent = 'Beim letzten Spielen gab es einen Fehler: ' + lastErr + ' — sag das bitte Claude.';
   if (vrCrash){
-    statusEl.textContent = (statusEl.textContent ? statusEl.textContent + ' ' : '') +
-      'Der letzte VR-Start ist abgestürzt (zuletzt: ' + vrCrash.step + (vrCrash.t ? ', nach ' + vrCrash.t + ' s' : '') + (vrCrash.fps ? ', ' + vrCrash.fps + ' FPS' : '') +
-      (vrCrash.mb ? ', ' + vrCrash.mb + ' MB' : '') + ', Grafik ' + (vrCrash.q || '?') + '). ' +
-      (vrCrash.autoSafe ? 'Der sichere VR-Modus ist jetzt an — probier es nochmal.' : 'Sag Claude diesen Text.');
+    var box = el('crashBox');
+    var txt = (vrCrash.phase === 'Laden' ? 'Beim letzten Mal ist das Spiel beim Laden hängen geblieben' : 'Beim letzten VR-Start ist das Spiel hängen geblieben') +
+      ' — bei: „' + vrCrash.step + (vrCrash.sec && vrCrash.t < 21 ? ' / ' + vrCrash.sec : '') + '“' + (vrCrash.t ? ' nach ' + vrCrash.t + ' s' : '') +
+      (vrCrash.phase === 'VR' ? ' (' + (vrCrash.frames || 0) + ' Bilder' + (vrCrash.fps ? ', ' + vrCrash.fps + ' FPS' : '') + ')' : '') +
+      ', Grafik ' + (vrCrash.q || '?') + '.' +
+      (vrCrash.slow ? ' Langsamster Schritt: ' + vrCrash.slow.name + ' (' + vrCrash.slow.ms + ' ms).' : '');
+    var hint = vrCrash.autoSafe ? 'Der sichere VR-Modus ist jetzt an. Probier es nochmal und schick Claude diesen Text.' : 'Schick Claude diesen Text.';
+    if (box){ box.textContent = ''; var b1 = document.createElement('b'); b1.textContent = txt; var p2 = document.createElement('div'); p2.textContent = hint; box.appendChild(b1); box.appendChild(p2); box.hidden = false; }
+    else statusEl.textContent = txt + ' ' + hint;
   }
   desktopBtn.disabled = true;
   updateVrButton();
@@ -20535,11 +20613,13 @@ function warmupShaders(done){
     if (existingSave.pos) start = existingSave.pos;
     if (existingSave.vox && !editsImported){ W.importEdits(existingSave.vox); editsImported = true; }
   }
+  loadMark('Welt wird gebaut');
   setTimeout(function(){
     var tw = performance.now();
     W.prepare(start.x, start.z, function(p){ vrBtn.textContent = 'Welt wird gebaut … ' + Math.round(p * 100) + ' %'; }, function(){
       worldMs = Math.round(performance.now() - tw);
       warmupShaders(function(){
+        loadMark('Menü bereit', true);
         desktopBtn.disabled = false;
         updateVrButton();
         (function mapLoop(){ if (!mapJob(8)) setTimeout(mapLoop, 30); })();
@@ -20577,6 +20657,7 @@ BL.debug = {
   trySpawnDark: function(){ headWorld(_v3); return trySpawnDark(_v3, dolly.position.y); },
   noRender: function(on){ debugNoRender = !!on; },
   renderInfo: function(){ return renderer.info.render; },
+  tickXR: function(dt, steps){ var fr = { session: { inputSources: [] } }; for (var i = 0; i < (steps || 1); i++) tick(dt || 0.016, fr); },
   vrLog: { mark: vrMark, frame: vrFrameMark, begin: function(t0){ vrStartT = t0 || performance.now(); vrFrames = 0; vrNextMark = 5; vrStable = false; } },
   memInfo: function(){ return { geo: renderer.info.memory.geometries, tex: renderer.info.memory.textures, programs: renderer.info.programs ? renderer.info.programs.length : -1, sceneKids: scene.children.length }; },
   fakeHand: fakeHand,
