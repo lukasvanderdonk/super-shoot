@@ -47,7 +47,7 @@ body{
 
 #menu{
   position:fixed;inset:0;z-index:20;
-  display:flex;align-items:center;justify-content:center;
+  display:flex;align-items:flex-start;justify-content:center;
   padding:24px;
   overflow-y:auto;
   background:
@@ -57,6 +57,7 @@ body{
 }
 #card{
   width:min(520px,100%);
+  margin:auto;
   background:var(--panel);
   border:1px solid rgba(123,211,137,0.22);
   border-radius:20px;
@@ -192,6 +193,7 @@ input[type="range"]{flex:1 1 140px;accent-color:var(--accent);min-width:0;}
         </div>
       </div>
       <label class="toggle"><input type="checkbox" id="autoBox"> Grafik automatisch anpassen, wenn es ruckelt</label>
+      <label class="toggle"><input type="checkbox" id="safeBox"> Sicherer VR-Modus: kleinere Auflösung und Sichtweite, falls der Browser beim VR-Start abstürzt</label>
       <label class="toggle"><input type="checkbox" id="fpsBox"> Bilder pro Sekunde anzeigen</label>
       <label class="toggle"><input type="checkbox" id="seatedBox"> Sitzmodus (hebt dich im Sitzen an)</label>
       <label class="toggle"><input type="checkbox" id="leftyBox"> Linkshänder (Werkzeug in der linken Hand)</label>
@@ -4549,7 +4551,8 @@ var DIFF = {
 var QUALITY = {
   hoch:    { label: 'Hoch',    pixelRatio: 2,    xrScale: 1.0,  foveation: 0.5, far: 260, decor: true,  clouds: true,  particles: 1.0, rain: 420, birds: true,  lights: 3, view: 104, nodeView: 84 },
   mittel:  { label: 'Mittel',  pixelRatio: 1.25, xrScale: 0.8,  foveation: 1,   far: 120, decor: true,  clouds: true,  particles: 0.6, rain: 200, birds: true,  lights: 2, view: 80, nodeView: 64 },
-  niedrig: { label: 'Niedrig', pixelRatio: 1,    xrScale: 0.65, foveation: 1,   far: 70,  decor: false, clouds: false, particles: 0.35, rain: 100, birds: false, lights: 1, view: 60, nodeView: 48 }
+  niedrig: { label: 'Niedrig', pixelRatio: 1,    xrScale: 0.65, foveation: 1,   far: 70,  decor: false, clouds: false, particles: 0.35, rain: 100, birds: false, lights: 1, view: 60, nodeView: 48 },
+  sicher:  { label: 'Sicher',  pixelRatio: 1,    xrScale: 0.55, foveation: 1,   far: 56,  decor: false, clouds: false, particles: 0.25, rain: 60,  birds: false, lights: 1, view: 44, nodeView: 36 }
 };
 
 /* Meta Quest und andere Standalone-Brillen: leichter starten */
@@ -4558,7 +4561,7 @@ var IS_QUEST = /OculusBrowser|Quest|Pacific|Pico|Wolvic/i.test(navigator.userAge
 var settings = {
   difficulty: 'normal', lefty: false, music: true, musicVol: 0.7, sfxVol: 0.9,
   quality: 'hoch', autoQuality: true, seated: false, thirst: true, showFps: false,
-  armswing: false, swipeturn: true, physmelee: true, handmenu: true, vignette: 0.5, fingers: true
+  armswing: false, swipeturn: true, physmelee: true, handmenu: true, vignette: 0.5, fingers: true, safeMode: false
 };
 try {
   var storedSettings = JSON.parse(localStorage.getItem('waldwacht-settings') || 'null');
@@ -4567,15 +4570,31 @@ try {
 } catch(e){}
 
 function saveSettings(){ try { localStorage.setItem('waldwacht-settings', JSON.stringify(settings)); } catch(e){} }
+
+/* Absturz-Rekorder: Ist der letzte VR-Start nicht bis „läuft stabil“ gekommen, war es ein Absturz.
+   Dann einmal melden und den sicheren VR-Modus einschalten. */
+var VRLOG_KEY = 'waldwacht-vrlog';
+var vrCrash = null;
+try {
+  var vrLog = JSON.parse(localStorage.getItem(VRLOG_KEY) || 'null');
+  if (vrLog && !vrLog.ok){
+    vrCrash = vrLog;
+    if (!settings.safeMode){ settings.safeMode = true; vrCrash.autoSafe = true; saveSettings(); }
+    vrLog.ok = true; vrLog.reported = true;
+    localStorage.setItem(VRLOG_KEY, JSON.stringify(vrLog));
+  }
+} catch(e){}
+
 function diff(){ return DIFF[settings.difficulty] || DIFF.normal; }
-function quality(){ return QUALITY[settings.quality] || QUALITY.hoch; }
+function quality(){ return settings.safeMode ? QUALITY.sicher : (QUALITY[settings.quality] || QUALITY.hoch); }
 function creative(){ return !!diff().creative; }
 function thirstOn(){ return settings.thirst && !creative(); }
 
 /* ================================================================ Aufbau */
 
 var canvas = document.getElementById('c');
-var renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+/* Im sicheren VR-Modus ohne Kantenglättung: spart auf der Quest viel Grafikspeicher */
+var renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: !settings.safeMode });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, quality().pixelRatio));
 renderer.setSize(Math.max(1, window.innerWidth), Math.max(1, window.innerHeight));
 renderer.xr.enabled = true;
@@ -10149,7 +10168,7 @@ function updateFps(dt){
   if (settings.showFps) uiDirty = true;
   if (!settings.autoQuality || !gameStarted) return;
   var limit = renderer.xr.isPresenting ? 58 : 38;
-  if (fps < limit && settings.quality !== 'niedrig'){
+  if (fps < limit && settings.quality !== 'niedrig' && !settings.safeMode){
     lowFpsStrikes++;
     if (lowFpsStrikes >= 2){
       lowFpsStrikes = 0;
@@ -10206,9 +10225,10 @@ function refreshMenu(){
   Array.prototype.slice.call(document.querySelectorAll('[data-diff]')).forEach(function(b){ b.setAttribute('aria-pressed', b.getAttribute('data-diff') === settings.difficulty ? 'true' : 'false'); });
   Array.prototype.slice.call(document.querySelectorAll('[data-quality]')).forEach(function(b){ b.setAttribute('aria-pressed', b.getAttribute('data-quality') === settings.quality ? 'true' : 'false'); });
   [['leftyBox','lefty'], ['musicBox','music'], ['autoBox','autoQuality'], ['seatedBox','seated'], ['thirstBox','thirst'], ['fpsBox','showFps'],
-   ['physBox','physmelee'], ['swipeBox','swipeturn'], ['armBox','armswing'], ['handmenuBox','handmenu'], ['fingersBox','fingers']].forEach(function(p){
+   ['physBox','physmelee'], ['swipeBox','swipeturn'], ['armBox','armswing'], ['handmenuBox','handmenu'], ['fingersBox','fingers'], ['safeBox','safeMode']].forEach(function(p){
     var box = el(p[0]); if (box) box.checked = !!settings[p[1]];
   });
+  Array.prototype.slice.call(document.querySelectorAll('[data-quality]')).forEach(function(b){ b.disabled = !!settings.safeMode; });
   if (el('musicVol')) el('musicVol').value = settings.musicVol;
   if (el('sfxVol')) el('sfxVol').value = settings.sfxVol;
   if (el('vignetteVol')) el('vignetteVol').value = settings.vignette;
@@ -10244,6 +10264,7 @@ bindCheck('swipeBox', 'swipeturn');
 bindCheck('armBox', 'armswing');
 bindCheck('handmenuBox', 'handmenu');
 bindCheck('fingersBox', 'fingers');
+bindCheck('safeBox', 'safeMode', function(){ applyQuality(); refreshMenu(); });
 bindRange('vignetteVol', 'vignette');
 
 function confirmButton(btn, question, action){
@@ -10267,12 +10288,38 @@ confirmButton(newWorldBtn, 'Neue Welt erzeugen? Nochmal tippen', function(){
   location.reload();
 });
 
+/* Absturz-Rekorder für den VR-Start: jeder Schritt landet sofort im Speicher des Browsers.
+   Stürzt der Browser ab, zeigt das Menü beim nächsten Laden den letzten Schritt (siehe g01). */
+var vrStartT = 0, vrFrames = 0, vrNextMark = 5, vrStable = true;
+function vrMark(step, ok){
+  try {
+    var info = { step: step, ok: !!ok, t: vrStartT ? Math.round((performance.now() - vrStartT) / 100) / 10 : 0, fps: fps, q: quality().label };
+    if (performance.memory) info.mb = Math.round(performance.memory.usedJSHeapSize / 1e6);
+    if (renderer.info && renderer.info.render) info.calls = renderer.info.render.calls;
+    localStorage.setItem(VRLOG_KEY, JSON.stringify(info));
+  } catch(e){}
+}
+function vrFrameMark(){
+  if (vrStable) return;
+  vrFrames++;
+  var t = (performance.now() - vrStartT) / 1000;
+  if (vrFrames === 1) vrMark('erstes Bild in VR');
+  else if (vrFrames === 30) vrMark('30 Bilder in VR');
+  else if (t >= vrNextMark){
+    vrNextMark += 5;
+    if (t >= 60){ vrStable = true; vrMark('läuft stabil', true); }
+    else vrMark('läuft seit ' + Math.floor(t) + ' s');
+  }
+}
+
 function startGame(){
   if (!gameStarted){
     gameStarted = true;
+    if (!vrStable) vrMark('Spielstand wird geladen');
     if (existingSave) applySave(existingSave);
     else starterKit();
     X3.afterLoad();
+    if (!vrStable) vrMark('Spielstand geladen');
     updateHeldTool();
     uiDirty = true;
     later(4000, function(){ tip('start'); });
@@ -10307,9 +10354,12 @@ updateVrButton();
 
 vrBtn.addEventListener('click', function(){
   if (!xrSupported) return;
+  vrStartT = performance.now(); vrFrames = 0; vrNextMark = 5; vrStable = false;
+  vrMark('VR-Knopf gedrückt');
   initAudio();
   applyQuality();
   navigator.xr.requestSession('immersive-vr', { optionalFeatures: ['local-floor', 'bounded-floor', 'hand-tracking'] }).then(function(session){
+    vrMark('VR-Sitzung geöffnet');
     renderer.xr.setSession(session);
     menu.style.display = 'none';
     desktopMode = false;
@@ -10320,8 +10370,8 @@ vrBtn.addEventListener('click', function(){
       if (!renderer.xr.isPresenting) return;
       banner('VR LÄUFT', [fps + ' Bilder pro Sekunde · Grafik ' + quality().label, fps < 45 ? 'Ruckelt es? Im Menü „Grafik: Niedrig“ wählen' : 'Viel Spaß!'], fps < 45 ? '#f2c14e' : '#7bd389');
     });
-    session.addEventListener('end', function(){ menu.style.display = 'flex'; saveGame(); existingSave = readSave(); refreshMenu(); });
-  }).catch(function(err){ statusEl.textContent = 'VR-Start fehlgeschlagen: ' + err.message; });
+    session.addEventListener('end', function(){ vrStable = true; vrMark('VR beendet', true); menu.style.display = 'flex'; saveGame(); existingSave = readSave(); refreshMenu(); });
+  }).catch(function(err){ vrStable = true; vrMark('VR-Start abgelehnt', true); statusEl.textContent = 'VR-Start fehlgeschlagen: ' + err.message; });
 });
 
 desktopBtn.addEventListener('click', function(){
@@ -10433,6 +10483,7 @@ function tick(dt, frame){
   endGestureFrame();
   if (gameStarted) X3.afterTick();
   if (!debugNoRender) renderer.render(scene, camera);
+  if (frame) vrFrameMark();
 }
 
 /* Generative Musik und Umgebungsgeräusche */
@@ -20454,6 +20505,8 @@ function warmupShaders(done){
     if (idx < factories.length){ setTimeout(step, 0); return; }
     setTimeout(function(){
       try { renderer.compile(scene, camera); } catch(e){ reportError(e); }
+      /* Einmal hinter dem Menü zeichnen: alle Modelle liegen dann schon auf der Grafikkarte und das erste VR-Bild ist leicht */
+      try { renderer.render(scene, camera); } catch(e){ reportError(e); }
       shadersReady = true;
       warmupProgress = 100;
       warmupMs = Math.round(performance.now() - tw);
@@ -20468,6 +20521,12 @@ function warmupShaders(done){
   var lastErr = null;
   try { lastErr = localStorage.getItem('waldwacht-lasterror'); localStorage.removeItem('waldwacht-lasterror'); } catch(e){}
   if (lastErr) statusEl.textContent = 'Beim letzten Spielen gab es einen Fehler: ' + lastErr + ' — sag das bitte Claude.';
+  if (vrCrash){
+    statusEl.textContent = (statusEl.textContent ? statusEl.textContent + ' ' : '') +
+      'Der letzte VR-Start ist abgestürzt (zuletzt: ' + vrCrash.step + (vrCrash.t ? ', nach ' + vrCrash.t + ' s' : '') + (vrCrash.fps ? ', ' + vrCrash.fps + ' FPS' : '') +
+      (vrCrash.mb ? ', ' + vrCrash.mb + ' MB' : '') + ', Grafik ' + (vrCrash.q || '?') + '). ' +
+      (vrCrash.autoSafe ? 'Der sichere VR-Modus ist jetzt an — probier es nochmal.' : 'Sag Claude diesen Text.');
+  }
   desktopBtn.disabled = true;
   updateVrButton();
   /* Zuerst die Blockwelt rund um den Startpunkt bauen, dann die Grafik-Programme vorbereiten */
@@ -20518,6 +20577,8 @@ BL.debug = {
   trySpawnDark: function(){ headWorld(_v3); return trySpawnDark(_v3, dolly.position.y); },
   noRender: function(on){ debugNoRender = !!on; },
   renderInfo: function(){ return renderer.info.render; },
+  vrLog: { mark: vrMark, frame: vrFrameMark, begin: function(t0){ vrStartT = t0 || performance.now(); vrFrames = 0; vrNextMark = 5; vrStable = false; } },
+  memInfo: function(){ return { geo: renderer.info.memory.geometries, tex: renderer.info.memory.textures, programs: renderer.info.programs ? renderer.info.programs.length : -1, sceneKids: scene.children.length }; },
   fakeHand: fakeHand,
   internals: function(){ return { air: air, climb: climb, riding: riding, swimming: swimming, sneaking: sneaking, grapple: grapple, bowVR: bowVR,
     hm: hm, raid: raid, goldRush: goldRush, eclipse: eclipseActive, vault: vault, campState: campState, smith: smith, webT: webT,
