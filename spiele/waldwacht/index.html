@@ -241,6 +241,7 @@ input[type="range"]{flex:1 1 140px;accent-color:var(--accent);min-width:0;}
         <li><b>Benutzen:</b> rechts pinchen — oder echt zuschlagen, werfen, den Bogen spannen, die Angel auswerfen.</li>
         <li><b>Körper:</b> über die Schulter greifen = Fernwaffe, Hüfte = Werkzeug, Hand zum Mund = essen, Handfläche hoch = Handmenü.</li>
         <li><b>Bewegen:</b> Leitern hochklettern, Jetpack mit der Faust nach unten, beim Fallen Arme ausbreiten = gleiten, schwimmen, reiten.</li>
+        <li><b>Zurück zur Website:</b> linke Handfläche nach oben drehen und im Handmenü zweimal auf „Website“ tippen. Klappt das nicht: rechte Handfläche zu dir drehen, Daumen und Zeigefinger zusammen halten (Meta-Menü).</li>
         <li><b>Mehr:</b> zeigen = Info, Daumen hoch = speichern, klatschen und winken für den Wolf, Zauber mit Gesten. Alles im Tab „Gesten“.</li>
         <li><b>Neu:</b> beide Arme hochreißen = springen, mit Schwung Geschosse zurückschlagen (parieren), Dreizack und Enderperle werfen, Gravitationskanone packen und schleudern.</li>
       </ul>
@@ -17736,13 +17737,28 @@ handMenuButtons = function(){
   list.push({ id: 'hm:mark', icon: 'markieren', label: 'Ping', ok: true });
   list.push({ id: 'hm:dance', icon: 'tanzen', label: 'Tanz', ok: !(X3.danceT > 0) });
   if (X3.cart) list.push({ id: 'hm:cart', icon: 'lore', label: 'Aussteigen', ok: true });
+  /* Zurück zur Website: zweimal antippen, damit man nicht aus Versehen herausfällt */
+  if (renderer.xr.isPresenting || debugVR) list.push({ id: 'hm:exitvr', icon: 'tuer', label: performance.now() - X3.exitArmAt < 3000 ? 'Sicher?' : 'Website', ok: true });
   return list;
 };
+X3.exitArmAt = -1e9;
+function exitVR(){
+  var session = renderer.xr.getSession ? renderer.xr.getSession() : null;
+  if (!session){ say('Du bist gerade nicht in VR', true); return; }
+  saveGame();
+  say('Zurück zur Website …', true);
+  session.end().catch(function(){});
+}
 var _doAction = doAction;
 doAction = function(id){
   if (id === 'hm:mark'){ X3.mark(); uiDirty = true; return; }
   if (id === 'hm:dance'){ X3.dance(); uiDirty = true; return; }
   if (id === 'hm:cart'){ if (X3.leaveCart) X3.leaveCart(false); uiDirty = true; return; }
+  if (id === 'hm:exitvr'){
+    if (performance.now() - X3.exitArmAt < 3000){ X3.exitArmAt = -1e9; exitVR(); }
+    else { X3.exitArmAt = performance.now(); say('Nochmal antippen = zurück zur Website', true); tone(520, 0.08, 'triangle', 0.04); }
+    return;
+  }
   if (X3.doAction && X3.doAction(id)) return;
   _doAction(id);
 };
