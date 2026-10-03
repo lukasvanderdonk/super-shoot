@@ -183,6 +183,13 @@ input[type="range"]{flex:1 1 140px;accent-color:var(--accent);min-width:0;}
           <button type="button" data-diff="schwer">Schwer</button>
         </div>
       </div>
+      <div class="setting-row">
+        <span class="setting-label">Spielstil</span>
+        <div class="segmented" role="group" aria-label="Spielstil">
+          <button type="button" data-style="minecraft">Minecraft</button>
+          <button type="button" data-style="waldwacht">Waldwacht (alles)</button>
+        </div>
+      </div>
       <label class="toggle"><input type="checkbox" id="thirstBox"> Durst (trinken am Wasser, Brunnen oder aus der Flasche)</label>
       <p id="saveInfo" class="save-info"></p>
       <p id="records" class="save-info muted"></p>
@@ -254,6 +261,7 @@ input[type="range"]{flex:1 1 140px;accent-color:var(--accent);min-width:0;}
         <li><b>Riesige Welt:</b> fast 10 km breit — sie entsteht beim Erkunden. Überall Bauwerke mit Kisten voller Beute: Dörfer mit Dorfbewohnern, Wachtürme, Wüstenpyramiden, Hexenhütten, Iglus, Schiffswracks, verlassene Minen, Festungen, Baumhäuser, Irrgärten, Lager, Leuchttürme und Ruinen. Der Kompass führt dich hin.</li>
         <li><b>Blockwelt:</b> 35 Blockarten, Erze tief im Stein (Kohle, Eisen, Gold, Kristall, Rubin, Smaragd), Grundgestein ganz unten.</li>
         <li><b>Neu:</b> Truhen, Ofen, Werkbank-Block, TNT, Leitern, Verliese mit Monster-Käfigen und Schatztruhen, Setzlinge, Bau-Zauberstab, Bohrer, Erzsucher, Feuerzeug, Saphir und Amethyst, über 70 Blockarten.</li>
+        <li><b>Minecraft-Umbau:</b> Pixel-Texturen für alle Blöcke, Bäume aus Blöcken (Eiche, Birke, Fichte, bunte Pappeln im Herbstwald), Werkzeuge aus Holz, Stein, Eisen, Diamant und Netherit, Schweine, der Frostbite, Enderaugen, das Endportal in der Festung und das End mit dem Enderdrachen. Im Spielstil „Minecraft“ gibt es nur Minecraft-Sachen, im Stil „Waldwacht“ alles.</li>
         <li><b>150er-Update:</b> Shooter-Waffen (MP, Revolver, Minigun, Scharfschützengewehr, Plasma, Railgun, Portal- und Gravitationskanone), Granaten aller Art, Schild, Kopftreffer, Kill-Serien mit Luftschlag und Drohne, Zeitlupe, Wunderkiste, Horden-Modus und Schießstand.</li>
         <li><b>Mehr Minecraft:</b> Diamanten und Netherit, Verzauberungen mit Lapis, Redstone mit Hebeln, Lampen und Türen, Notenblöcke, Plattenspieler, Loren auf Schienen, Golems, Katzen und Papageien — und das Nether mit Netherfestungen hinter einem Obsidian-Portal.</li>
         <li><b>Monster im Dunkeln:</b> keine Wellen mehr. Nachts, in Höhlen und unter Dächern kommen manchmal Monster. Fackeln und Leuchtblöcke halten sie fern.</li>
@@ -365,11 +373,97 @@ function baseHeight(x, z){
 
 function clampTop(t){ return Math.max(MIN_Y + 3, Math.min(MAX_Y - 3, t)); }
 /* Natürliche Oberkante einer Blocksäule: alle Ebenen darunter sind fest */
-function natTop(ix, iz){ if (inNether(ix, iz)) return netherFloorAt(ix, iz); return clampTop(Math.round(baseHeight(ix + 0.5, iz + 0.5))); }
+function natTop(ix, iz){ if (inNether(ix, iz)) return netherFloorAt(ix, iz); if (inEnd(ix, iz)){ var es = endSurface(ix, iz); return es === -Infinity ? MIN_Y : es; } return clampTop(Math.round(baseHeight(ix + 0.5, iz + 0.5))); }
 
 /* ------------------------------------------------------------ Das Nether: eine Höhlenwelt weit draußen, nur durch ein Portal erreichbar */
 var NETHER = { x0: 11520, x1: 12800, z0: -640, z1: 640, cx: 12160, cz: 0, lava: -8 };
 function inNether(x, z){ return x >= NETHER.x0 && x < NETHER.x1 && z >= NETHER.z0 && z < NETHER.z1; }
+/* ------------------------------------------------------------ Das End: Insel aus Endstein in der Leere */
+/* Wie das Nether liegt es als eigene Gegend weit draußen in der Welt. Mitte: Ausgangsportal aus Grundgestein,
+   ringsum 10 Obsidiansäulen, auf denen die Endkristalle schweben. */
+var END = { x0: 14080, x1: 15360, z0: -640, z1: 640, cx: 14720, cz: 0, top: 8 };
+var ENDSTONE = 118, EPF = 131, EPF_EYE = 132, ENDPORTAL = 133, DRAGONEGG = 134;
+function inEnd(x, z){ return x >= END.x0 && x < END.x1 && z >= END.z0 && z < END.z1; }
+var END_PILLARS = (function(){
+  var out = [];
+  for (var i = 0; i < 10; i++){
+    var a = i / 10 * Math.PI * 2 + 0.3;
+    out.push({ x: Math.round(END.cx + Math.cos(a) * 40), z: Math.round(END.cz + Math.sin(a) * 40), r: 2 + (i % 3), top: 26 + ((i * 7) % 10) * 2 });
+  }
+  return out;
+})();
+function endIslandR(ix, iz){ return 70 + (vnoise(ix / 23, iz / 23, 91) - 0.5) * 18; }
+/* Erste freie Ebene über dem Endstein, oder -Infinity über der Leere */
+function endSurface(ix, iz){
+  var dx = ix + 0.5 - END.cx, dz = iz + 0.5 - END.cz, d = Math.sqrt(dx * dx + dz * dz), R = endIslandR(ix, iz);
+  if (d < R) return END.top + Math.round((1 - d / R) * 5 + (vnoise(ix / 11, iz / 11, 92) - 0.5) * 2);
+  if (d > 135){
+    var gx = Math.floor(ix / 72), gz = Math.floor(iz / 72);
+    for (var a = -1; a <= 1; a++) for (var b = -1; b <= 1; b++){
+      var cx = gx + a, cz = gz + b;
+      if (ihash(cx, cz, 9301) > 0.35) continue;
+      var ox = cx * 72 + 18 + ihash(cx, cz, 9302) * 36, oz = cz * 72 + 18 + ihash(cx, cz, 9303) * 36;
+      if (Math.hypot(ox - END.cx, oz - END.cz) < 130) continue;
+      var r = 6 + ihash(cx, cz, 9304) * 8, dd = Math.hypot(ix + 0.5 - ox, iz + 0.5 - oz);
+      if (dd < r) return END.top - 4 + Math.round((1 - dd / r) * 3);
+    }
+  }
+  return -Infinity;
+}
+function endBottom(ix, iz, s){
+  var d = Math.hypot(ix + 0.5 - END.cx, iz + 0.5 - END.cz), R = endIslandR(ix, iz);
+  return s - 3 - Math.round(Math.max(0, R - d) * 0.35);
+}
+var END_CENTER_TOP = null;
+function endCenterTop(){ if (END_CENTER_TOP === null) END_CENTER_TOP = endSurface(END.cx, END.cz); return END_CENTER_TOP; }
+function endArrival(){ var x = END.cx + 52, z = END.cz; return { x: x + 0.5, z: z + 0.5, y: endSurface(x, z) }; }
+
+function genEnd(c){
+  var d = c.data, x0 = c.x0, z0 = c.z0, lz, lx, L;
+  for (lz = 0; lz < CH; lz++){
+    for (lx = 0; lx < CH; lx++){
+      var ix = x0 + lx, iz = z0 + lz, col = lz * CH + lx, base = col * H;
+      var s = endSurface(ix, iz);
+      if (s !== -Infinity){
+        for (L = Math.max(MIN_Y + 1, endBottom(ix, iz, s)); L < s; L++) d[base + L - MIN_Y] = ENDSTONE;
+        c.nat[col] = s;
+      } else c.nat[col] = MIN_Y;
+    }
+  }
+  /* Obsidiansäulen */
+  END_PILLARS.forEach(function(p){
+    if (p.x + p.r < x0 || p.x - p.r >= x0 + CH || p.z + p.r < z0 || p.z - p.r >= z0 + CH) return;
+    var sb = endSurface(p.x, p.z);
+    for (var iz2 = p.z - p.r; iz2 <= p.z + p.r; iz2++) for (var ix2 = p.x - p.r; ix2 <= p.x + p.r; ix2++){
+      if (ix2 < x0 || ix2 >= x0 + CH || iz2 < z0 || iz2 >= z0 + CH) continue;
+      if (Math.hypot(ix2 - p.x, iz2 - p.z) > p.r + 0.3) continue;
+      var b2 = ((iz2 - z0) * CH + (ix2 - x0)) * H;
+      for (L = sb - 4; L <= p.top; L++) d[b2 + L - MIN_Y] = OBSIDIAN;
+    }
+  });
+  /* Ausgangsportal in der Mitte */
+  var ct = endCenterTop();
+  for (var pz = END.cz - 4; pz <= END.cz + 4; pz++) for (var px = END.cx - 4; px <= END.cx + 4; px++){
+    if (px < x0 || px >= x0 + CH || pz < z0 || pz >= z0 + CH) continue;
+    var dist = Math.hypot(px - END.cx, pz - END.cz), b3 = ((pz - z0) * CH + (px - x0)) * H;
+    if (dist > 3.5) continue;
+    d[b3 + (ct - 1) - MIN_Y] = BEDROCK;
+    for (L = ct; L < ct + 6; L++) d[b3 + L - MIN_Y] = AIR;
+    if (dist > 2.5) d[b3 + ct - MIN_Y] = BEDROCK;
+    if (dist < 0.5) for (L = ct; L <= ct + 3; L++) d[b3 + L - MIN_Y] = BEDROCK;
+  }
+  var em = editsByChunk.get(c.key);
+  if (em) em.forEach(function(t, idx){ d[idx] = t; });
+  for (var k = 0; k < CH * CH; k++) computeCol(c, k);
+}
+
+/* Portalraum der Festung: Mittelpunkt des Portals, damit Enderaugen den Weg finden */
+function festungPortal(s){
+  var cx = Math.floor(s.x), cz = Math.floor(s.z), y = natTop(cx, cz);
+  var yb = Math.max(MIN_Y + 5, y - 28);
+  return { x: cx + 0.5, y: yb + 1, z: cz + 15.5 };
+}
+function festungenNear(x, z, r){ return structuresNear(x, z, r).filter(function(s){ return s.type === 'festung'; }); }
 function netherEdge(ix, iz){ return Math.min(ix - NETHER.x0, NETHER.x1 - 1 - ix, iz - NETHER.z0, NETHER.z1 - 1 - iz); }
 function netherFloorAt(ix, iz){
   var f = -18 + Math.round(fbm(ix / 38, iz / 38, 51) * 34 + (vnoise(ix / 9, iz / 9, 52) - 0.5) * 4);
@@ -382,6 +476,7 @@ function netherCeilAt(ix, iz){ return 30 + Math.round((fbm(ix / 30, iz / 30, 53)
 function inWorld(x, z, margin){
   var m = margin || 0;
   if (x * x + z * z < (FIELD_R - m) * (FIELD_R - m) && FIELD_R - m > 0) return true;
+  if (x > END.x0 + 6 + m && x < END.x1 - 6 - m && z > END.z0 + 6 + m && z < END.z1 - 6 - m) return true;
   return x > NETHER.x0 + 6 + m && x < NETHER.x1 - 6 - m && z > NETHER.z0 + 6 + m && z < NETHER.z1 - 6 - m;
 }
 
@@ -434,7 +529,7 @@ defVox(22, 'stamm',       { c: 0x6b4a2f, top: 0xb08a5a, drop: 'holz', hard: 4, t
 defVox(23, 'bretter',     { c: 0xb8864e, drop: 'bretter', hard: 3, tool: 'axt', label: 'Bretter' });
 defVox(24, 'ziegel',      { c: 0xb5523a, drop: 'ziegel', hard: 6, tool: 'spitzhacke', label: 'Ziegel' });
 defVox(25, 'glas',        { c: 0xd8f0ff, trans: true, drop: 'glas', hard: 1, label: 'Glas' });
-defVox(26, 'laub',        { c: 0x3f8f45, drop: 'laub', hard: 1, label: 'Laub' });
+defVox(26, 'laub',        { c: 0x3f8f45, drop: 'laub', hard: 1, leaves: true, label: 'Laub' });
 defVox(27, 'goldblock',   { c: 0xf2c33c, drop: 'goldblock', hard: 8, tool: 'spitzhacke', label: 'Goldblock' });
 defVox(28, 'leuchtblock', { c: 0xffe08a, glow: true, light: true, drop: 'leuchtblock', hard: 2, label: 'Leuchtblock' });
 defVox(29, 'steinblock',  { c: 0x7c7f86, drop: 'stein', hard: 5, tool: 'spitzhacke', label: 'Pflasterstein' });
@@ -539,6 +634,20 @@ var AIR = 0, GRAS = 1, ERDE = 2, STEIN = 3, SAND = 4, SCHNEE = 5, BEDROCK = 6, O
     MYZEL = 17, SANDSTEIN = 19, STEINZIEGEL = 20, MOOSZIEGEL = 21, GOLDBLOCK = 27, LEUCHT = 28,
     TRUHE = 36, SPAWNER = 41, TIEFENSTEIN = 42, LEHM = 43, KIES = 44, MOOSSTEIN = 45;
 function isLightType(t){ return !!(VOX[t] && VOX[t].light); }
+
+defVox(122,'birkenstamm', { c: 0xd8d6cc, top: 0xd6be8c, drop: 'holz', hard: 4, tool: 'axt', label: 'Birkenstamm' });
+defVox(123,'birkenlaub',  { c: 0x80a755, drop: 'laub', hard: 1, leaves: true, label: 'Birkenlaub' });
+defVox(124,'fichtenstamm',{ c: 0x3e2c1c, top: 0x6a5030, drop: 'holz', hard: 4, tool: 'axt', label: 'Fichtenstamm' });
+defVox(125,'fichtenlaub', { c: 0x3a5e3e, drop: 'laub', hard: 1, leaves: true, label: 'Fichtennadeln' });
+defVox(126,'pappelstamm', { c: 0x7a6e60, top: 0xc8a878, drop: 'holz', hard: 4, tool: 'axt', label: 'Pappelstamm' });
+defVox(127,'pappellaub_rot', { c: 0xb8402c, drop: 'laub', hard: 1, leaves: true, label: 'Rotes Pappellaub' });
+defVox(128,'pappellaub_orange', { c: 0xd87a2c, drop: 'laub', hard: 1, leaves: true, label: 'Oranges Pappellaub' });
+defVox(129,'pappellaub_gelb', { c: 0xe0b434, drop: 'laub', hard: 1, leaves: true, label: 'Gelbes Pappellaub' });
+defVox(130,'kaktusblock', { c: 0x4c8c3c, drop: 'kaktus', hard: 1, cactus: true, label: 'Kaktus' });
+defVox(131,'endportalrahmen', { c: 0xdee2b0, top: 0x2a6054, hard: Infinity, use: 'endrahmen', label: 'Endportalrahmen' });
+defVox(132,'endportalrahmen_auge', { c: 0xdee2b0, top: 0x1e6e46, hard: Infinity, use: 'endrahmen', label: 'Endportalrahmen mit Auge' });
+defVox(133,'endportal', { c: 0x10141e, glow: true, slab: true, hard: Infinity, endportal: true, label: 'Endportal' });
+defVox(134,'drachenei', { c: 0x180c22, drop: 'drachenei', hard: 3, label: 'Drachenei' });
 
 var TRANS = new Uint8Array(256), GLOW = new Uint8Array(256), SLAB = new Uint8Array(256);
 var COLR = new Float32Array(256), COLG = new Float32Array(256), COLB = new Float32Array(256);
@@ -1161,6 +1270,7 @@ function surfaceKind(x, z, h){
 
 function biomeAt(x, z, refY){
   if (inNether(x, z)) return 'nether';
+  if (inEnd(x, z)) return 'end';
   if (insideCave(x, z, refY)) return 'hoehle';
   if (inZone('lava', x, z)) return 'lava';
   if (inZone('pilz', x, z)) return 'pilzwald';
@@ -1210,6 +1320,152 @@ function carveRange(d, base, from, to){
   for (var L = a; L < b; L++) d[base + L - MIN_Y] = AIR;
 }
 
+/* ------------------------------------------------------------ Bäume aus Blöcken (wie in Minecraft) */
+/* Ob an einer Stelle ein Baum steht, hängt nur von der Stelle ab. So kann jeder Chunk die Teile von
+   Bäumen zeichnen, die von Nachbar-Chunks zu ihm herüberragen. */
+var LOG = 22, LEAF = 26, BIRCH_LOG = 122, BIRCH_LEAF = 123, SPRUCE_LOG = 124, SPRUCE_LEAF = 125, POPLAR_LOG = 126, CACTUS_B = 130;
+var POPLAR_LEAVES = [127, 128, 129];
+var mcStyle = false;
+var MC_SKIP_NODES = { stein: 1, kohle: 1, kupfer: 1, eisen: 1, kristall: 1, gold: 1, fossil: 1, muschel: 1, sandhaufen: 1, eis: 1, rubin: 1, smaragd: 1, obsidian: 1 };
+
+function autumnAt(x, z){ return !inNether(x, z) && !inEnd(x, z) && Math.hypot(x, z) > 90 && fbm(x / 240 + 17, z / 240 - 31, 77) > 0.6; }
+function forestAt(x, z){ return smoothstep((fbm(x / 110 + 3, z / 110 + 9, 61) - 0.42) / 0.2); }
+
+/* Oberster Block einer Säule, genau wie bei der Erzeugung der Chunks */
+function surfaceBlockAt(ix, iz){
+  var x = ix + 0.5, z = iz + 0.5, h = baseHeight(x, z), T = clampTop(Math.round(h));
+  if (T <= -2) return 0;
+  var kind = surfaceKind(x, z, h);
+  if (kind === 'lava') return BASALT;
+  if (kind === 'pilzwald') return MYZEL;
+  if (kind === 'schnee') return SCHNEE;
+  if (kind === 'wueste' || kind === 'strand') return SAND;
+  var sl = Math.max(Math.abs(baseHeight(x + 1, z) - baseHeight(x - 1, z)), Math.abs(baseHeight(x, z + 1) - baseHeight(x, z - 1))) * 0.5;
+  if (sl > 0.9 && h > 5) return STEIN;
+  return GRAS;
+}
+
+function treeKindAt(ix, iz){
+  var p = ihash(ix, iz, 6101);
+  if (p > 0.034) return null;
+  var x = ix + 0.5, z = iz + 0.5, h = baseHeight(x, z);
+  if (h < WATER_Y + 0.7) return null;
+  var kind = surfaceKind(x, z, h), autumn = kind === 'wald' && autumnAt(x, z), dens;
+  if (kind === 'wueste') dens = 0.0035;
+  else if (kind === 'schnee') dens = 0.012;
+  else if (kind === 'wald') dens = autumn ? 0.026 : 0.004 + 0.028 * forestAt(x, z);
+  else return null;
+  if (p > dens) return null;
+  for (var dx = -2; dx <= 2; dx++) for (var dz = -2; dz <= 2; dz++){ if ((dx || dz) && ihash(ix + dx, iz + dz, 6101) < p) return null; }
+  var ground = surfaceBlockAt(ix, iz);
+  if (kind === 'wueste'){ if (ground !== SAND) return null; }
+  else if (ground !== GRAS && ground !== SCHNEE) return null;
+  if (Math.hypot(x, z) < 7) return null;
+  if (insideCave(x, z) || nearEntrance(x, z, 1) || nearZone(x, z, 2) || inTrench(x, z)) return null;
+  var ss = structuresNear(x, z, 4);
+  if (ss.length) return null;
+  var r = ihash(ix, iz, 6102);
+  if (kind === 'wueste') return 'kaktus';
+  if (kind === 'schnee') return 'fichte';
+  if (autumn) return r < 0.72 ? 'pappel' : 'fichte';
+  return r < 0.2 ? 'birke' : (r < 0.3 && forestAt(x, z) > 0.5 ? 'fichte' : 'eiche');
+}
+
+/* Bauplan eines Baumes: Liste aus [dx, dy, dz, Blockart], dy = 0 ist der erste Block über dem Boden */
+function treeBlocks(kind, ix, iz){
+  var out = [], h, y, dx, dz, rad, r = ihash(ix, iz, 6103);
+  function put(a, b, c, t){ out.push(a, b, c, t); }
+  if (kind === 'kaktus'){ h = 2 + Math.floor(r * 2); for (y = 0; y < h; y++) put(0, y, 0, CACTUS_B); return out; }
+  if (kind === 'eiche' || kind === 'birke'){
+    var lg = kind === 'eiche' ? LOG : BIRCH_LOG, lf = kind === 'eiche' ? LEAF : BIRCH_LEAF;
+    h = (kind === 'eiche' ? 4 : 5) + Math.floor(r * 3);
+    for (y = h - 3; y <= h; y++){
+      rad = y >= h - 1 ? 1 : 2;
+      for (dx = -rad; dx <= rad; dx++) for (dz = -rad; dz <= rad; dz++){
+        if (Math.abs(dx) === rad && Math.abs(dz) === rad && (y === h || ihash(ix + dx * 7, y, iz + dz * 13) < 0.5)) continue;
+        put(dx, y, dz, lf);
+      }
+    }
+    for (y = 0; y < h; y++) put(0, y, 0, lg);
+    return out;
+  }
+  if (kind === 'fichte'){
+    h = 6 + Math.floor(r * 4);
+    for (y = 2; y <= h; y++){
+      rad = y === h ? 0 : ((h - y) % 2 === 1 ? 1 : (y < h - 3 ? 2 : 1));
+      for (dx = -rad; dx <= rad; dx++) for (dz = -rad; dz <= rad; dz++){
+        if (rad === 2 && Math.abs(dx) === 2 && Math.abs(dz) === 2) continue;
+        put(dx, y, dz, SPRUCE_LEAF);
+      }
+    }
+    put(0, h + 1, 0, SPRUCE_LEAF);
+    for (y = 0; y < h; y++) put(0, y, 0, SPRUCE_LOG);
+    return out;
+  }
+  if (kind === 'pappel'){
+    h = 7 + Math.floor(r * 3);
+    var pl = POPLAR_LEAVES[Math.floor(ihash(ix, iz, 6104) * 3)];
+    for (y = 3; y <= h; y++){
+      for (dx = -1; dx <= 1; dx++) for (dz = -1; dz <= 1; dz++){
+        if (dx && dz && (y === 3 || y === h || ihash(ix + dx * 5, y, iz + dz * 11) < 0.4)) continue;
+        put(dx, y, dz, pl);
+      }
+    }
+    put(0, h + 1, 0, pl);
+    for (y = 0; y < h; y++) put(0, y, 0, POPLAR_LOG);
+    return out;
+  }
+  return out;
+}
+
+function isLeafType(t){ return !!(VOX[t] && VOX[t].leaves); }
+
+function stampTrees(c){
+  var d = c.data, x0 = c.x0, z0 = c.z0;
+  for (var iz = z0 - 2; iz < z0 + CH + 2; iz++){
+    for (var ix = x0 - 2; ix < x0 + CH + 2; ix++){
+      var kind = treeKindAt(ix, iz);
+      if (!kind) continue;
+      var gy;
+      if (ix >= x0 && ix < x0 + CH && iz >= z0 && iz < z0 + CH){
+        var col = (iz - z0) * CH + (ix - x0);
+        gy = c.nat[col];
+        if (c.lake[col] || d[col * H + (gy - MIN_Y)]) continue;
+        var below = d[col * H + (gy - 1 - MIN_Y)];
+        if (below !== GRAS && below !== SCHNEE && !(kind === 'kaktus' && below === SAND)) continue;
+      } else gy = natTop(ix, iz);
+      var bl = treeBlocks(kind, ix, iz);
+      for (var i = 0; i < bl.length; i += 4){
+        var wx = ix + bl[i], wz = iz + bl[i + 2];
+        if (wx < x0 || wx >= x0 + CH || wz < z0 || wz >= z0 + CH) continue;
+        var L = gy + bl[i + 1];
+        if (L >= MAX_Y - 1) continue;
+        var idx = ((wz - z0) * CH + (wx - x0)) * H + (L - MIN_Y), cur = d[idx], t = bl[i + 3];
+        if (!cur || (isLeafType(cur) && !isLeafType(t))) d[idx] = t;
+      }
+    }
+  }
+}
+
+/* Ein Setzling wächst zu einem echten Block-Baum */
+function treeKindForGrowth(x, z){
+  var h = baseHeight(x, z), k = surfaceKind(x, z, h);
+  if (k === 'wueste') return 'kaktus';
+  if (k === 'schnee') return 'fichte';
+  if (autumnAt(x, z)) return Math.random() < 0.75 ? 'pappel' : 'fichte';
+  return Math.random() < 0.2 ? 'birke' : 'eiche';
+}
+function growTree(ix, iy, iz, kind){
+  var bl = treeBlocks(kind || 'eiche', ix, iz), placed = 0;
+  for (var i = 0; i < bl.length; i += 4){
+    var x = ix + bl[i], y = iy + bl[i + 1], z = iz + bl[i + 2], t = bl[i + 3];
+    if (y >= MAX_Y - 1) continue;
+    var cur = rawAt(x, y, z);
+    if (!cur || (isLeafType(cur) && !isLeafType(t))){ setVoxel(x, y, z, t); placed++; }
+  }
+  return placed;
+}
+
 function genChunk(cx, cz){
   var x0 = cx << CS, z0 = cz << CS;
   var c = { cx: cx, cz: cz, x0: x0, z0: z0, key: ckey(cx, cz),
@@ -1217,6 +1473,7 @@ function genChunk(cx, cz){
     lake: new Uint8Array(CH * CH), nodes: [], mesh: null, glass: null, glow: null, water: null, dirty: true, used: frameNo };
   var d = c.data;
   if (inNether(x0 + 16, z0 + 16)){ genNether(c); return c; }
+  if (inEnd(x0 + 16, z0 + 16)){ genEnd(c); return c; }
   var HW = CH + 2, hs = new Float32Array(HW * HW), i, j;
   for (j = 0; j < HW; j++) for (i = 0; i < HW; i++) hs[j * HW + i] = baseHeight(x0 + i - 0.5, z0 + j - 0.5);
   var lz, lx;
@@ -1300,6 +1557,8 @@ function genChunk(cx, cz){
       }
     }
   });
+  /* Bäume aus Blöcken */
+  stampTrees(c);
   /* Verliese mit Monster-Käfig und Schatztruhen tief im Stein */
   genDungeon(c);
   /* Dörfer, Türme, Pyramiden, Minen … */
@@ -1487,6 +1746,7 @@ SB.prototype.pad = function(x0, z0, x1, z1, y, t, clearH){
 };
 SB.prototype.chest = function(x, y, z, type){ this.set(x, y, z, TRUHE); this.loot.push([x, y, z, type]); };
 SB.prototype.spawner = function(x, y, z){ this.set(x, y, z, SPAWNERB); this.spawners.push([x, y, z]); };
+SB.prototype.spawnerMobs = function(x, y, z, mobs){ this.set(x, y, z, SPAWNERB); this.spawners.push([x, y, z, mobs]); };
 
 function planStructure(gx, gz){
   var x = gx * STRUCT_CELL + 40 + ihash(gx, gz, 7002) * (STRUCT_CELL - 80);
@@ -1557,7 +1817,7 @@ function buildStruct(s){
   s.npcs = b.npcs;
   s.mobs = b.mobs;
   b.loot.forEach(function(l){ lootChests.set(l[0] + ',' + l[1] + ',' + l[2], l[3]); });
-  b.spawners.forEach(function(p){ var k = p[0] + ',' + p[1] + ',' + p[2]; if (!spawnerList.has(k)) spawnerList.set(k, { x: p[0], y: p[1], z: p[2], cd: 4 }); });
+  b.spawners.forEach(function(p){ var k = p[0] + ',' + p[1] + ',' + p[2]; if (!spawnerList.has(k)) spawnerList.set(k, { x: p[0], y: p[1], z: p[2], cd: 4, mobs: p[3] }); });
   return s;
 }
 
@@ -1740,6 +2000,18 @@ var STRUCT_GEN = {
     b.spawner(cx + 6, yb, cz + 6);
     b.chest(cx - 6, yb, cz + 6, 'festung');
     b.chest(cx + 6, yb, cz - 6, 'festung');
+    /* Portalraum zum End: 12 Endportalrahmen über einem Lavabecken, ein Silberfisch-Käfig */
+    b.box(cx - 6, yb - 1, cz + 9, cx + 6, yb + 6, cz + 21, STEINZIEGEL);
+    b.box(cx - 5, yb, cz + 10, cx + 5, yb + 5, cz + 20, AIR);
+    for (var dy0 = 0; dy0 < 3; dy0++){ b.set(cx, yb + dy0, cz + 8, AIR); b.set(cx, yb + dy0, cz + 9, AIR); }
+    var ppz = cz + 15;
+    b.box(cx - 3, yb, ppz - 3, cx + 3, yb, ppz + 3, STEINZIEGEL);
+    b.box(cx - 1, yb, ppz - 1, cx + 1, yb, ppz + 1, LAVA);
+    for (var q = -1; q <= 1; q++){
+      [[cx + q, ppz - 2], [cx + q, ppz + 2], [cx - 2, ppz + q], [cx + 2, ppz + q]].forEach(function(p){ b.set(p[0], yb + 1, p[1], ihash(p[0], yb, p[1]) < 0.1 ? EPF_EYE : EPF); });
+    }
+    b.set(cx - 5, yb + 4, cz + 12, LEUCHT); b.set(cx + 5, yb + 4, cz + 18, LEUCHT);
+    b.spawnerMobs(cx + 4, yb, cz + 11, ['silberfisch']);
     /* Bibliothek */
     b.box(cx + 9, yb - 1, cz - 4, cx + 17, yb + 5, cz + 4, STEINZIEGEL);
     b.box(cx + 8, yb, cz - 3, cx + 16, yb + 4, cz + 3, AIR);
@@ -2071,12 +2343,12 @@ function canStand(x, z, refY){
   return floorAt(x, z, refY) > -Infinity;
 }
 
-function lakeNatural(x, z){ if (inNether(x, z)) return false; return natTop(Math.floor(x), Math.floor(z)) <= -2 && !insideCave(x, z) && !inTrench(x, z); }
+function lakeNatural(x, z){ if (inNether(x, z) || inEnd(x, z)) return false; return natTop(Math.floor(x), Math.floor(z)) <= -2 && !insideCave(x, z) && !inTrench(x, z); }
 
 function isWater(x, z){ return lakeNatural(x, z) && height(x, z) <= -2; }
 
 function isDry(x, z, refY){
-  if (inNether(x, z)) return true;
+  if (inNether(x, z) || inEnd(x, z)) return true;
   if (insideCave(x, z, refY) || inTrench(x, z)) return true;
   if (natTop(Math.floor(x), Math.floor(z)) > -2) return true;
   /* tief unter dem Seeboden (Tunnel, Verlies) ist es trocken */
@@ -2251,6 +2523,7 @@ function genChunkNodes(c){
   if (dMid < FIELD_R + 20){
     for (k = 0; k < NODE_DENSITY.length; k++){
       var kind0 = NODE_DENSITY[k][0], lam = NODE_DENSITY[k][1];
+      if (kind0 === 'pine' || (mcStyle && MC_SKIP_NODES[kind0])) continue;
       var rng = makeRandom(Math.floor(ihash(c.cx, c.cz, 100 + k) * 4294967296));
       var ruled = !!SPOT_RULE[kind0];
       var tries = Math.ceil(lam * (ruled ? 5 : 1.6));
@@ -2266,6 +2539,7 @@ function genChunkNodes(c){
           else if (b === 'lava') continue;
           else if (b === 'pilzwald') kind = 'riesenpilz';
           else if (rng() < 0.18) kind = 'apfelbaum';
+          if (kind !== 'riesenpilz') continue;
           if (b === 'strand' && baseHeight(x, z) < WATER_Y + 0.7) continue;
         }
         var id = c.key * 1000 + k * 40 + i;
@@ -2292,6 +2566,7 @@ function genChunkNodes(c){
       }
     }
     cv.nodePlan.forEach(function(p){
+      if (mcStyle && MC_SKIP_NODES[p.kind]) return;
       if (Math.floor(p.x) < c.x0 || Math.floor(p.x) >= c.x0 + CH || Math.floor(p.z) < c.z0 || Math.floor(p.z) >= c.z0 + CH) return;
       if (removedNodes.has(p.id)) return;
       var col3 = (Math.floor(p.z) - c.z0) * CH + (Math.floor(p.x) - c.x0);
@@ -2302,7 +2577,7 @@ function genChunkNodes(c){
   var plan = planByChunk.get(c.key);
   if (plan){
     plan.forEach(function(p){
-      if (removedNodes.has(p.id)) return;
+      if (removedNodes.has(p.id) || (mcStyle && MC_SKIP_NODES[p.kind])) return;
       var col2 = (Math.floor(p.z) - c.z0) * CH + (Math.floor(p.x) - c.x0);
       var y = p.inCave ? floorScan(c, col2, p.y + 0.5) : c.top[col2];
       if (y === -Infinity) return;
@@ -2413,7 +2688,7 @@ function addNodeAt(kind, x, z){
 
 function respawnNode(kind, inCave){
   var base = (kind === 'pine' || kind === 'cactus' || kind === 'apfelbaum') ? 'tree' : kind;
-  if (base === 'riesenpilz') return;
+  if (base === 'riesenpilz' || base === 'tree' || (mcStyle && MC_SKIP_NODES[base])) return;
   addNode(base, inCave);
 }
 
@@ -2550,6 +2825,366 @@ function digAt(x, z){
   return t;
 }
 
+/* ------------------------------------------------------------ Minecraft-Look: Pixel-Texturen */
+/* Jede Blockart bekommt 16×16-Pixel-Kacheln für oben, Seite und unten. Sie werden beim Start in eine
+   256×256-Textur gemalt, ganz ohne Bilddateien. Kachel 0 ist weiß: dann zählt nur die Blockfarbe. */
+var TILE_TOP = new Uint8Array(256), TILE_SIDE = new Uint8Array(256), TILE_BOT = new Uint8Array(256), TILE_ITEMTOP = new Uint8Array(256);
+var atlasPix = null, atlasCanvas = null, atlasTex = null, itemMat = null, tileNext = 1, tileCache = {};
+
+/* Hash ohne Weltsaat: Texturen sehen in jeder Welt gleich aus */
+function th(a, b, c){
+  var h = Math.imul(a | 0, 374761393) ^ Math.imul(b | 0, 668265263) ^ Math.imul(c | 0, 1274126177);
+  h = Math.imul(h ^ (h >>> 13), 1103515245); h ^= h >>> 16;
+  return (h >>> 0) / 4294967296;
+}
+function rgbOf(c){ return [c >> 16 & 255, c >> 8 & 255, c & 255]; }
+function mulc(a, k){ return [a[0] * k, a[1] * k, a[2] * k]; }
+function mixc(a, b, k){ return [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k]; }
+function setPx(t, x, y, c){
+  x &= 15; y &= 15;
+  var o = (((t >> 4) * 16 + y) * 256 + (t & 15) * 16 + x) * 4;
+  atlasPix[o] = c[0] < 0 ? 0 : (c[0] > 255 ? 255 : c[0]);
+  atlasPix[o + 1] = c[1] < 0 ? 0 : (c[1] > 255 ? 255 : c[1]);
+  atlasPix[o + 2] = c[2] < 0 ? 0 : (c[2] > 255 ? 255 : c[2]);
+  atlasPix[o + 3] = 255;
+}
+function rect(t, x0, y0, x1, y1, c, s, amp){
+  for (var y = y0; y <= y1; y++) for (var x = x0; x <= x1; x++) setPx(t, x, y, amp ? mulc(c, 1 + (th(x, y, s || 3) - 0.5) * amp) : c);
+}
+function each(t, fn){ for (var y = 0; y < 16; y++) for (var x = 0; x < 16; x++) setPx(t, x, y, fn(x, y)); }
+
+var PAINT = {
+  noise: function(t, s, c, amp){ amp = amp === undefined ? 0.16 : amp; each(t, function(x, y){ var n = th(x, y, s) * 0.6 + th(x >> 1, y >> 1, s + 1) * 0.4; return mulc(c, 1 + (n - 0.5) * amp * 2); }); },
+  flat: function(t, s, c){ PAINT.noise(t, s, c, 0.05); },
+  smooth: function(t, s, c){ each(t, function(x, y){ var k = 1 + (th(x, y, s) - 0.5) * 0.06; if (x === 0 || y === 0 || x === 15 || y === 15) k *= 0.82; return mulc(c, k); }); },
+  stone: function(t, s, c){
+    PAINT.noise(t, s, c, 0.11);
+    for (var i = 0; i < 8; i++){
+      var x = Math.floor(th(i, 1, s) * 16), y = Math.floor(th(i, 2, s) * 16), l = 2 + Math.floor(th(i, 3, s) * 4), dark = th(i, 4, s) < 0.62;
+      for (var k = 0; k < l; k++) setPx(t, x + k, y + (th(i, 5, s) < 0.5 ? (k >> 1) : 0), mulc(c, dark ? 0.8 : 1.12));
+    }
+  },
+  dirt: function(t, s, c){ each(t, function(x, y){ var h = th(x, y, s); return mulc(c, h < 0.1 ? 0.74 : (h > 0.92 ? 1.2 : 0.9 + th(x >> 1, y >> 1, s + 1) * 0.2)); }); },
+  sand: function(t, s, c){ each(t, function(x, y){ var h = th(x, y, s); return mulc(c, h < 0.08 ? 0.76 : 0.86 + th(x, y, s + 1) * 0.1); }); },
+  cobble: function(t, s, c, c2, edge){
+    var pts = [], i;
+    for (i = 0; i < 7; i++) pts.push([th(i, 1, s) * 16, th(i, 2, s) * 16, 0.8 + th(i, 3, s) * 0.36]);
+    each(t, function(x, y){
+      var d1 = 99, d2 = 99, b = 0;
+      for (var j = 0; j < pts.length; j++) for (var ox = -16; ox <= 16; ox += 16) for (var oy = -16; oy <= 16; oy += 16){
+        var dx = x + 0.5 - pts[j][0] - ox, dy = y + 0.5 - pts[j][1] - oy, d = Math.sqrt(dx * dx + dy * dy);
+        if (d < d1){ d2 = d1; d1 = d; b = j; } else if (d < d2) d2 = d;
+      }
+      if (d2 - d1 < 1.1) return edge || mulc(c, 0.55);
+      var col = (c2 && b % 3 === 0) ? c2 : c;
+      return mulc(col, pts[b][2] * (1 + (th(x, y, s + 7) - 0.5) * 0.16) * (d1 < 1.6 ? 1.08 : 1));
+    });
+  },
+  planks: function(t, s, c){
+    each(t, function(x, y){
+      var row = y >> 2, seam = (row * 7 + 3 + Math.floor(th(row, 0, s) * 6)) & 15;
+      var k = 1 + (th(x >> 2, y, s) - 0.5) * 0.14 + (th(x, y, s + 3) - 0.5) * 0.08;
+      if ((y & 3) === 3) k *= 0.62; else if (x === seam) k *= 0.7; else if ((y & 3) === 0) k *= 1.06;
+      return mulc(c, k);
+    });
+  },
+  logSide: function(t, s, c){ each(t, function(x, y){ var k = (0.82 + th(x, 0, s) * 0.3) * (1 + (th(x, y >> 2, s + 1) - 0.5) * 0.16); if (th(x, y, s + 2) < 0.06) k *= 0.7; return mulc(c, k); }); },
+  logTop: function(t, s, bark, inner){
+    each(t, function(x, y){
+      if (x === 0 || y === 0 || x === 15 || y === 15) return mulc(bark, 0.85 + th(x, y, s) * 0.25);
+      var d = Math.max(Math.abs(x - 7.5), Math.abs(y - 7.5));
+      return mulc(inner, (Math.floor(d) % 2 ? 0.86 : 1) * (1 + (th(x, y, s) - 0.5) * 0.08));
+    });
+  },
+  birch: function(t, s){
+    each(t, function(x, y){ return mulc([218, 216, 204], 0.92 + th(x, y, s) * 0.12); });
+    for (var i = 0; i < 7; i++){ var x0 = Math.floor(th(i, 1, s) * 16), y0 = Math.floor(th(i, 2, s) * 16), l = 2 + Math.floor(th(i, 3, s) * 4); for (var k = 0; k < l; k++) setPx(t, x0 + k, y0, [44, 42, 38]); }
+  },
+  leaves: function(t, s, c){ each(t, function(x, y){ var h = th(x, y, s); return mulc(c, h < 0.16 ? 0.42 : 0.8 + th(x >> 1, y >> 1, s + 1) * 0.45); }); },
+  bricks: function(t, s, c, m){
+    each(t, function(x, y){
+      var row = y >> 2, off = (row & 1) * 4;
+      if ((y & 3) === 0 || ((x + off) & 7) === 0) return mulc(m, 0.9 + th(x, y, s) * 0.15);
+      return mulc(c, 0.88 + th(x, y, s) * 0.18 + th((x + off) >> 3, row, s + 5) * 0.1);
+    });
+  },
+  stoneBricks: function(t, s, c, moss){
+    each(t, function(x, y){
+      var row = y >> 3, off = (row & 1) * 8, lx = (x + off) & 15, ly = y & 7, k;
+      if (ly === 7 || lx === 15) k = 0.6; else if (ly === 0 || lx === 0) k = 1.12; else k = 0.92 + th(x, y, s) * 0.14;
+      var col = (moss && th(x >> 1, y >> 1, s + 9) < 0.3) ? moss : c;
+      return mulc(col, k);
+    });
+  },
+  ore: function(t, s, bg, ore, bgKind){
+    (PAINT[bgKind || 'stone'])(t, s + 50, bg);
+    var n = 4 + Math.floor(th(0, 9, s) * 3), cells = [[0, 0], [1, 0], [0, 1], [1, 1], [-1, 0], [0, -1]];
+    for (var i = 0; i < n; i++){
+      var x0 = 1 + Math.floor(th(i, 1, s) * 13), y0 = 1 + Math.floor(th(i, 2, s) * 13), m = 2 + Math.floor(th(i, 3, s) * 3);
+      for (var k = 0; k < m; k++) setPx(t, x0 + cells[k][0], y0 + cells[k][1], mulc(ore, k === 0 ? 1.25 : 0.82 + th(i, k, s) * 0.25));
+    }
+  },
+  metal: function(t, s, c){
+    each(t, function(x, y){
+      var k = 1 + (th(x, y, s) - 0.5) * 0.06;
+      if (x === 0 || y === 0) k *= 1.22; else if (x === 15 || y === 15) k *= 0.7; else if (x === 1 || y === 1) k *= 1.1;
+      if (y === 7 || y === 8) k *= 0.94;
+      return mulc(c, k);
+    });
+  },
+  gem: function(t, s, c){
+    each(t, function(x, y){
+      var k = ((x + y) & 7) < 4 ? 1.12 : 0.9;
+      if (((x - y) & 15) < 2) k *= 1.15;
+      if (x === 0 || y === 0 || x === 15 || y === 15) k *= 0.75;
+      return mulc(c, k * (1 + (th(x, y, s) - 0.5) * 0.06));
+    });
+  },
+  glass: function(t, s, c){ each(t, function(x, y){ var k = 1.12; if (x === 0 || y === 0 || x === 15 || y === 15) k = 0.7; else if (x - y === 4 || x - y === 5 || x - y === -6) k = 1.35; return mulc(c, k); }); },
+  wool: function(t, s, c){ each(t, function(x, y){ var k = 1 + (th(x, y, s) - 0.5) * 0.14; if (((x + ((y >> 1) & 1) * 2) & 3) === 0) k *= 0.92; return mulc(c, k); }); },
+  ice: function(t, s, c){ each(t, function(x, y){ var k = 1 + (th(x, y, s) - 0.5) * 0.05; if ((x + y) % 11 === 0 || (x * 2 + y) % 13 === 0) k *= 1.16; return mulc(c, k); }); },
+  grassTop: function(t, s){ each(t, function(x, y){ var n = th(x, y, s) * 0.6 + th(x >> 1, y >> 1, s + 1) * 0.4, v = 205 + n * 50; return [v, v, v]; }); },
+  grassTopItem: function(t, s, g){ each(t, function(x, y){ var n = th(x, y, s) * 0.6 + th(x >> 1, y >> 1, s + 1) * 0.4; return mulc(g, 0.82 + n * 0.3); }); },
+  stripSide: function(t, s, dirt, top){
+    PAINT.dirt(t, s, dirt);
+    for (var x = 0; x < 16; x++){ var hh = 3 + Math.floor(th(x, 0, s + 9) * 3) - (th(x, 1, s + 9) < 0.3 ? 1 : 0); for (var y = 0; y < hh; y++) setPx(t, x, y, mulc(top, 0.85 + th(x, y, s + 4) * 0.3)); }
+  },
+  sandstoneSide: function(t, s, c){ each(t, function(x, y){ var k = y < 3 ? 1.08 : (y > 12 ? 0.86 : 0.94 + th(x, y, s) * 0.1); if (y === 3 || y === 12) k *= 0.88; return mulc(c, k); }); },
+  basaltSide: function(t, s, c){ each(t, function(x, y){ var k = (x % 4 === 0) ? 0.66 : 0.9 + th(x >> 2, y >> 3, s) * 0.2 + (th(x, y, s + 1) - 0.5) * 0.08; return mulc(c, k); }); },
+  deepslate: function(t, s, c){ each(t, function(x, y){ var k = 0.9 + th(x >> 2, y, s) * 0.18; if (th(x, y, s + 2) < 0.08) k *= 0.75; return mulc(c, k); }); },
+  obsidian: function(t, s, c){ each(t, function(x, y){ var h = th(x, y, s); return h > 0.9 ? [92, 62, 132] : mulc(c, 0.85 + th(x >> 1, y >> 1, s + 1) * 0.3); }); },
+  bedrock: function(t, s){ each(t, function(x, y){ var v = th(x >> 1, y >> 1, s) < 0.5 ? 46 : 92; v *= 0.85 + th(x, y, s + 1) * 0.3; return [v, v, v]; }); },
+  lava: function(t, s){ each(t, function(x, y){ var n = th(x >> 1, y >> 1, s) * 0.6 + th(x, y, s + 1) * 0.4; return n > 0.78 ? [255, 236, 120] : (n < 0.18 ? [190, 60, 10] : [255, 120 + n * 60, 20]); }); },
+  magma: function(t, s){ PAINT.cobble(t, s, [120, 40, 20], null, [255, 150, 40]); },
+  glowstone: function(t, s, c){ PAINT.cobble(t, s, c, mulc(c, 1.15), mulc(c, 0.62)); },
+  netherrack: function(t, s, c){ each(t, function(x, y){ var h = th(x, y, s), b = th(x >> 2, y >> 1, s + 1); return mulc(c, (b < 0.3 ? 0.78 : 1) * (0.88 + h * 0.24)); }); },
+  soulSand: function(t, s, c){ PAINT.sand(t, s, c); for (var i = 0; i < 3; i++){ var x = 2 + Math.floor(th(i, 1, s) * 11), y = 2 + Math.floor(th(i, 2, s) * 11); setPx(t, x, y, mulc(c, 0.45)); setPx(t, x + 2, y, mulc(c, 0.45)); rect(t, x, y + 2, x + 2, y + 2, mulc(c, 0.5)); } },
+  endStone: function(t, s, c){ each(t, function(x, y){ var h = th(x, y, s); return mulc(c, h < 0.07 ? 0.72 : (th(x >> 1, y >> 1, s + 1) < 0.15 ? 0.86 : 0.96 + h * 0.08)); }); },
+  purpur: function(t, s, c){ each(t, function(x, y){ var lx = x & 7, ly = y & 7, k = 0.94 + th(x, y, s) * 0.1; if (lx === 0 || ly === 0) k *= 1.12; else if (lx === 7 || ly === 7) k *= 0.78; return mulc(c, k); }); },
+  prismarine: function(t, s, c){ each(t, function(x, y){ var n = th(x >> 1, y >> 1, s); return mixc(mulc(c, 0.85 + th(x, y, s + 1) * 0.25), [70, 150, 130], n < 0.4 ? 0.4 : 0); }); },
+  sculk: function(t, s, c){ each(t, function(x, y){ var h = th(x, y, s); return h > 0.93 ? [58, 208, 224] : mulc(c, 0.85 + th(x >> 1, y >> 1, s + 1) * 0.35); }); },
+  bone: function(t, s, c){ each(t, function(x, y){ var k = (x % 5 === 0) ? 0.86 : 0.97 + th(x, y, s) * 0.06; return mulc(c, k); }); },
+  boneTop: function(t, s, c){ each(t, function(x, y){ var d = Math.max(Math.abs(x - 7.5), Math.abs(y - 7.5)); return mulc(c, (d > 6.5 ? 0.86 : (d < 3 ? 0.9 : 1)) * (0.97 + th(x, y, s) * 0.06)); }); },
+  cactusSide: function(t, s, c){ each(t, function(x, y){ var k = (x % 4 === 1) ? 0.72 : 0.95 + th(x, y, s) * 0.1; if (x % 4 === 1 && y % 4 === 2) return [230, 226, 190]; return mulc(c, k); }); },
+  cactusTop: function(t, s, c){ each(t, function(x, y){ var d = Math.max(Math.abs(x - 7.5), Math.abs(y - 7.5)); return mulc(c, d > 6.5 ? 0.8 : (d < 2.5 ? 1.15 : 1) * (0.95 + th(x, y, s) * 0.1)); }); },
+  mushroom: function(t, s, c){ PAINT.noise(t, s, c, 0.06); for (var i = 0; i < 5; i++){ var x = Math.floor(th(i, 1, s) * 14) + 1, y = Math.floor(th(i, 2, s) * 14) + 1; rect(t, x, y, x + 1, y + 1, [240, 236, 226]); } },
+  tntSide: function(t, s){
+    each(t, function(x, y){ var band = y >= 5 && y <= 10; var c = band ? [236, 234, 224] : [208, 52, 40]; if (!band && (x & 3) === 3) c = mulc(c, 0.75); return mulc(c, 0.94 + th(x, y, s) * 0.1); });
+    var glyphs = [[2, [7, 2, 2, 2]], [6, [9, 13, 11, 9]], [11, [7, 2, 2, 2]]];
+    glyphs.forEach(function(g){ for (var r = 0; r < 4; r++) for (var b = 0; b < 4; b++) if (g[1][r] >> (3 - b) & 1) setPx(t, g[0] + b - (g[1][0] === 7 ? 1 : 0), 6 + r, [30, 30, 30]); });
+  },
+  tntTop: function(t, s){ PAINT.noise(t, s, [200, 196, 186], 0.08); rect(t, 6, 6, 9, 9, [70, 64, 60]); rect(t, 7, 7, 8, 8, [30, 30, 30]); },
+  chestSide: function(t, s, c, latch){ PAINT.planks(t, s, c); each2border(t, mulc(c, 0.55)); rect(t, 1, 5, 14, 5, mulc(c, 0.5)); rect(t, 7, 4, 8, 7, latch || [196, 196, 200]); },
+  chestTop: function(t, s, c){ PAINT.planks(t, s, mulc(c, 1.05)); each2border(t, mulc(c, 0.55)); },
+  furnaceSide: function(t, s, c, glow){ PAINT.stone(t, s, c); each2border(t, mulc(c, 0.7)); rect(t, 4, 8, 11, 13, [28, 28, 30]); if (glow) rect(t, 5, 11, 10, 12, glow); rect(t, 3, 7, 12, 7, mulc(c, 1.2)); },
+  furnaceTop: function(t, s, c){ PAINT.stone(t, s, c); each2border(t, mulc(c, 0.7)); },
+  workbenchTop: function(t, s, c){ PAINT.planks(t, s, mulc(c, 1.12)); each2border(t, mulc(c, 0.6)); for (var i = 0; i < 16; i++){ setPx(t, 5, i, mulc(c, 0.6)); setPx(t, 10, i, mulc(c, 0.6)); setPx(t, i, 5, mulc(c, 0.6)); setPx(t, i, 10, mulc(c, 0.6)); } },
+  workbenchSide: function(t, s, c){ PAINT.planks(t, s, c); rect(t, 0, 0, 15, 2, mulc(c, 0.7)); rect(t, 3, 5, 4, 12, [150, 150, 156]); rect(t, 2, 5, 5, 6, [120, 120, 126]); rect(t, 11, 5, 12, 12, [120, 80, 46]); rect(t, 10, 5, 13, 7, [160, 160, 166]); },
+  bookshelf: function(t, s, c){
+    PAINT.planks(t, s, c);
+    var cols = [[150, 40, 36], [50, 70, 150], [50, 120, 60], [120, 80, 40], [110, 60, 130], [190, 160, 70]];
+    [[2, 6], [9, 13]].forEach(function(sh, si){ var x = 1; while (x < 15){ var w = 1 + Math.floor(th(x, si, s) * 2), col = cols[Math.floor(th(x, si + 4, s) * cols.length)]; rect(t, x, sh[0] + (th(x, si + 2, s) < 0.3 ? 1 : 0), Math.min(14, x + w - 1), sh[1], col, s + x, 0.12); x += w + (th(x, si + 6, s) < 0.2 ? 1 : 0); } });
+  },
+  haySide: function(t, s, c){ each(t, function(x, y){ var k = 0.92 + th(x, y >> 2, s) * 0.16; if (x % 3 === 0) k *= 0.85; if (y === 3 || y === 12) return [120, 90, 30]; return mulc(c, k); }); },
+  hayTop: function(t, s, c){ each(t, function(x, y){ var k = ((x + y) % 4 < 2) ? 1.05 : 0.88; return mulc(c, k * (0.95 + th(x, y, s) * 0.1)); }); },
+  pumpkinFace: function(t, s, c, lit){
+    each(t, function(x, y){ return mulc(c, (x % 4 === 0 ? 0.82 : 1) * (0.95 + th(x, y, s) * 0.1)); });
+    var f = lit ? [255, 220, 90] : [60, 36, 10];
+    rect(t, 3, 5, 5, 6, f); rect(t, 10, 5, 12, 6, f); rect(t, 3, 10, 12, 11, f); setPx(t, 5, 10, mulc(c, 1)); setPx(t, 10, 11, mulc(c, 1));
+  },
+  pumpkinTop: function(t, s, c){ each(t, function(x, y){ return mulc(c, (x % 4 === 0 ? 0.8 : 1) * (0.95 + th(x, y, s) * 0.1)); }); rect(t, 7, 7, 8, 8, [90, 70, 30]); },
+  boxTop: function(t, s, c, center){ PAINT.planks(t, s, c); each2border(t, mulc(c, 0.6)); if (center) rect(t, 4, 4, 11, 11, center, s, 0.1); },
+  lamp: function(t, s, c, lit){ each(t, function(x, y){ var line = x % 5 === 0 || y % 5 === 0; return line ? (lit ? [150, 90, 40] : [70, 40, 26]) : mulc(c, 0.9 + th(x, y, s) * 0.2); }); },
+  target: function(t, s){ each(t, function(x, y){ var d = Math.sqrt((x - 7.5) * (x - 7.5) + (y - 7.5) * (y - 7.5)); return Math.floor(d / 2) % 2 ? [236, 228, 216] : [212, 52, 44]; }); },
+  framed: function(t, s, c, inner){ each(t, function(x, y){ var e = x === 0 || y === 0 || x === 15 || y === 15; var i = x > 3 && x < 12 && y > 3 && y < 12; return mulc(i ? inner : c, (e ? 1.15 : 1) * (0.96 + th(x, y, s) * 0.08)); }); },
+  scaffold: function(t, s, c){ each(t, function(x, y){ var e = x < 2 || y < 2 || x > 13 || y > 13 || Math.abs(x - y) < 1.5; return e ? mulc(c, 0.9 + th(x, y, s) * 0.15) : mulc(c, 0.45); }); },
+  cakeTop: function(t, s){ PAINT.noise(t, s, [246, 240, 232], 0.05); for (var i = 0; i < 5; i++) setPx(t, 2 + Math.floor(th(i, 1, s) * 12), 2 + Math.floor(th(i, 2, s) * 12), [210, 40, 50]); },
+  cakeSide: function(t, s){ each(t, function(x, y){ if (y < 4) return [246, 240, 232]; if (y === 4 || y === 9) return [200, 50, 60]; return mulc([220, 176, 120], 0.95 + th(x, y, s) * 0.1); }); },
+  door: function(t, s, c){ PAINT.planks(t, s, c); each2border(t, mulc(c, 0.6)); rect(t, 3, 2, 12, 6, mulc(c, 0.8)); rect(t, 3, 9, 12, 13, mulc(c, 0.8)); rect(t, 12, 8, 13, 8, [200, 200, 205]); },
+  barrelTop: function(t, s, c){ PAINT.planks(t, s, c); each2border(t, mulc(c, 0.5)); rect(t, 6, 6, 9, 9, mulc(c, 0.55)); },
+  barrelSide: function(t, s, c){ each(t, function(x, y){ if (y === 3 || y === 12) return [90, 90, 96]; return mulc(c, (x % 4 === 0 ? 0.7 : 1) * (0.92 + th(x, y, s) * 0.14)); }); },
+  spawner: function(t, s){ each(t, function(x, y){ if (x % 4 === 0 || y % 4 === 0) return mulc([96, 104, 116], 0.9 + th(x, y, s) * 0.2); return [14, 18, 26]; }); },
+  ladder: function(t, s, c){ PAINT.planks(t, s, mulc(c, 0.7)); rect(t, 2, 0, 3, 15, mulc(c, 1.1), s, 0.1); rect(t, 12, 0, 13, 15, mulc(c, 1.1), s, 0.1); for (var y = 1; y < 16; y += 4) rect(t, 2, y, 13, y, mulc(c, 1.15)); },
+  rail: function(t, s, tie, steel){ PAINT.cobble(t, s, [92, 88, 84]); for (var y = 1; y < 16; y += 4) rect(t, 1, y, 14, y + 1, tie, s, 0.1); rect(t, 3, 0, 3, 15, steel); rect(t, 12, 0, 12, 15, steel); },
+  pad: function(t, s, base, glow){ PAINT.metal(t, s, base); for (var i = 0; i < 5; i++){ rect(t, 7 - i, 3 + i, 8 + i, 3 + i, glow); } rect(t, 6, 8, 9, 12, glow); },
+  mystery: function(t, s){ PAINT.metal(t, s, [70, 50, 110]); var q = [[6, 3], [7, 3], [8, 3], [9, 3], [5, 4], [10, 4], [10, 5], [9, 6], [8, 7], [7, 8], [7, 9], [7, 12]]; q.forEach(function(p){ setPx(t, p[0], p[1], [242, 195, 60]); setPx(t, p[0] + 1, p[1], [242, 195, 60]); }); },
+  lever: function(t, s, c, knob){ PAINT.smooth(t, s, c); rect(t, 7, 4, 8, 11, [130, 90, 50]); rect(t, 6, 3, 9, 4, knob); rect(t, 5, 11, 10, 13, mulc(c, 0.75)); },
+  button: function(t, s, c){ PAINT.smooth(t, s, c); rect(t, 5, 6, 10, 9, mulc(c, 1.2)); rect(t, 5, 10, 10, 10, mulc(c, 0.7)); },
+  endFrameTop: function(t, s, eye){ PAINT.endStone(t, s, [222, 226, 176]); rect(t, 3, 3, 12, 12, [42, 96, 84], s, 0.15); rect(t, 2, 2, 13, 2, [180, 190, 140]); if (eye){ rect(t, 5, 5, 10, 10, [30, 110, 70], s, 0.1); rect(t, 6, 6, 9, 9, [12, 30, 22]); setPx(t, 6, 6, [180, 240, 210]); } },
+  endFrameSide: function(t, s){ PAINT.endStone(t, s, [222, 226, 176]); rect(t, 0, 0, 15, 3, [42, 96, 84], s, 0.15); },
+  endPortal: function(t, s){ each(t, function(x, y){ var h = th(x, y, s); if (h > 0.95) return [180, 255, 230]; if (h > 0.9) return [60, 160, 200]; return [8, 10, 20 + th(x >> 2, y >> 2, s + 1) * 20]; }); },
+  dragonEgg: function(t, s){ each(t, function(x, y){ var h = th(x, y, s); return h > 0.88 ? [150, 60, 200] : mulc([24, 12, 34], 0.8 + th(x >> 1, y >> 1, s + 1) * 0.5); }); },
+  star: function(t, s, c){ PAINT.noise(t, s, c, 0.08); for (var i = 0; i < 4; i++){ var x = 2 + Math.floor(th(i, 1, s) * 12), y = 2 + Math.floor(th(i, 2, s) * 12); setPx(t, x, y, [255, 255, 255]); setPx(t, x - 1, y, mulc(c, 1.2)); setPx(t, x + 1, y, mulc(c, 1.2)); setPx(t, x, y - 1, mulc(c, 1.2)); setPx(t, x, y + 1, mulc(c, 1.2)); } },
+  debrisSide: function(t, s, c){ each(t, function(x, y){ var d = Math.abs(((x + y * 0.3) % 6) - 3); return mulc(c, (0.75 + d * 0.12) * (0.92 + th(x, y, s) * 0.16)); }); },
+  debrisTop: function(t, s, c){ each(t, function(x, y){ var d = Math.sqrt((x - 7.5) * (x - 7.5) + (y - 7.5) * (y - 7.5)); return mulc(c, (Math.floor(d) % 3 === 0 ? 0.7 : 1) * (0.92 + th(x, y, s) * 0.16)); }); }
+};
+function each2border(t, c){ for (var i = 0; i < 16; i++){ setPx(t, i, 0, c); setPx(t, i, 15, c); setPx(t, 0, i, c); setPx(t, 15, i, c); } }
+
+/* Welche Bemalung welcher Block bekommt: [Seite, oben, unten]; null = wie Seite */
+function texSpec(v){
+  var n = v.name, c = rgbOf(v.c), top = v.top !== undefined ? rgbOf(v.top) : c, S = function(){ return Array.prototype.slice.call(arguments); };
+  var stone = [139, 143, 149];
+  switch (n){
+    case 'gras': return [S('stripSide', c, [106, 168, 79]), S('grassTop'), S('dirt', c)];
+    case 'myzel': return [S('stripSide', c, top), S('noise', top, 0.2), S('dirt', c)];
+    case 'erde': case 'lehm': return [S(n === 'lehm' ? 'flat' : 'dirt', c)];
+    case 'stein': case 'steinstufe': return [S('stone', n === 'stein' ? c : stone)];
+    case 'steinblock': return [S('cobble', c)];
+    case 'moosstein': return [S('cobble', [124, 128, 132], c)];
+    case 'kies': return [S('cobble', c, mulc(c, 1.25))];
+    case 'sand': case 'seelensand': return [S(n === 'sand' ? 'sand' : 'soulSand', c)];
+    case 'schnee': return [S('noise', c, 0.06), S('noise', top, 0.04)];
+    case 'grundgestein': return [S('bedrock')];
+    case 'basalt': return [S('basaltSide', c), S('cobble', c)];
+    case 'lava': return [S('lava')];
+    case 'magmablock': return [S('magma')];
+    case 'eis': case 'packeis': return [S('ice', c)];
+    case 'sandstein': case 'sandsteinstufe': return [S('sandstoneSide', rgbOf(0xd9b778)), S('smooth', rgbOf(0xe0c088))];
+    case 'steinziegel': return [S('stoneBricks', c)];
+    case 'moosziegel': return [S('stoneBricks', [150, 146, 138], c)];
+    case 'netherziegel': return [S('bricks', c, mulc(c, 0.6))];
+    case 'ziegel': case 'ziegelstufe': return [S('bricks', rgbOf(0xb5523a), [168, 160, 150])];
+    case 'stamm': return [S('logSide', c), S('logTop', c, top)];
+    case 'birkenstamm': return [S('birch'), S('logTop', [210, 206, 190], [214, 190, 140])];
+    case 'fichtenstamm': case 'pappelstamm': return [S('logSide', c), S('logTop', c, top)];
+    case 'bretter': case 'holzstufe': return [S('planks', rgbOf(0xb8864e))];
+    case 'laub': case 'birkenlaub': case 'fichtenlaub': case 'pappellaub_rot': case 'pappellaub_orange': case 'pappellaub_gelb': return [S('leaves', c)];
+    case 'kaktusblock': return [S('cactusSide', c), S('cactusTop', c)];
+    case 'glas': case 'glasrot': case 'glasblau': case 'glasgruen': return [S('glass', c)];
+    case 'obsidian': return [S('obsidian', c)];
+    case 'tiefenstein': return [S('deepslate', c)];
+    case 'glattstein': case 'druckplatte': case 'quarzblock': return [S('smooth', c)];
+    case 'goldblock': case 'eisenblock': case 'kupferblock': case 'diamantblock': case 'netheritblock': return [S('metal', c)];
+    case 'kristallblock': case 'rubinblock': case 'smaragdblock': case 'saphirblock': case 'amethystblock': case 'lapisblock': case 'redstoneblock': case 'kohleblock': return [S('gem', c)];
+    case 'knochenblock': return [S('bone', c), S('boneTop', top)];
+    case 'leuchtblock': case 'leuchtstein': return [S('glowstone', c)];
+    case 'seelaterne': return [S('glowstone', c)];
+    case 'kuerbislaterne': return [S('pumpkinFace', c, true), S('pumpkinTop', c)];
+    case 'heuballen': return [S('haySide', c), S('hayTop', top)];
+    case 'buecherregal': return [S('bookshelf', rgbOf(0xb8864e)), S('planks', rgbOf(0xb8864e))];
+    case 'truhe': return [S('chestSide', c), S('chestTop', top)];
+    case 'enderkiste': return [S('chestSide', c, [60, 200, 160]), S('chestTop', top)];
+    case 'ofenblock': return [S('furnaceSide', c), S('furnaceTop', top)];
+    case 'raeucherofen': return [S('furnaceSide', c, [255, 150, 40]), S('boxTop', top)];
+    case 'schmelzofen': return [S('furnaceSide', c, [255, 120, 40]), S('furnaceTop', top)];
+    case 'werkbankblock': return [S('workbenchSide', c), S('workbenchTop', top), S('planks', c)];
+    case 'tnt': return [S('tntSide'), S('tntTop'), S('tntTop')];
+    case 'leiter': return [S('ladder', c)];
+    case 'spawner': return [S('spawner')];
+    case 'honigblock': return [S('framed', c, mulc(c, 0.85))];
+    case 'schleimblock': return [S('framed', c, mulc(c, 0.82))];
+    case 'pilzblock': return [S('mushroom', top), S('mushroom', top), S('noise', c, 0.06)];
+    case 'sternenblock': return [S('star', c)];
+    case 'notenblock': return [S('boxTop', c, mulc(c, 0.4)), S('boxTop', c)];
+    case 'plattenspieler': return [S('boxTop', c), S('boxTop', c, [36, 36, 42])];
+    case 'geruest': return [S('scaffold', c)];
+    case 'lampe': return [S('lamp', [110, 60, 34], false)];
+    case 'lampean': return [S('lamp', [255, 214, 120], true)];
+    case 'hebel': return [S('smooth', c), S('lever', c, [160, 160, 166])];
+    case 'hebelan': return [S('smooth', c), S('lever', c, [228, 69, 46])];
+    case 'knopf': return [S('button', c)];
+    case 'schiene': return [S('planks', c), S('rail', [110, 80, 46], [170, 174, 180])];
+    case 'antriebsschiene': return [S('planks', c), S('rail', [110, 80, 46], [242, 195, 60])];
+    case 'kuchenblock': return [S('cakeSide'), S('cakeTop'), S('noise', [220, 176, 120], 0.06)];
+    case 'tuerblock': return [S('door', c)];
+    case 'zielblock': return [S('target'), S('target'), S('hayTop', [200, 180, 90])];
+    case 'wunderkiste': return [S('mystery')];
+    case 'fass': return [S('barrelSide', c), S('barrelTop', top)];
+    case 'netherrack': return [S('netherrack', c)];
+    case 'endstein': return [S('endStone', c)];
+    case 'purpurblock': return [S('purpur', c)];
+    case 'prismarin': return [S('prismarine', c)];
+    case 'skulk': return [S('sculk', top)];
+    case 'skulksensor': return [S('sculk', c), S('framed', [20, 60, 70], top)];
+    case 'sprungpad': return [S('metal', c), S('pad', c, top)];
+    case 'tempopad': return [S('metal', c), S('pad', c, top)];
+    case 'schutterz': return [S('debrisSide', c), S('debrisTop', top)];
+    case 'quarzerz': return [S('ore', rgbOf(0x7a2a2a), top, 'netherrack')];
+    case 'endportalrahmen': return [S('endFrameSide'), S('endFrameTop', false), S('endStone', [222, 226, 176])];
+    case 'endportalrahmen_auge': return [S('endFrameSide'), S('endFrameTop', true), S('endStone', [222, 226, 176])];
+    case 'endportal': return [S('endPortal')];
+    case 'drachenei': return [S('dragonEgg')];
+    case 'terrakotta': return [S('flat', c)];
+  }
+  if (v.ore) return [S('ore', stone, c)];
+  if (n.indexOf('wolle') === 0) return [S('wool', c)];
+  if (/block$/.test(n)) return [S('flat', c)];
+  return [S('noise', c, 0.12), v.top !== undefined ? S('noise', top, 0.12) : null];
+}
+
+function paintTile(spec, seed){
+  var key = JSON.stringify(spec);
+  if (tileCache[key] !== undefined) return tileCache[key];
+  if (tileNext >= 256) return 0;
+  var t = tileNext++;
+  PAINT[spec[0]].apply(null, [t, seed].concat(spec.slice(1)));
+  tileCache[key] = t;
+  return t;
+}
+
+function buildAtlas(){
+  atlasCanvas = document.createElement('canvas');
+  atlasCanvas.width = atlasCanvas.height = 256;
+  var g = atlasCanvas.getContext('2d');
+  var img = g.createImageData(256, 256);
+  atlasPix = img.data;
+  rect(0, 0, 0, 15, 15, [255, 255, 255]);
+  VOX.forEach(function(v){
+    if (!v.id || v.c === undefined) return;
+    var sp = texSpec(v), seed = v.id * 7 + 11;
+    var side = paintTile(sp[0], seed);
+    TILE_SIDE[v.id] = side;
+    TILE_TOP[v.id] = sp[1] ? paintTile(sp[1], seed + 1) : side;
+    TILE_BOT[v.id] = sp[2] ? paintTile(sp[2], seed + 2) : (sp[1] && v.name !== 'gras' && v.name !== 'myzel' && v.name !== 'stamm' ? TILE_TOP[v.id] : side);
+    if (v.name === 'stamm' || /stamm$/.test(v.name) || v.name === 'knochenblock' || v.name === 'kaktusblock' || v.name === 'basalt' || v.name === 'heuballen') TILE_BOT[v.id] = TILE_TOP[v.id];
+    TILE_ITEMTOP[v.id] = TILE_TOP[v.id];
+  });
+  TILE_ITEMTOP[GRAS] = paintTile(['grassTopItem', [106, 168, 79]], 999);
+  g.putImageData(img, 0, 0);
+}
+
+/* Würfel für Gegenstände in der Welt und in der Hand: jede Seite zeigt ihre Kachel */
+var blockGeoCache = {};
+function tileUV(tile){ return { u: (tile & 15) / 16, v: (15 - (tile >> 4)) / 16 }; }
+function blockGeometry(vt, size){
+  var key = vt + ':' + (size || 1);
+  if (blockGeoCache[key]) return blockGeoCache[key];
+  var s = size || 1, geo = new THREE.BoxGeometry(s, s, s), uv = geo.attributes.uv;
+  var faces = [TILE_SIDE[vt], TILE_SIDE[vt], TILE_ITEMTOP[vt], TILE_BOT[vt], TILE_SIDE[vt], TILE_SIDE[vt]];
+  for (var f = 0; f < 6; f++){
+    var o = tileUV(faces[f]);
+    for (var k = 0; k < 4; k++){ var i = f * 4 + k; uv.setXY(i, o.u + uv.getX(i) / 16, o.v + uv.getY(i) / 16); }
+  }
+  uv.needsUpdate = true;
+  blockGeoCache[key] = geo;
+  return geo;
+}
+
+/* Inventar-Symbol: kleiner Würfel aus drei Kacheln, wie in Minecraft */
+function drawBlockIcon(ctx, vt, cx, cy, s, dim){
+  if (!atlasCanvas || !VOX[vt]) return false;
+  var top = TILE_ITEMTOP[vt], side = TILE_SIDE[vt], r = s * 0.62;
+  ctx.save();
+  ctx.imageSmoothingEnabled = false;
+  if (dim) ctx.globalAlpha = 0.45;
+  function face(tile, a, b, c2, d, e, f, shade){
+    ctx.save();
+    ctx.setTransform(a, b, c2, d, e, f);
+    ctx.drawImage(atlasCanvas, (tile & 15) * 16, (tile >> 4) * 16, 16, 16, 0, 0, 1, 1);
+    if (shade){ ctx.fillStyle = 'rgba(0,0,0,' + shade + ')'; ctx.fillRect(0, 0, 1, 1); }
+    ctx.restore();
+  }
+  var m = ctx.getTransform ? ctx.getTransform() : null;
+  var ox = cx, oy = cy;
+  if (m){ ox = m.a * cx + m.c * cy + m.e; oy = m.b * cx + m.d * cy + m.f; r *= m.a; }
+  var hx = r * 0.866, hy = r * 0.5;
+  face(top, hx, -hy, hx, hy, ox - hx, oy - hy, 0);
+  face(side, hx, hy, 0, r, ox - hx, oy - hy, 0.18);
+  face(side, hx, -hy, 0, r, ox, oy, 0.36);
+  ctx.restore();
+  return true;
+}
+
 /* ------------------------------------------------------------ Zeichnen der Blöcke */
 
 var FC = new Int8Array([
@@ -2563,17 +3198,18 @@ var FC = new Int8Array([
 var FN = new Int8Array([127,0,0, -127,0,0, 0,127,0, 0,-127,0, 0,0,127, 0,0,-127]);
 var SHADE = [0.88, 0.88, 1.0, 0.55, 0.77, 0.77];
 
-function Builder(){ this.cap = 0; this.n = 0; this.pos = null; this.nor = null; this.col = null; this.grow(4096); }
+function Builder(){ this.cap = 0; this.n = 0; this.pos = null; this.nor = null; this.col = null; this.tile = null; this.grow(4096); }
 Builder.prototype.grow = function(min){
   var cap = Math.max(min, this.cap * 2);
-  var p = new Int8Array(cap * 3), no = new Int8Array(cap * 3), co = new Uint8Array(cap * 3);
-  if (this.pos){ p.set(this.pos); no.set(this.nor); co.set(this.col); }
-  this.pos = p; this.nor = no; this.col = co; this.cap = cap;
+  var p = new Int8Array(cap * 3), no = new Int8Array(cap * 3), co = new Uint8Array(cap * 3), ti = new Uint8Array(cap);
+  if (this.pos){ p.set(this.pos); no.set(this.nor); co.set(this.col); ti.set(this.tile); }
+  this.pos = p; this.nor = no; this.col = co; this.tile = ti; this.cap = cap;
 };
-Builder.prototype.quad = function(x, y, z, f, r, g, b, hs){
+Builder.prototype.quad = function(x, y, z, f, r, g, b, hs, tile){
   if (this.n + 4 > this.cap) this.grow(this.n + 4);
   var o = this.n * 3, fo = f * 12, nx = FN[f * 3], ny = FN[f * 3 + 1], nz = FN[f * 3 + 2];
-  var pos = this.pos, nor = this.nor, col = this.col, yh = hs ? 1 : 2;
+  var pos = this.pos, nor = this.nor, col = this.col, yh = hs ? 1 : 2, tv = tile || 0, ti = this.tile, tn = this.n;
+  ti[tn] = ti[tn + 1] = ti[tn + 2] = ti[tn + 3] = tv;
   for (var k = 0; k < 4; k++){
     pos[o] = 2 * (x + FC[fo + k * 3]); pos[o + 1] = 2 * y + yh * FC[fo + k * 3 + 1]; pos[o + 2] = 2 * (z + FC[fo + k * 3 + 2]);
     nor[o] = nx; nor[o + 1] = ny; nor[o + 2] = nz;
@@ -2588,7 +3224,10 @@ Builder.prototype.build = function(withColor){
   var geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.BufferAttribute(this.pos.slice(0, n * 3), 3));
   geo.setAttribute('normal', new THREE.BufferAttribute(this.nor.slice(0, n * 3), 3, true));
-  if (withColor !== false) geo.setAttribute('color', new THREE.BufferAttribute(this.col.slice(0, n * 3), 3, true));
+  if (withColor !== false){
+    geo.setAttribute('color', new THREE.BufferAttribute(this.col.slice(0, n * 3), 3, true));
+    geo.setAttribute('tile', new THREE.BufferAttribute(this.tile.slice(0, n), 1));
+  }
   var idx = n > 65535 ? new Uint32Array(q * 6) : new Uint16Array(q * 6);
   for (var i = 0, v = 0, j = 0; i < q; i++, v += 4){ idx[j++] = v; idx[j++] = v + 1; idx[j++] = v + 2; idx[j++] = v; idx[j++] = v + 2; idx[j++] = v + 3; }
   geo.setIndex(new THREE.BufferAttribute(idx, 1));
@@ -2637,6 +3276,7 @@ function buildMesh(c){
           }
           if (SLAB[t]){ if (f !== 2 && nt && ((!TRANS[nt] && !SLAB[nt]) || SLAB[nt])) continue; }
           else if (nt && ((!TRANS[nt] && !SLAB[nt]) || nt === t || (trans && !SLAB[nt]))) continue;
+          var tile = f === 2 ? TILE_TOP[t] : (f === 3 ? TILE_BOT[t] : TILE_SIDE[t]);
           var r, g, b;
           if (f === 2 && t === GRAS){
             if (!grassDone){
@@ -2644,14 +3284,18 @@ function buildMesh(c){
               var m = vnoise(wx * 0.07, wz * 0.07, 5), dz = desertness(wx, wz);
               gr = GRASS_A[0] + (GRASS_B[0] - GRASS_A[0]) * m; gg = GRASS_A[1] + (GRASS_B[1] - GRASS_A[1]) * m; gb = GRASS_A[2] + (GRASS_B[2] - GRASS_A[2]) * m;
               if (dz > 0.35){ var k2 = Math.min(1, (dz - 0.35) / 0.2) * 0.6; gr += (GRASS_DRY[0] - gr) * k2; gg += (GRASS_DRY[1] - gg) * k2; gb += (GRASS_DRY[2] - gb) * k2; }
+              if (autumnAt(wx, wz)){ gr += (176 - gr) * 0.7; gg += (140 - gg) * 0.7; gb += (70 - gb) * 0.7; }
+              if (tile){ gr *= 0.96; gg *= 0.96; gb *= 0.96; }
             }
             r = gr; g = gg; b = gb;
-          } else if (f === 2 || (f === 3 && t === 22)){ r = TOPR[t]; g = TOPG[t]; b = TOPB[t]; }
+          } else if (tile){ r = 255; g = 255; b = 255; }
+          else if (f === 2 || (f === 3 && t === 22)){ r = TOPR[t]; g = TOPG[t]; b = TOPB[t]; }
           else { r = COLR[t]; g = COLG[t]; b = COLB[t]; }
-          var s = glow ? (f === 2 ? 1 : 0.88) : SHADE[f] * (cover ? 0.42 : 1);
+          var glowF = glow && !VOX[t].ore;
+          var s = glowF ? (f === 2 ? 1 : 0.88) : SHADE[f] * (cover ? 0.42 : 1);
           s *= 0.94 + ihash(wx, L, wz) * 0.12;
           r *= s; g *= s; b *= s;
-          (glow ? BLW : (trans ? BG : BO)).quad(lx, L, lz, f, r > 255 ? 255 : r, g > 255 ? 255 : g, b > 255 ? 255 : b, SLAB[t]);
+          (glowF ? BLW : (trans ? BG : BO)).quad(lx, L, lz, f, r > 255 ? 255 : r, g > 255 ? 255 : g, b > 255 ? 255 : b, SLAB[t], tile);
         }
       }
     }
@@ -3001,11 +3645,45 @@ function refresh(){
 
 /* ------------------------------------------------------------ Aufbau */
 
-function init(scene){
+/* Die Blockflächen holen ihre Pixel aus der Textur. Die Koordinate in der Kachel ergibt sich aus der
+   Position auf der Fläche; die Mip-Stufe wird aus der durchgehenden Position berechnet (keine Nähte). */
+function voxFrag(gl2){
+  return [
+    'vec3 vxA = abs(vVoxN);',
+    'vec2 cuv = vxA.y > 0.5 ? vVox.xz : (vxA.x > 0.5 ? vec2(vVoxN.x > 0.0 ? -vVox.z : vVox.z, vVox.y) : vec2(vVoxN.z > 0.0 ? vVox.x : -vVox.x, vVox.y));',
+    'float vti = floor(vTile + 0.5);',
+    'vec2 vuv = (vec2(mod(vti, 16.0), 15.0 - floor(vti / 16.0)) + fract(cuv)) / 16.0;',
+    gl2 ? 'vec2 vgx = dFdx(cuv) / 16.0; vec2 vgy = dFdy(cuv) / 16.0; float vgm = max(length(vgx), length(vgy)) * 256.0; if (vgm > 16.0){ vgx *= 16.0 / vgm; vgy *= 16.0 / vgm; } diffuseColor.rgb *= textureGrad(voxAtlas, vuv, vgx, vgy).rgb;'
+        : 'diffuseColor.rgb *= texture2D(voxAtlas, vuv).rgb;'
+  ].join('\n');
+}
+function texturize(mat, gl2){
+  mat.onBeforeCompile = function(sh){
+    sh.uniforms.voxAtlas = { value: atlasTex };
+    sh.vertexShader = 'attribute float tile;\nvarying vec3 vVox;\nvarying vec3 vVoxN;\nvarying float vTile;\n' +
+      sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n  vVox = position * 0.5; vVoxN = normal; vTile = tile;');
+    sh.fragmentShader = 'uniform sampler2D voxAtlas;\nvarying vec3 vVox;\nvarying vec3 vVoxN;\nvarying float vTile;\n' +
+      sh.fragmentShader.replace('#include <color_fragment>', '#include <color_fragment>\n' + voxFrag(gl2));
+  };
+  mat.customProgramCacheKey = function(){ return 'voxtex' + (gl2 ? 2 : 1); };
+  return mat;
+}
+
+function init(scene, opts){
   sceneRef = scene;
-  voxMat = new THREE.MeshLambertMaterial({ vertexColors: true });
-  glassMat = new THREE.MeshLambertMaterial({ vertexColors: true, transparent: true, opacity: 0.42, depthWrite: false });
-  glowMat = new THREE.MeshBasicMaterial({ vertexColors: true });
+  opts = opts || {};
+  buildAtlas();
+  atlasTex = new THREE.CanvasTexture(atlasCanvas);
+  atlasTex.magFilter = THREE.NearestFilter;
+  if (opts.webgl2){ atlasTex.minFilter = THREE.NearestMipmapLinearFilter; atlasTex.generateMipmaps = true; }
+  else { atlasTex.minFilter = THREE.NearestFilter; atlasTex.generateMipmaps = false; }
+  voxMat = texturize(new THREE.MeshLambertMaterial({ vertexColors: true }), opts.webgl2);
+  glassMat = texturize(new THREE.MeshLambertMaterial({ vertexColors: true, transparent: true, opacity: 0.42, depthWrite: false }), opts.webgl2);
+  glowMat = texturize(new THREE.MeshBasicMaterial({ vertexColors: true }), opts.webgl2);
+  itemMat = new THREE.MeshLambertMaterial({ map: atlasTex });
+  var itemDummy = new THREE.Mesh(blockGeometry(STEIN, 0.2), itemMat);
+  itemDummy.position.set(0, -500, 0);
+  scene.add(itemDummy);
   waterMat = new THREE.MeshPhongMaterial({ color: 0x3f83a8, transparent: true, opacity: 0.78, shininess: 40 });
   /* Winzige Platzhalter, damit alle Grafik-Programme schon im Menü vorbereitet werden */
   [voxMat, glassMat, glowMat].forEach(function(m){
@@ -3052,7 +3730,10 @@ var W = BL.world = {
   skyCovered: skyCovered, glowNear: glowNear, exportEdits: exportEdits, importEdits: importEdits,
   editCount: function(){ return editTotal; }, onVoxelChange: null,
   isLootChest: function(key){ return lootChests.get(key) || false; }, spawners: spawnerList, isEdited: isEdited,
-  inWorld: inWorld, isNether: inNether, NETHER: NETHER, netherFortsNear: netherFortsNear, netherFloorAt: netherFloorAt, oreAt: oreAt,
+  inWorld: inWorld, isNether: inNether, NETHER: NETHER,
+  isEnd: inEnd, END: END, endSurface: endSurface, endArrival: endArrival, endCenterTop: endCenterTop, END_PILLARS: END_PILLARS, festungenNear: festungenNear, festungPortal: festungPortal,
+  blockGeometry: blockGeometry, itemMaterial: function(){ return itemMat; }, drawBlockIcon: drawBlockIcon, atlas: function(){ return atlasCanvas; },
+  setMinecraft: function(on){ mcStyle = !!on; }, growTree: growTree, treeKindForGrowth: treeKindForGrowth, autumnAt: autumnAt, treeBlocks: treeBlocks, netherFortsNear: netherFortsNear, netherFloorAt: netherFloorAt, oreAt: oreAt,
   structuresNear: structuresNear, buildStructure: function(s){ return s.list ? s : buildStruct(s); }, STRUCT_NAMES: STRUCT_NAMES, INNER_R: INNER_R, climate: climate, zonesNear: zonesNear,
   stats: function(){ var m = 0; chunks.forEach(function(c){ if (c.meshed) m++; }); return { chunks: chunks.size, meshed: m, nodes: nodes.length, needed: needed.length, edits: editTotal, caves: caves.length }; }
 };
@@ -3337,6 +4018,11 @@ function simpleIcon(ctx, shape, s, col, col2){
 }
 
 function icon(ctx, kind, cx, cy, s, color){
+  /* Blöcke als kleine Pixel-Würfel (Minecraft-Look) */
+  if (BL.ui && BL.ui.blockIconFor && BL.world && BL.world.drawBlockIcon){
+    var bvt = BL.ui.blockIconFor(kind);
+    if (bvt > 0 && BL.world.drawBlockIcon(ctx, bvt, cx, cy, s, !!(color && color.indexOf('rgba') === 0))) return;
+  }
   var simple = SIMPLE[kind];
   if (simple){
     ctx.save();
@@ -4532,7 +5218,8 @@ BL.ui = {
   createHandMenu: createHandMenu,
   createInfoLabel: createInfoLabel,
   createInventoryPanel: createInventoryPanel,
-  icon: icon
+  icon: icon,
+  SIMPLE: SIMPLE
 };
 })();
 
@@ -4678,7 +5365,8 @@ var stars = (function(){
   return pts;
 })();
 
-W.init(scene);
+W.setMinecraft(settings.style !== 'waldwacht');
+W.init(scene, { webgl2: renderer.capabilities.isWebGL2 });
 
 var cloudMesh = (function(){
   var mat = new THREE.MeshPhongMaterial({ color: 0xffffff, transparent: true, opacity: 0.85, flatShading: true, shininess: 0 });
@@ -8281,7 +8969,7 @@ function spawnProjectile(from, to, color, opts){
   var dist = vel.length();
   vel.normalize().multiplyScalar(speed);
   if (opts.arrow) vel.y += 9.8 * (dist / speed) * 0.5;
-  projectiles.push({ mesh: mesh, vel: vel, life: 5, gravity: opts.arrow ? 9.8 : 0, dmg: opts.dmg || 1, poison: !!opts.poison, arrow: !!opts.arrow, web: !!opts.web, potion: !!opts.potion });
+  projectiles.push({ mesh: mesh, vel: vel, life: 5, gravity: opts.arrow ? 9.8 : 0, dmg: opts.dmg || 1, poison: !!opts.poison, arrow: !!opts.arrow, web: !!opts.web, potion: !!opts.potion, ice: !!opts.ice, dragon: !!opts.dragon });
   if (!opts.fire) tone(300, 0.1, 'sawtooth', 0.03, 500);
 }
 
@@ -14737,9 +15425,9 @@ function breakVoxel(hit, def, tool){
     dropOrGive(def.drop, amount, _bt.clone(), true);
     text = '+' + amount + ' ' + (BLOCK_LABELS[def.drop] || def.label);
     if (def.name === 'kies' && Math.random() < 0.15){ give('feuerstein', 1, true); text += ' + 1 Feuerstein'; }
-    if (def.name === 'laub' && Math.random() < 0.12){ give('apfel', 1, true); text += ' + 1 Apfel'; }
-    if (def.name === 'laub' && Math.random() < 0.08){ give('samen', 1, true); text += ' + 1 Samen'; }
-    if (def.name === 'laub' && Math.random() < 0.1){ give('setzling', 1, true); text += ' + 1 Setzling'; }
+    if ((def.name === 'laub' || def.leaves) && Math.random() < 0.12){ give('apfel', 1, true); text += ' + 1 Apfel'; }
+    if ((def.name === 'laub' || def.leaves) && Math.random() < 0.08){ give('samen', 1, true); text += ' + 1 Samen'; }
+    if ((def.name === 'laub' || def.leaves) && Math.random() < 0.1){ give('setzling', 1, true); text += ' + 1 Setzling'; }
     if (tool === 'schaufel' && (def.name === 'gras' || def.name === 'erde')){
       var r = Math.random();
       if (r < 0.1){ give('kohle', 1, true); text += ' + 1 Kohle'; }
@@ -14862,9 +15550,9 @@ function updateBlocks(dt){
 
   /* Block in der Hand zeigen */
   if (isBlock && th.active){
-    var vt = W.VOX[W.VT[BLOCK_ITEMS[sel]]];
+    var vtId = W.VT[BLOCK_ITEMS[sel]];
     heldBlock.visible = true;
-    heldBlock.material.color.setHex(vt.c);
+    if (heldBlock.userData.vt !== vtId){ heldBlock.userData.vt = vtId; heldBlock.geometry = W.blockGeometry(vtId, 0.11); heldBlock.material = W.itemMaterial(); }
     _hbPos.copy(th.wrist).addScaledVector(th.dir, 0.1);
     heldBlock.position.copy(_hbPos);
     heldBlock.quaternion.copy(th.group.quaternion);
@@ -15216,10 +15904,7 @@ scene.add(invPanel.mesh);
 
 function dropMaterial(id){
   var vt = BLOCK_ITEMS[id] ? W.VT[BLOCK_ITEMS[id]] : undefined;
-  if (vt !== undefined){
-    if (!dropMats[id]) dropMats[id] = new THREE.MeshLambertMaterial({ color: W.VOX[vt].c });
-    return { cube: true, mat: dropMats[id] };
-  }
+  if (vt !== undefined) return { cube: true, mat: W.itemMaterial(), geo: W.blockGeometry(vt, 0.22) };
   if (!dropTex[id]){
     var tex = new THREE.CanvasTexture(invPanel.iconCanvas(id, 1));
     tex.generateMipmaps = false; tex.minFilter = THREE.LinearFilter;
@@ -15232,7 +15917,7 @@ function spawnItemDrop(id, n, pos, vel, opts){
   opts = opts || {};
   if (drops.length > 60){ collectDrop({ id: id, n: n, gathered: opts.gathered }); return; }
   var m = dropMaterial(id);
-  var mesh = m.cube ? new THREE.Mesh(dropGeo, m.mat) : new THREE.Sprite(m.mat);
+  var mesh = m.cube ? new THREE.Mesh(m.geo || dropGeo, m.mat) : new THREE.Sprite(m.mat);
   if (!m.cube) mesh.scale.setScalar(0.3);
   mesh.position.copy(pos);
   scene.add(mesh);
@@ -16377,7 +17062,8 @@ function updateSaplings(dt){
     if (!W.rawAt(sp.x, sp.y - 1, sp.z) || W.rawAt(sp.x, sp.y, sp.z)) continue;
     var b = W.biomeAt(sp.x + 0.5, sp.z + 0.5);
     var kind = b === 'schnee' ? 'pine' : (b === 'wueste' ? 'cactus' : (b === 'pilzwald' ? 'riesenpilz' : (Math.random() < 0.2 ? 'apfelbaum' : 'tree')));
-    W.addNodeAt(kind, sp.x + 0.5, sp.z + 0.5);
+    if (kind === 'riesenpilz') W.addNodeAt(kind, sp.x + 0.5, sp.z + 0.5);
+    else W.growTree(sp.x, sp.y, sp.z, W.treeKindForGrowth(sp.x + 0.5, sp.z + 0.5));
     state.stats.treesGrown = (state.stats.treesGrown || 0) + 1;
     spawnBurst(_v.set(sp.x + 0.5, sp.y + 1, sp.z + 0.5), 0x7bd389, 16, 2.5);
     headWorld(_v3);
@@ -20498,6 +21184,799 @@ X3.barterDrop = barterDrop;
 
 })();
 
+/* ================================================================ Minecraft-Umbau
+   Spielstil „Minecraft“ (Standard) oder „Waldwacht“ (alles wie vorher). Im Minecraft-Stil gibt es nur
+   Minecraft-Monster, -Tiere und -Rezepte, keinen Durst und keine Kälte, Werkzeugstufen Holz → Stein → Eisen →
+   Diamant → Netherit und Aufgaben, die den Weg durch Minecraft bis zum Enderdrachen zeigen.
+   Für beide Stile: Pixel-Würfel im Inventar, in der Hand und auf dem Boden, Schweine, der Frostbite,
+   Enderaugen, das Endportal in der Festung und das End mit Endkristallen und Enderdrachen. */
+
+var MC = settings.style !== 'waldwacht';
+var X4 = { dragonDead: false, portalCd: 0, freezeT: 0, freezeTick: 0, wwq: 0, mcq: 0 };
+
+(function(){
+
+var A = new THREE.Vector3(), B = new THREE.Vector3(), C = new THREE.Vector3();
+var VT = W.VT, END = W.END;
+
+/* ---------------------------------------------------------------- Gegenstände */
+
+['enderauge', 'lohenstaub', 'drachenei', 'eisball'].forEach(function(k){ if (ITEM_KEYS.indexOf(k) < 0) ITEM_KEYS.push(k); if (state.inv[k] === undefined) state.inv[k] = 0; });
+var MC_TOOLS = ['holzspitzhacke', 'steinspitzhacke', 'holzaxt', 'steinaxt', 'holzschwert', 'steinschwert'];
+MC_TOOLS.forEach(function(k){ if (OWNED_KEYS.indexOf(k) < 0) OWNED_KEYS.push(k); if (state.owned[k] === undefined) state.owned[k] = false; });
+Object.assign(ITEM_NAMES, {
+  enderauge: 'Enderauge', lohenstaub: 'Lohenstaub', drachenei: 'Drachenei', eisball: 'Eisball',
+  holzspitzhacke: 'Holzspitzhacke', steinspitzhacke: 'Steinspitzhacke', holzaxt: 'Holzaxt', steinaxt: 'Steinaxt', holzschwert: 'Holzschwert', steinschwert: 'Steinschwert'
+});
+BLOCK_ITEMS.drachenei = 'drachenei'; BLOCK_LABELS.drachenei = 'Drachenei';
+(function(){
+  function after(id, entries){ var idx = HOTBAR_DEFS.findIndex(function(d){ return d[0] === id; }); HOTBAR_DEFS.splice.apply(HOTBAR_DEFS, [idx + 1, 0].concat(entries)); }
+  after('spitzhacke', [['holzspitzhacke', 'Holzhacke', 'tool'], ['steinspitzhacke', 'Steinhacke', 'tool']]);
+  after('axt', [['holzaxt', 'Holzaxt', 'tool'], ['steinaxt', 'Steinaxt', 'tool']]);
+  after('schwert', [['holzschwert', 'Holzschwert', 'tool'], ['steinschwert', 'Steinschwert', 'tool']]);
+  after('enderperle', [['enderauge', 'Enderauge', 'stack'], ['eisball', 'Eisball', 'stack'], ['lohenstaub', 'Lohenstaub', 'stack']]);
+  if (MC){
+    HOTBAR_DEFS.forEach(function(d){
+      if (d[0] === 'spitzhacke') d[1] = 'Eisenhacke';
+      else if (d[0] === 'axt') d[1] = 'Eisenaxt';
+      else if (d[0] === 'schwert') d[1] = 'Eisenschwert';
+    });
+  }
+  HOTBAR_FIRST.enderauge = true;
+})();
+if (BL.ui && BL.ui.SIMPLE){
+  Object.assign(BL.ui.SIMPLE, {
+    holzspitzhacke: ['pick', '#b0844c'], steinspitzhacke: ['pick', '#9ea2a8'], holzaxt: ['axe', '#b0844c'], steinaxt: ['axe', '#9ea2a8'],
+    holzschwert: ['sword', '#b0844c'], steinschwert: ['sword', '#9ea2a8'], enderauge: ['orb', '#3ad07a'], lohenstaub: ['pile', '#ffb030'], eisball: ['orb', '#cfefff']
+  });
+}
+/* Blöcke im Inventar als Pixel-Würfel zeichnen */
+if (BL.ui) BL.ui.blockIconFor = function(kind){ var n = BLOCK_ITEMS[kind]; if (!n) return -1; var v = VT[n]; return v ? v : -1; };
+
+/* ---------------------------------------------------------------- Werkzeugstufen Holz und Stein */
+
+var MC_CLASS = { holzspitzhacke: 'spitzhacke', steinspitzhacke: 'spitzhacke', holzaxt: 'axt', steinaxt: 'axt', holzschwert: 'schwert', steinschwert: 'schwert' };
+var MC_TIER = { holzspitzhacke: 0.25, steinspitzhacke: 0.5, holzaxt: 0.25, steinaxt: 0.5 };
+var _toolClass = toolClass, _toolTier = toolTier, _tierMult = tierMult;
+toolClass = function(t){ return MC_CLASS[t] || _toolClass(t); };
+toolTier = function(t){ return MC_TIER[t] !== undefined ? MC_TIER[t] : _toolTier(t); };
+tierMult = function(t){ if (MC_TIER[t] !== undefined) return MC_TIER[t] < 0.4 ? 0.55 : 0.75; return _tierMult(t); };
+MC_TOOLS.forEach(function(k){ if (k.indexOf('schwert') < 0) MINING_TOOLS[k] = 1; });
+MELEE.holzschwert = { dmg: 2.5, range: 2.8, cd: 0.42 }; MELEE.steinschwert = { dmg: 3.2, range: 2.85, cd: 0.41 };
+MELEE.holzspitzhacke = { dmg: 1.5, range: 2.4, cd: 0.5 }; MELEE.steinspitzhacke = { dmg: 1.8, range: 2.4, cd: 0.5 };
+MELEE.holzaxt = { dmg: 2, range: 2.4, cd: 0.5 }; MELEE.steinaxt = { dmg: 2.4, range: 2.4, cd: 0.5 };
+TOOL_ORDER.push('steinschwert', 'holzschwert', 'steinspitzhacke', 'holzspitzhacke', 'steinaxt', 'holzaxt');
+
+function recolorExact(model, from, to){ model.traverse(function(o){ if (o.isMesh && o.material && o.material.color && o.material.color.getHex() === from){ o.material = o.material.clone(); o.material.color.setHex(to); } }); return model; }
+function recolorExcept(model, keep, to){ model.traverse(function(o){ if (o.isMesh && o.material && o.material.color && keep.indexOf(o.material.color.getHex()) < 0){ o.material = o.material.clone(); o.material.color.setHex(to); } }); return model; }
+var HANDLE = [0x7a5231, 0x6b4526], WOODC = 0xb0844c, STONEC = 0x8e9298;
+var MC_MODELS = {
+  holzspitzhacke: function(){ return recolorExact(makePickaxe(), 0x9aa0aa, WOODC); },
+  steinspitzhacke: function(){ return recolorExact(makePickaxe(), 0x9aa0aa, STONEC); },
+  holzaxt: function(){ return recolorExcept(makeAxe(), HANDLE, WOODC); },
+  steinaxt: function(){ return recolorExcept(makeAxe(), HANDLE, STONEC); },
+  holzschwert: function(){ return recolorExcept(makeSword(false), HANDLE, WOODC); },
+  steinschwert: function(){ return recolorExcept(makeSword(false), HANDLE, STONEC); }
+};
+Object.keys(MC_MODELS).forEach(function(k){
+  TOOL_MODELS[k] = MC_MODELS[k];
+  ['left', 'right'].forEach(function(side){ var m = MC_MODELS[k](); m.visible = false; hands[side].group.add(m); hands[side].tools[k] = m; });
+});
+
+/* Im Minecraft-Stil braucht jeder Stein eine Spitzhacke, Erze die richtige Stufe */
+var NEED_IRON = { diamanterz: 1, golderz: 1, redstoneerz: 1, smaragderz: 1, kristallerz: 1, rubinerz: 1, saphirerz: 1, amethysterz: 1 };
+var NEED_STONE = { eisenerz: 1, kupfererz: 1, lapiserz: 1 };
+var NEED_DIAMOND = { obsidian: 1, schutterz: 1 };
+function mcNeed(def){
+  if (NEED_DIAMOND[def.name]) return 2;
+  if (NEED_IRON[def.name]) return 1;
+  if (NEED_STONE[def.name]) return 0.5;
+  if (def.tool === 'spitzhacke' && def.name !== 'eis' && def.name !== 'packeis') return 0.25;
+  return 0;
+}
+var TIER_NAME = { 0.25: 'eine Spitzhacke', 0.5: 'mindestens eine Steinspitzhacke', 1: 'mindestens eine Eisenspitzhacke', 2: 'eine Diamantspitzhacke' };
+var _mineVoxel = mineVoxel;
+mineVoxel = function(hit, tool, power){
+  var def = W.VOX[hit.type];
+  if (def && (def.use === 'endrahmen' || def.endportal)){ say(def.label + ' ist unzerstörbar', true); sfx.mine(); return; }
+  if (MC && def && !creative() && tool !== 'bohrer'){
+    var need = mcNeed(def);
+    if (need > 0 && (toolClass(tool) !== 'spitzhacke' || toolTier(tool) < need)){ say(def.label + ': dafür brauchst du ' + TIER_NAME[need], true); sfx.mine(); return; }
+  }
+  return _mineVoxel(hit, tool, power);
+};
+
+/* ---------------------------------------------------------------- Rezepte */
+
+function addRecipe(tab, r){ RECIPES[tab] = RECIPES[tab] || []; RECIPES[tab].push(r); RECIPE_BY_ID['craft:' + r.id] = r; RECIPE_BY_ID[r.id] = r; }
+if (MC){
+  addRecipe('waffen', R('holzspitzhacke', 'holzspitzhacke', 'Holzspitzhacke', { bretter: 3, stock: 2 }, { unique: true, info: 'Baut Stein und Kohle ab.' }));
+  addRecipe('waffen', R('steinspitzhacke', 'steinspitzhacke', 'Steinspitzhacke', { stein: 3, stock: 2 }, { unique: true, info: 'Baut auch Eisen, Kupfer und Lapis ab.' }));
+  addRecipe('waffen', R('holzaxt', 'holzaxt', 'Holzaxt', { bretter: 3, stock: 2 }, { unique: true }));
+  addRecipe('waffen', R('steinaxt', 'steinaxt', 'Steinaxt', { stein: 3, stock: 2 }, { unique: true }));
+  addRecipe('waffen', R('holzschwert', 'holzschwert', 'Holzschwert', { bretter: 2, stock: 1 }, { unique: true }));
+  addRecipe('waffen', R('steinschwert', 'steinschwert', 'Steinschwert', { stein: 2, stock: 1 }, { unique: true }));
+  GR('holzspitzhacke', 1, ['BBB', ' T ', ' T '], { B: 'bretter', T: 'stock' }, { unique: true });
+  GR('holzaxt', 1, ['BB', 'BT', ' T'], { B: 'bretter', T: 'stock' }, { unique: true });
+  GR('holzschwert', 1, ['B', 'B', 'T'], { B: 'bretter', T: 'stock' }, { unique: true });
+  GR('steinschwert', 1, ['S', 'S', 'T'], { S: 'stein', T: 'stock' }, { unique: true });
+  /* Die bisherige Spitzhacke und Axt sind jetzt aus Eisen; die Steinversionen bekommen die alten Muster */
+  GRID_RECIPES.forEach(function(g){
+    if (g.out === 'spitzhacke' && g.key && g.key.S === 'stein') g.key = { S: 'eisen', T: 'stock' };
+    if (g.out === 'axt' && g.key && g.key.S === 'stein') g.key = { S: 'eisen', T: 'stock' };
+  });
+  GR('steinspitzhacke', 1, ['SSS', ' T ', ' T '], { S: 'stein', T: 'stock' }, { unique: true });
+  GR('steinaxt', 1, ['SS', 'ST', ' T'], { S: 'stein', T: 'stock' }, { unique: true });
+  ['spitzhacke', 'axt'].forEach(function(id){ var r = RECIPE_BY_ID[id]; if (r){ r.cost = { eisen: 3, stock: 2 }; r.title = id === 'spitzhacke' ? 'Eisenspitzhacke' : 'Eisenaxt'; } });
+  if (RECIPE_BY_ID.schwert) RECIPE_BY_ID.schwert.title = 'Eisenschwert';
+  /* Die wichtigsten Minecraft-Rezepte auch im Rezeptbuch (antippen legt die Zutaten ins Crafting-Feld) */
+  addRecipe('bloecke', R('stock', 'stock', '4 Stöcke', { bretter: 2 }, { out: ['stock', 4], info: '2 Bretter übereinander.' }));
+  addRecipe('bloecke', R('werkbankblock', 'werkbankblock', 'Werkbank', { bretter: 4 }, { out: ['werkbankblock', 1], info: '4 Bretter im Quadrat. Aufstellen = 3 × 3 Crafting.' }));
+  addRecipe('bloecke', R('truhe', 'truhe', 'Truhe', { bretter: 8 }, { out: ['truhe', 1], bench: true, info: '8 Bretter im Kreis.' }));
+  addRecipe('bloecke', R('ofenblock', 'ofenblock', 'Ofen', { stein: 8 }, { out: ['ofenblock', 1], bench: true, info: '8 Stein im Kreis. Schmilzt Erz, brät Fleisch.' }));
+  addRecipe('bloecke', R('leiter', 'leiter', '3 Leitern', { stock: 7 }, { out: ['leiter', 3], bench: true }));
+  addRecipe('bloecke', R('tnt', 'tnt', 'TNT', { sand: 4, kohle: 5 }, { out: ['tnt', 1], bench: true }));
+  (function(){ var l = RECIPES.bloecke, moved = l.splice(l.length - 6, 6); Array.prototype.splice.apply(l, [1, 0].concat(moved)); })();
+}
+addRecipe('magie', R('lohenstaub', 'lohenstaub', '2 Lohenstaub', { lohenrute: 1 }, { out: ['lohenstaub', 2], info: 'Aus einer Lohenrute.' }));
+addRecipe('magie', R('enderauge', 'enderauge', 'Enderauge', { enderperle: 1, lohenstaub: 1 }, { out: ['enderauge', 1], info: 'Werfen: fliegt Richtung Festung. In einen Endportalrahmen setzen.' }));
+GS('lohenstaub', 2, { lohenrute: 1 });
+GS('enderauge', 1, { enderperle: 1, lohenstaub: 1 });
+
+/* ---------------------------------------------------------------- Nur Minecraft-Sachen */
+
+var MC_DENY = {};
+('pistole schrotflinte sturmgewehr frostgewehr feuerstab goldlauf munition granate energieschwert medipack medipackxl trank gegengift flasche ' +
+ 'jacke stiefel helmlampe kristallruestung obsidianruestung glueckring lebensamulett temporing feuerring taucheramulett flammenwerfer raketenwerfer ' +
+ 'rakete lasergewehr blitzstab eisstab heilstab enterhaken bumerang zauberbuch jetpack gleiter stahl speer hammer apfelkuchen honigbrot fischsuppe ' +
+ 'kuerbissuppe spiegelei saft kuchen eintopf wand fensterwand barrikade stacheldraht turm blitzturm kanonenturm stachelfalle mine plattform heilstation ' +
+ 'werkbank ofen brunnen zelt tuer wachturm steinmauer tor bruecke teleporter leuchtfeuer flammenturm eisturm baerenfalle vogelscheuche huehnerstall ' +
+ 'regentonne statue wegpunkt mp revolver minigun scharfschuetze plasmagewehr railgun portalkanone gravikanone farbwerfer kettensaege spraydose zeituhr ' +
+ 'dashhandschuh schildguertel wurfmesser klebegranate rauchgranate blendgranate heilgranate molotow signalfackel luftschlag kampfdrohne horn schildtrank ' +
+ 'megaschluck verband juggertrank schnellfeuertrank explosivpfeil feuerpfeil wunderkiste sprungpad tempopad bauzauberstab bohrer erzsucher sternenblock ' +
+ 'leuchtblock kristallblock rubinblock saphirblock drink').split(' ').forEach(function(k){ MC_DENY[k] = 1; });
+function mcDenied(id){
+  if (!MC || !id) return false;
+  if (id.indexOf('spell:') === 0 || id.indexOf('upgrade:') === 0 || id.indexOf('enchant:') === 0) return true;
+  var k = id.replace(/^(craft|trade):/, '');
+  return !!MC_DENY[k];
+}
+var _recipesForTab = recipesForTab;
+recipesForTab = function(tab){
+  var list = _recipesForTab(tab);
+  return MC ? list.filter(function(r){ return !mcDenied(r.id) && !mcDenied(r.icon); }) : list;
+};
+var _matchGrid = matchGrid;
+matchGrid = function(){
+  var m = _matchGrid();
+  if (m && MC && (MC_DENY[m.rec.out] || MC_DENY[m.rec.id])) return null;
+  return m;
+};
+var _tradeOffers = tradeOffers;
+tradeOffers = function(){
+  var l = _tradeOffers();
+  return MC ? l.filter(function(o){ return !mcDenied(o.id) && !mcDenied(o.icon); }) : l;
+};
+var _catalogList = catalogList;
+catalogList = function(){ var l = _catalogList(); return MC ? l.filter(function(k){ return !MC_DENY[k]; }) : l; };
+var _starterKit = starterKit;
+starterKit = function(){ if (!MC) _starterKit(); };
+var _thirstOn = thirstOn;
+thirstOn = function(){ return !MC && _thirstOn(); };
+var _inColdZone = inColdZone;
+inColdZone = function(){ return !MC && _inColdZone(); };
+
+/* Nur Minecraft-Monster: alles andere wird zu seinem Minecraft-Gegenstück */
+var MC_ENEMY = {};
+('zombie skelett spinne kriecher hexe schleim schleimchen endermann phantom pluenderer verwuester magier plagegeist lohe ghast ertrunkener ' +
+ 'silberfisch waechter piglin witherskelett magmawuerfel magmachen frostbite enderdrache endkristall').split(' ').forEach(function(k){ MC_ENEMY[k] = 1; });
+var MC_ENEMY_MAP = { crawler: 'zombie', flyer: 'phantom', spitter: 'spinne', jumper: 'spinne', golem: 'zombie', geist: 'phantom', skorpion: 'spinne',
+  eisgolem: 'frostbite', mimic: 'zombie', bomber: 'kriecher', brute: 'verwuester', wasp: 'phantom', golemking: 'verwuester', drache: 'phantom',
+  bandit: 'pluenderer', schatten: 'endermann', koenigsspinne: 'spinne', waldriese: 'verwuester', krake: 'ertrunkener', grubenwurm: 'silberfisch',
+  hoehlentroll: 'zombie', fledermaus: 'skelett' };
+var _createEnemy = createEnemy;
+createEnemy = function(kind, x, z, waveNum, elite, refY){
+  if (MC && !MC_ENEMY[kind] && ENEMY_DEF[kind]) kind = MC_ENEMY_MAP[kind] || 'zombie';
+  var e = _createEnemy(kind, x, z, waveNum, elite, refY);
+  if (e && kind === 'frostbite'){ e.iceThrower = Math.random() < 0.3; e.iceCd = 1 + Math.random() * 2; }
+  return e;
+};
+var _pickEnemyKind = pickEnemyKind;
+pickEnemyKind = function(n){
+  headWorld(A);
+  if (W.isEnd(A.x, A.z)) return 'endermann';
+  if (!MC || W.isNether(A.x, A.z)){
+    if (!W.isNether(A.x, A.z) && nightFactor > 0.5 && W.biomeAt(A.x, A.z, dolly.position.y) === 'schnee' && Math.random() < 0.25) return 'frostbite';
+    return _pickEnemyKind(n);
+  }
+  var biome = W.biomeAt(A.x, A.z, dolly.position.y), r = Math.random();
+  if (biome === 'schnee' && r < 0.45) return r < 0.3 ? 'frostbite' : 'skelett';
+  if (biome === 'strand' && r < 0.35) return 'ertrunkener';
+  if (r < 0.05) return 'endermann';
+  if (r < 0.08 && n >= 3) return 'hexe';
+  if (r < 0.12 && biome === 'wald') return 'schleim';
+  r = Math.random();
+  return r < 0.36 ? 'zombie' : (r < 0.62 ? 'skelett' : (r < 0.82 ? 'spinne' : 'kriecher'));
+};
+var _pickUnder = pickUndergroundKind;
+pickUndergroundKind = function(y){
+  headWorld(A);
+  if (!MC || W.isNether(A.x, A.z)) return _pickUnder(y);
+  var r = Math.random();
+  if (y < -20 && r < 0.05) return 'endermann';
+  r = Math.random();
+  return r < 0.34 ? 'zombie' : (r < 0.6 ? 'skelett' : (r < 0.8 ? 'spinne' : 'kriecher'));
+};
+
+/* Keine erfundenen Ereignisse im Minecraft-Stil */
+function mcOff(name, fn){ return function(){ if (MC) return null; return fn.apply(this, arguments); }; }
+updateBossNight = mcOff('boss', updateBossNight);
+startRaid = mcOff('raid', startRaid);
+spawnKraken = mcOff('krake', spawnKraken);
+smithArrive = mcOff('schmied', smithArrive);
+launchMeteor = mcOff('meteor', launchMeteor);
+updateCamp = mcOff('lager', updateCamp);
+spawnSupplyDrop = mcOff('kiste', spawnSupplyDrop);
+var _updateEclipse = updateEclipse;
+updateEclipse = function(dt){ if (MC){ eclipseActive = false; return; } _updateEclipse(dt); };
+var mcWasNight = false;
+var _updateBloodMoon = updateBloodMoon;
+updateBloodMoon = function(dt){
+  if (!MC) return _updateBloodMoon(dt);
+  var isNight = nightFactor > 0.5;
+  if (isNight && !mcWasNight) tip('night');
+  if (!isNight && mcWasNight && gameStarted && !state.dead){
+    state.stats.nights = (state.stats.nights || 0) + 1;
+    if (state.stats.nights > state.best) state.best = state.stats.nights;
+    saveSoon();
+  }
+  mcWasNight = isNight;
+  bloodMoon = false;
+  moonDisc.material.color.setHex(0xe2e8ff);
+};
+if (MC){
+  nests.forEach(function(n){ if (n.hp > 0){ n.hp = 0; scene.remove(n.mesh); W.removeObstacleNear(n.x, n.z, 1.5); } });
+  chests.forEach(function(c){ if (c.mimic) c.mimic = false; });
+}
+
+/* ---------------------------------------------------------------- Tiere: Schweine, Eisbären, keine erfundenen Tiere */
+
+ANIMAL_DEF.schwein = { hp: 10, speed: 2.4, radius: 0.55, bar: 1.2, off: 0, name: 'Schwein', drops: [['fleisch', 2]], biome: 'wald', center: 0.5, food: 'karotte' };
+EXTRA_ANIMAL_MESH.schwein = function(){
+  var g = makeQuadruped(0xf0a8a2, 0.9, { ears: true, neckTilt: 0.1, headY: 0.82, legColor: 0xe0928c });
+  var snout = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.09, 0.05), flat(0xd8807a)); snout.position.set(0, 0.8 * 0.9, -0.77 * 0.9); g.add(snout);
+  g.userData.body.scale.set(1.5, 1.15, 1.0);
+  return g;
+};
+if (MC){
+  ANIMAL_DEF.baer.name = 'Eisbär';
+  EXTRA_ANIMAL_MESH.baer = function(){ return makeQuadruped(0xf0efe6, 1.35, { ears: true, neckTilt: 1.2, headY: 0.95, legColor: 0xe0dfd6 }); };
+}
+var MC_ANIMAL_MAP = { reh: 'schwein', ente: 'huhn', eule: 'huhn', pinguin: 'hase' };
+var _createAnimal = createAnimal;
+createAnimal = function(kind){
+  var args = Array.prototype.slice.call(arguments);
+  if (MC && MC_ANIMAL_MAP[kind]) args[0] = MC_ANIMAL_MAP[kind];
+  return _createAnimal.apply(null, args);
+};
+if (MC){
+  ANIMAL_WISHES.forEach(function(w){ if (MC_ANIMAL_MAP[w[0]]) w[0] = MC_ANIMAL_MAP[w[0]]; });
+  animals.slice().forEach(function(a){
+    var to = MC_ANIMAL_MAP[a.kind];
+    if (!to || a.tame) return;
+    var p = a.mesh.position.clone();
+    scene.remove(a.mesh); if (a.bar) scene.remove(a.bar);
+    animals.splice(animals.indexOf(a), 1);
+    _createAnimal(to, p.x, p.z, false, p.y);
+  });
+}
+ANIMAL_WISHES.push(['schwein', 5]);
+for (var pi = 0; pi < 5; pi++) spawnAnimal('schwein');
+
+/* ---------------------------------------------------------------- Frostbite (Eis-Zombie aus dem Winter-Update) */
+
+ENEMY_DEF.frostbite = { hp: 13, speed: 1.15, dmg: 2, off: 0, radius: 0.5, xp: 11, bar: 2.0, name: 'Frostbite', center: 1.0, burnsInSun: true };
+EXTRA_ENEMY_MESH.frostbite = function(){
+  var g = makeHumanoid({ skin: 0xa8d8e8, cloth: 0x4a6a9a, pants: 0x2a3a5a, armsForward: true, armSkin: true, eyes: 0x9ff0ff });
+  var ice = new THREE.MeshPhongMaterial({ color: 0xd8f4ff, emissive: 0x2a5a78, shininess: 80, flatShading: true });
+  [[-0.24, 1.38], [0.24, 1.38], [0.06, 1.78], [-0.08, 1.74]].forEach(function(p, i){ var c = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.22, 4), ice); c.position.set(p[0], p[1], 0); c.rotation.z = (i % 2 ? -0.4 : 0.4); g.add(c); });
+  return g;
+};
+function freezePlayer(t){
+  X4.freezeT = Math.max(X4.freezeT, t);
+  state.slowTime = Math.max(state.slowTime, t);
+  if (hurtOverlay) hurtOverlay.material.opacity = Math.max(hurtOverlay.material.opacity, 0.12);
+}
+var _hitPlayer = hitPlayer;
+hitPlayer = function(e){ _hitPlayer(e); if (e && e.kind === 'frostbite') freezePlayer(4); };
+var _projHits = projectileHitsPlayer;
+projectileHitsPlayer = function(p){
+  _projHits(p);
+  if (p.ice) freezePlayer(4);
+  if (p.dragon){ headWorld(A); spawnBurst(A, 0xb048ff, 16, 2.5, { gravity: -0.5, life: 1.2 }); }
+};
+USE_ITEMS.eisball = { can: function(){ return true; }, use: function(){
+  var th = toolHand(); headWorld(A);
+  var from = (th.active ? th.wrist : A).clone(), dir = th.active ? th.dir.clone() : camera.getWorldDirection(B).clone();
+  launchShot('eis', from.addScaledVector(dir, 0.3), dir.multiplyScalar(20), { dmg: rangedBonus(3, 'eisstab'), gravity: 4, life: 3 });
+  sfx.frost();
+  return 'Eisball geworfen';
+} };
+
+/* ---------------------------------------------------------------- Festung finden, Enderaugen */
+
+var festCache = { x: 1e9, z: 1e9, list: [] };
+function nearestFestung(){
+  headWorld(A);
+  if (Math.hypot(A.x - festCache.x, A.z - festCache.z) > 150){
+    festCache.x = A.x; festCache.z = A.z;
+    festCache.list = W.inWorld(A.x, A.z) && !W.isNether(A.x, A.z) && !W.isEnd(A.x, A.z) ? W.festungenNear(A.x, A.z, 2600) : [];
+  }
+  var best = null, bd = Infinity;
+  festCache.list.forEach(function(s){ var d = Math.hypot(s.x - A.x, s.z - A.z); if (d < bd){ bd = d; best = s; } });
+  return best;
+}
+var eyeGeo = new THREE.SphereGeometry(0.09, 10, 8);
+var eyeMat = new THREE.MeshBasicMaterial({ color: 0x3ad07a });
+var eyePupil = new THREE.MeshBasicMaterial({ color: 0x0a1a12 });
+var flyingEyes = [];
+function throwEye(){
+  var th = toolHand(); headWorld(A);
+  var from = (th.active ? th.wrist : A).clone();
+  var f = nearestFestung(), dir = new THREE.Vector3(), target = null, dist = 99;
+  if (f){
+    target = W.festungPortal(f);
+    dir.set(target.x - from.x, 0, target.z - from.z); dist = dir.length(); dir.normalize();
+  } else { camera.getWorldDirection(dir); dir.y = 0; dir.normalize(); }
+  var mesh = new THREE.Group(), ball = new THREE.Mesh(eyeGeo, eyeMat), pupil = new THREE.Mesh(new THREE.SphereGeometry(0.045, 8, 6), eyePupil);
+  pupil.position.z = -0.06; mesh.add(ball, pupil); mesh.position.copy(from); scene.add(mesh);
+  flyingEyes.push({ mesh: mesh, start: from.clone(), dir: dir, t: 0, near: !!f && dist < 16, target: target });
+  tone(880, 0.3, 'sine', 0.04, 1320);
+  return f ? (dist < 16 ? 'Das Auge sinkt nach unten: die Festung ist direkt unter dir!' : 'Das Enderauge fliegt Richtung Festung (' + Math.round(dist) + ' m)') : 'Das Enderauge findet hier keine Festung';
+}
+USE_ITEMS.enderauge = { can: function(){ return true; }, use: throwEye };
+function updateEyes(dt){
+  for (var i = flyingEyes.length - 1; i >= 0; i--){
+    var e = flyingEyes[i], p = e.mesh.position;
+    e.t += dt;
+    if (e.near && e.target){
+      var k = Math.min(1, e.t / 2.2);
+      p.set(e.start.x + (e.target.x - e.start.x) * k, e.start.y + 1.5 * Math.sin(k * Math.PI) - (e.start.y - (e.target.y + 1)) * k * k, e.start.z + (e.target.z - e.start.z) * k);
+    } else if (e.t < 1.7){
+      var k2 = e.t / 1.7;
+      p.copy(e.start).addScaledVector(e.dir, k2 * 12); p.y += Math.sin(k2 * Math.PI * 0.5) * 3;
+    }
+    e.mesh.lookAt(p.x + e.dir.x, p.y, p.z + e.dir.z);
+    if (Math.random() < dt * 20) spawnBurst(p, 0xb48cff, 1, 0.4, { gravity: -0.5, life: 0.6 });
+    if (e.t > (e.near ? 3.2 : 2.8)){
+      scene.remove(e.mesh);
+      flyingEyes.splice(i, 1);
+      if (Math.random() < 0.8){ spawnItemDrop('enderauge', 1, p.clone(), new THREE.Vector3(0, 1, 0), { delay: 0.6 }); }
+      else { spawnBurst(p, 0x3ad07a, 14, 2.5); tone(300, 0.2, 'triangle', 0.05, 120); S().eyesBroken = (S().eyesBroken || 0) + 1; say('Das Enderauge ist zerbrochen', true); }
+    }
+  }
+}
+
+/* Auge in einen Endportalrahmen setzen; sind alle 12 voll, öffnet sich das Portal */
+var _tryUseVoxel = tryUseVoxel;
+tryUseVoxel = function(h){
+  if (state.selected === 'enderauge' && (has('enderauge', 1) || creative())){
+    var hit = blockTarget(h, 4.5);
+    if (hit && hit.type === VT.endportalrahmen){
+      W.setVoxel(hit.ix, hit.iy, hit.iz, VT.endportalrahmen_auge);
+      if (!creative()) state.inv.enderauge--;
+      S().eyesPlaced = (S().eyesPlaced || 0) + 1;
+      spawnBurst(B.set(hit.ix + 0.5, hit.iy + 1, hit.iz + 0.5), 0x3ad07a, 10, 1.5);
+      tone(520, 0.25, 'sine', 0.05, 780);
+      checkEndPortal(hit.ix, hit.iy, hit.iz);
+      uiDirty = true; saveSoon();
+      return true;
+    }
+    if (hit && hit.type === VT.endportalrahmen_auge){ say('In diesem Rahmen steckt schon ein Auge', true); return true; }
+  }
+  return _tryUseVoxel(h);
+};
+function ringOf(cx, cz){ var out = []; for (var q = -1; q <= 1; q++) out.push([cx + q, cz - 2], [cx + q, cz + 2], [cx - 2, cz + q], [cx + 2, cz + q]); return out; }
+function checkEndPortal(ix, iy, iz){
+  var bestMissing = 12;
+  for (var cx = ix - 2; cx <= ix + 2; cx++) for (var cz = iz - 2; cz <= iz + 2; cz++){
+    var ring = ringOf(cx, cz), eyes = 0, frames = 0;
+    ring.forEach(function(p){ var t = W.rawAt(p[0], iy, p[1]); if (t === VT.endportalrahmen_auge){ eyes++; frames++; } else if (t === VT.endportalrahmen) frames++; });
+    if (frames < 12) continue;
+    if (eyes === 12){
+      for (var a = -1; a <= 1; a++) for (var b = -1; b <= 1; b++) W.setVoxel(cx + a, iy, cz + b, VT.endportal);
+      S().mcPortal = 1;
+      banner('DAS ENDPORTAL IST OFFEN!', ['Spring hinein, um ins End zu reisen', 'Dort wartet der Enderdrache'], '#3ad07a');
+      [262, 330, 392, 523].forEach(function(f, i){ later(i * 160, function(){ tone(f, 0.5, 'sine', 0.05); }); });
+      return;
+    }
+    bestMissing = Math.min(bestMissing, 12 - eyes);
+  }
+  if (bestMissing < 12) say('Noch ' + bestMissing + ' Enderaugen bis zum Endportal', true);
+}
+
+/* ---------------------------------------------------------------- Reisen ins End und zurück */
+
+function travelTo(x, z, yHint){
+  W.stream(x, z);
+  headWorld(A);
+  if (riding) dismountHorse();
+  if (X3.leaveCart) X3.leaveCart(true);
+  dolly.position.x += x - A.x;
+  dolly.position.z += z - A.z;
+  var fy = W.floorRaw(x, z, (yHint || 0) + 3);
+  dolly.position.y = (fy === -Infinity ? (yHint || 0) : fy) + ((renderer.xr.isPresenting && settings.seated) ? 0.45 : 0);
+  air.active = false; air.vy = 0;
+  X3.invulnT = Math.max(X3.invulnT || 0, 4);
+  X4.portalCd = 4;
+}
+function dragonAlive(){ return enemies.some(function(e){ return e.kind === 'enderdrache' && e.hp > 0; }); }
+function enterEnd(){
+  var a = W.endArrival();
+  travelTo(a.x, a.z, a.y);
+  S().endVisits = (S().endVisits || 0) + 1;
+  banner('DAS END', X4.dragonDead ? ['Der Enderdrache ist besiegt', 'Das Ausgangsportal in der Mitte bringt dich heim'] : ['Zerstöre die Endkristalle auf den Säulen', 'Dann besiege den Enderdrachen!'], '#b048ff');
+  tone(110, 2.5, 'sine', 0.06, 70);
+  if (!X4.dragonDead && !dragonAlive()) later(2500, setupDragonFight);
+  saveSoon();
+}
+function leaveEnd(){
+  var sp = state.spawn || { x: 0, z: 0 };
+  var x = sp.x || 0.5, z = sp.z || 0.5;
+  travelTo(x, z, typeof sp.y === 'number' ? sp.y : W.surfaceHeight(x, z));
+  banner('ZURÜCK IN DER OBERWELT', [X4.dragonDead ? 'Du hast Minecraft durchgespielt!' : 'Willkommen zu Hause'], '#7bd389');
+}
+
+/* ---------------------------------------------------------------- Endkristalle und Enderdrache */
+
+ENEMY_DEF.endkristall = { hp: 1, speed: 0, dmg: 0, off: 0, radius: 0.9, xp: 2, bar: 0.6, name: 'Endkristall', center: 0.4 };
+ENEMY_DEF.enderdrache = { hp: 200, speed: 10, dmg: 4, off: 0, radius: 3.0, xp: 500, bar: 4.5, boss: true, flying: true, name: 'Enderdrache', center: 0.6 };
+EXTRA_ENEMY_MESH.endkristall = function(){
+  var g = new THREE.Group();
+  var core = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.45, 0.45), new THREE.MeshBasicMaterial({ color: 0xff7ad8 }));
+  var cage = new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.85, 0.85), new THREE.MeshBasicMaterial({ color: 0xe8d8ff, wireframe: true, transparent: true, opacity: 0.8 }));
+  var cage2 = cage.clone(); cage2.scale.setScalar(1.25); cage2.rotation.set(0.6, 0.4, 0.2);
+  var base = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.25, 0.9), flat(0x3a2a4a)); base.position.y = -0.9;
+  g.add(core, cage, cage2, base);
+  g.userData.body = core; g.userData.cage = cage; g.userData.cage2 = cage2;
+  return g;
+};
+EXTRA_ENEMY_MESH.enderdrache = function(){
+  var g = makeDragon();
+  g.traverse(function(o){
+    if (!o.isMesh || !o.material || !o.material.color) return;
+    var hx = o.material.color.getHex();
+    o.material = o.material.clone();
+    if (o.material.isMeshBasicMaterial) o.material.color.setHex(0xd060ff);
+    else o.material.color.setHex(hx === 0xd8a050 ? 0x2a2230 : (hx === 0xefe3cf ? 0x8a8090 : 0x16141c));
+  });
+  g.scale.setScalar(1.6);
+  return g;
+};
+var beamGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3(0, 1, 0)]);
+var beam = new THREE.Line(beamGeo, new THREE.LineBasicMaterial({ color: 0xff9ae8, transparent: true, opacity: 0.85 }));
+beam.frustumCulled = false; beam.visible = false; scene.add(beam);
+
+function setupDragonFight(){
+  if (X4.dragonDead || dragonAlive() || !W.isEnd(dolly.position.x, dolly.position.z)) return;
+  enemies.filter(function(e){ return e.kind === 'endkristall'; }).forEach(function(e){ scene.remove(e.mesh); scene.remove(e.bar); enemies.splice(enemies.indexOf(e), 1); });
+  W.END_PILLARS.forEach(function(p){
+    W.floorRaw(p.x + 0.5, p.z + 0.5, p.top + 2);
+    var e = createEnemy('endkristall', p.x + 0.5, p.z + 0.5, 1, false, p.top + 1);
+    if (!e) return;
+    e.anchor = new THREE.Vector3(p.x + 0.5, p.top + 2.1, p.z + 0.5);
+    e.mesh.position.copy(e.anchor);
+  });
+  var ct = W.endCenterTop();
+  var d = createEnemy('enderdrache', END.cx + 40, END.cz, 6, false, ct + 20);
+  if (!d) return;
+  d.mesh.position.set(END.cx + 40, ct + 24, END.cz);
+  d.hp = d.maxHp = Math.round(ENEMY_DEF.enderdrache.hp * Math.max(0.6, diff().enemies || 1));
+  d.phase = 'kreisen'; d.angle = 0; d.phaseT = 8; d.fireCd = 1; d.breathCd = 1;
+  banner('DER ENDERDRACHE!', ['Endkristalle heilen ihn: zerstöre sie zuerst', 'Pfeile treffen auch im Flug'], '#b048ff');
+  sfx.roar();
+}
+
+var _enemyCustom = enemyCustom;
+enemyCustom = function(e, def, dt, px, pz, dist, nx, nz, active, target){
+  if (e.kind === 'endkristall'){
+    if (e.anchor){ e.mesh.position.set(e.anchor.x, e.anchor.y + Math.sin(e.anim * 0.4) * 0.15, e.anchor.z); }
+    var ud = e.mesh.userData; e.anim += dt * 3;
+    if (ud.cage){ ud.cage.rotation.x += dt * 1.3; ud.cage.rotation.y += dt * 1.7; ud.cage2.rotation.y -= dt * 1.1; ud.body.rotation.y += dt * 2; }
+    return true;
+  }
+  if (e.kind === 'enderdrache') return dragonAI(e, dt, px, pz);
+  if (e.kind === 'frostbite' && e.iceThrower && active && dist > 3 && dist < 14){
+    e.iceCd -= dt;
+    if (e.iceCd <= 0){
+      e.iceCd = 2.4 + Math.random();
+      headWorld(A);
+      B.copy(e.mesh.position); B.y += 1.5;
+      spawnProjectile(B, A, 0xd8f4ff, { speed: 13, dmg: 2, size: 1.1, ice: true });
+      tone(1200, 0.08, 'triangle', 0.03, 600);
+    }
+  }
+  return _enemyCustom(e, def, dt, px, pz, dist, nx, nz, active, target);
+};
+
+var dragonTarget = new THREE.Vector3();
+function dragonAI(e, dt, px, pz){
+  var pos = e.mesh.position, ct = W.endCenterTop(), ud = e.mesh.userData;
+  e.phaseT -= dt; e.anim += dt;
+  headWorld(A);
+  var py = dolly.position.y;
+  if (!W.isEnd(A.x, A.z)){ e.phase = 'kreisen'; }
+  if (e.phase === 'kreisen'){
+    e.angle += dt * 0.3;
+    var R = 46 + Math.sin(e.angle * 0.7) * 8;
+    dragonTarget.set(END.cx + Math.cos(e.angle) * R, ct + 24 + Math.sin(e.angle * 1.3) * 5, END.cz + Math.sin(e.angle) * R);
+    if (e.phaseT <= 0 && W.isEnd(A.x, A.z)){
+      var r = Math.random();
+      e.phase = r < 0.42 ? 'sturz' : (r < 0.78 ? 'feuer' : 'landen');
+      e.phaseT = e.phase === 'landen' ? 9 : 6;
+    }
+  } else if (e.phase === 'sturz'){
+    dragonTarget.set(A.x, py + 1.4, A.z);
+    if (pos.distanceTo(dragonTarget) < 3.2){
+      damagePlayer(4, false);
+      B.set(A.x - pos.x, 0, A.z - pos.z).normalize();
+      tryMove(B.x * 2.5, B.z * 2.5);
+      air.active = true; air.vy = Math.max(air.vy, 5);
+      e.phase = 'kreisen'; e.phaseT = 7 + Math.random() * 4;
+    }
+    if (e.phaseT <= 0){ e.phase = 'kreisen'; e.phaseT = 6; }
+  } else if (e.phase === 'feuer'){
+    B.set(pos.x - A.x, 0, pos.z - A.z); if (B.lengthSq() < 0.01) B.set(1, 0, 0); B.normalize();
+    dragonTarget.set(A.x + B.x * 26, py + 14, A.z + B.z * 26);
+    e.fireCd -= dt;
+    if (e.fireCd <= 0){
+      e.fireCd = 1.3;
+      C.copy(pos); C.y += 1;
+      spawnProjectile(C, A, 0xb048ff, { speed: 15, dmg: 3, size: 2.4, dragon: true });
+      noiseBurst(0.3, 0.05, 600);
+    }
+    if (e.phaseT <= 0){ e.phase = 'kreisen'; e.phaseT = 6 + Math.random() * 4; }
+  } else if (e.phase === 'landen'){
+    dragonTarget.set(END.cx + 0.5, ct + 5.5, END.cz + 4.5);
+    if (pos.distanceTo(dragonTarget) < 1.5){
+      e.breathCd -= dt;
+      if (e.breathCd <= 0){
+        e.breathCd = 1.4;
+        B.copy(pos); B.y -= 1; spawnBurst(B, 0xb048ff, 18, 3, { gravity: -0.3, life: 1.4 });
+        if (Math.hypot(A.x - pos.x, A.z - pos.z) < 8 && Math.abs(py - (pos.y - 4)) < 4) damagePlayer(2, false);
+      }
+    }
+    if (e.phaseT <= 0){ e.phase = 'kreisen'; e.phaseT = 8; }
+  }
+  B.copy(dragonTarget).sub(pos);
+  var dl = B.length(), spd = (e.phase === 'sturz' ? 17 : (e.phase === 'landen' ? 9 : 12)) * (e.slowT > 0 ? 0.5 : 1);
+  if (dl > 0.05){
+    pos.addScaledVector(B.multiplyScalar(1 / dl), Math.min(dl, spd * dt));
+    var want = Math.atan2(-(dragonTarget.x - pos.x), -(dragonTarget.z - pos.z));
+    var dy = want - e.mesh.rotation.y; while (dy > Math.PI) dy -= Math.PI * 2; while (dy < -Math.PI) dy += Math.PI * 2;
+    e.mesh.rotation.y += dy * Math.min(1, dt * 3);
+  }
+  if (ud.wings) ud.wings.forEach(function(w, i){ w.rotation.z = Math.sin(e.anim * (e.phase === 'landen' ? 2 : 5)) * 0.55 * (i ? -1 : 1); });
+  /* Endkristalle heilen den Drachen */
+  var healer = null, hd = 75;
+  enemies.forEach(function(c){ if (c.kind === 'endkristall' && c.hp > 0){ var d = c.mesh.position.distanceTo(pos); if (d < hd){ hd = d; healer = c; } } });
+  if (healer && e.hp < e.maxHp){
+    e.hp = Math.min(e.maxHp, e.hp + dt * 2.5);
+    var bp = beam.geometry.attributes.position;
+    bp.setXYZ(0, healer.mesh.position.x, healer.mesh.position.y, healer.mesh.position.z);
+    bp.setXYZ(1, pos.x, pos.y, pos.z); bp.needsUpdate = true;
+    beam.visible = true;
+  } else beam.visible = false;
+  return true;
+}
+
+var _prevKilled4 = X3.onEnemyKilled;
+X3.onEnemyKilled = function(e, source){
+  if (_prevKilled4) _prevKilled4(e, source);
+  if (e.kind === 'endkristall'){
+    explode(e.mesh.position.clone(), 4.5, 8, 'kristall');
+    S().crystals = (S().crystals || 0) + 1;
+  }
+  if (e.kind === 'frostbite' && Math.random() < 0.6) give('eisball', 1 + (Math.random() < 0.3 ? 1 : 0), true);
+  if (e.kind === 'enderdrache'){
+    X4.dragonDead = true;
+    S().enderDragon = 1;
+    S().dragons = (S().dragons || 0) + 1;
+    beam.visible = false;
+    var ct = W.endCenterTop();
+    for (var dx = -3; dx <= 3; dx++) for (var dz = -3; dz <= 3; dz++){
+      var d = Math.hypot(dx, dz);
+      if (d >= 0.5 && d <= 2.5) W.setVoxel(END.cx + dx, ct, END.cz + dz, VT.endportal);
+    }
+    W.setVoxel(END.cx, ct + 4, END.cz, VT.drachenei);
+    gainXP(200, e.mesh.position);
+    for (var k = 0; k < 6; k++) later(k * 300, function(){ spawnBurst(B.set(END.cx + (Math.random() - 0.5) * 8, ct + 6 + Math.random() * 6, END.cz + (Math.random() - 0.5) * 8), [0xb048ff, 0xffffff, 0xff9ae8][Math.floor(Math.random() * 3)], 30, 6); });
+    banner('DER ENDERDRACHE IST BESIEGT!', ['Das Ausgangsportal in der Mitte ist offen', 'Das Drachenei liegt oben auf dem Portal'], '#b048ff');
+    sfx.level();
+    saveSoon();
+  }
+};
+
+/* ---------------------------------------------------------------- Pro Bild: End-Himmel, Leere, Portale, Augen, Einfrieren */
+
+var endCol = new THREE.Color(0x120c1c), wasEnd = false, endSpawnT = 4;
+function updateMC(dt){
+  headWorld(A);
+  var feet = playerFeet(), inE = W.isEnd(A.x, A.z);
+  if (X4.portalCd > 0) X4.portalCd -= dt;
+  if (inE){
+    scene.background.copy(endCol);
+    scene.fog.color.copy(endCol);
+    scene.fog.near = 30; scene.fog.far = Math.min(quality().far - 5, 120);
+    hemi.intensity = 0.7 + (state.nightVision > 0 ? 0.4 : 0);
+    sun.intensity = 0.15;
+    sunDisc.visible = false; moonDisc.visible = false; stars.material.opacity = 0.85; cloudMesh.visible = false;
+    if (typeof fireflies !== 'undefined') fireflies.visible = false;
+    if (typeof butterflies !== 'undefined') butterflies.visible = false;
+    if (!wasEnd){ hemi.color.setHex(0xc8b8f0); hemi.groundColor.setHex(0x2a1a3a); }
+    /* Ins Leere gefallen */
+    if (feet < -30 && !state.dead){
+      if (creative()){ var ar = W.endArrival(); travelTo(ar.x, ar.z, ar.y); }
+      else { X3.invulnT = 0; state.shield = 0; damagePlayer(999, false); say('Du bist ins Leere gefallen!'); }
+    }
+    /* Endermen auf der Insel */
+    endSpawnT -= dt;
+    if (endSpawnT <= 0 && diff().enemies > 0){
+      endSpawnT = 6;
+      var n = enemies.filter(function(e){ return e.kind === 'endermann'; }).length;
+      if (n < 6){
+        var a = Math.random() * Math.PI * 2, r = 15 + Math.random() * 15, x = A.x + Math.cos(a) * r, z = A.z + Math.sin(a) * r;
+        var fy = W.floorRaw(x, z, feet + 6);
+        if (fy !== -Infinity && Math.abs(fy - feet) < 8) createEnemy('endermann', x, z, 4, false, fy);
+      }
+    }
+  } else if (wasEnd){
+    hemi.color.setHex(0xd8ecff); hemi.groundColor.setHex(0x4d5a3a);
+    cloudMesh.visible = quality().clouds;
+    beam.visible = false;
+  }
+  wasEnd = inE;
+  /* Endportal betreten */
+  if (X4.portalCd <= 0 && !state.dead && gameStarted){
+    var t = W.rawAt(Math.floor(A.x), Math.floor(feet + 0.05), Math.floor(A.z));
+    if (t === VT.endportal){ if (inE) leaveEnd(); else enterEnd(); }
+  }
+  updateEyes(dt);
+  /* Einfrieren */
+  if (X4.freezeT > 0){
+    X4.freezeT -= dt; X4.freezeTick += dt;
+    if (X4.freezeTick > 1.6){ X4.freezeTick = 0; if (!state.owned.lederruestung) damagePlayer(1, false); }
+    if (Math.random() < dt * 6) spawnBurst(B.set(A.x, A.y - 0.8, A.z), 0xd8f4ff, 1, 0.6, { life: 0.5 });
+  }
+  /* Kaktus sticht */
+  if (gameStarted && !state.dead && !creative()){
+    X4.cactusT = (X4.cactusT || 0) - dt;
+    if (X4.cactusT <= 0){
+      var touch = false;
+      for (var ox = -1; ox <= 1 && !touch; ox += 2){ if (W.rawAt(Math.floor(A.x + ox * 0.45), Math.floor(feet + 0.5), Math.floor(A.z)) === VT.kaktusblock) touch = true; if (W.rawAt(Math.floor(A.x), Math.floor(feet + 0.5), Math.floor(A.z + ox * 0.45)) === VT.kaktusblock) touch = true; }
+      if (touch){ X4.cactusT = 0.6; damagePlayer(1, false); say('Autsch, ein Kaktus!', true); }
+    }
+  }
+}
+var _updateNether = X3.updateNether;
+X3.updateNether = function(dt){ _updateNether(dt); updateMC(dt); };
+
+/* Kompass: Festung für die Endportal-Aufgaben, im End die Inselmitte */
+var _qct = questCompassTarget;
+questCompassTarget = function(t){
+  headWorld(A);
+  if (W.isEnd(A.x, A.z) && (t === 'drache' || t === 'end')) return { x: END.cx, z: END.cz, label: X4.dragonDead ? 'Ausgangsportal' : 'Enderdrache' };
+  if (t === 'festung'){ var f = nearestFestung(); if (f) return { x: f.x, z: f.z, label: 'Festung' }; }
+  return _qct(t);
+};
+
+/* Statistik: Werkbank und Ofen aufgestellt */
+var _ovc4 = W.onVoxelChange;
+W.onVoxelChange = function(ix, iy, iz, before, after){
+  if (_ovc4) _ovc4(ix, iy, iz, before, after);
+  if (after === VT.werkbankblock) state.stats.mcBench = 1;
+  if (after === VT.ofenblock || after === VT.schmelzofen || after === VT.raeucherofen) state.stats.mcFurnace = 1;
+};
+
+/* Einfrieren und Spielstil in der Anzeige */
+var _uiState = uiState;
+uiState = function(){
+  var s = _uiState();
+  if (X4.freezeT > 0) s.chips.push({ text: 'Einfrieren ' + Math.ceil(X4.freezeT), color: '#9fe0ff' });
+  return s;
+};
+
+/* ---------------------------------------------------------------- Aufgaben: der Weg durch Minecraft */
+
+function owns(){ for (var i = 0; i < arguments.length; i++) if (state.owned[arguments[i]]) return 1; return 0; }
+var MC_QUESTS = [
+  { title: 'Fälle einen Baum: sammle 4 Holz', goal: 4, val: function(){ return gotCount('holz'); }, reward: [['apfel', 2]], xp: 5 },
+  { title: 'Crafte im Inventar: Holz wird zu Brettern', goal: 1, val: function(){ return S().gridCrafts || 0; }, reward: [['stock', 4]], xp: 5 },
+  { title: 'Crafte eine Werkbank (4 Bretter) und stell sie auf', goal: 1, val: function(){ return S().mcBench || 0; }, reward: [['bretter', 8]], xp: 8 },
+  { title: 'Baue eine Holzspitzhacke an der Werkbank', goal: 1, val: function(){ return owns('holzspitzhacke', 'steinspitzhacke', 'spitzhacke', 'diamantspitzhacke', 'netheritspitzhacke'); }, reward: [['brot', 2]], xp: 8 },
+  { title: 'Baue 8 Stein ab', goal: 8, val: function(){ return gotCount('stein'); }, reward: [['kohle', 2]], xp: 8 },
+  { title: 'Baue eine Steinspitzhacke', goal: 1, val: function(){ return owns('steinspitzhacke', 'spitzhacke', 'diamantspitzhacke', 'netheritspitzhacke'); }, reward: [['fackel', 4]], xp: 10 },
+  { title: 'Crafte einen Ofen (8 Stein) und stell ihn auf', goal: 1, val: function(){ return S().mcFurnace || 0; }, reward: [['kohle', 3]], xp: 10 },
+  { title: 'Stell 4 Fackeln auf (Kohle + Stock)', goal: 4, val: function(){ return S().torches || 0; }, reward: [['brot', 3]], xp: 10 },
+  { title: 'Brate etwas im Ofen oder am Lagerfeuer', goal: 1, val: function(){ return (S().smelted || 0) + (S().cooked || 0); }, reward: [['eisen', 1]], xp: 10 },
+  { title: 'Überlebe deine erste Nacht', goal: 1, val: function(){ return S().nights || 0; }, reward: [['bett', 1]], xp: 15 },
+  { title: 'Baue 5 Eisen ab (mit der Steinspitzhacke)', goal: 5, val: function(){ return gotCount('eisen'); }, reward: [['brot', 3]], xp: 15 },
+  { title: 'Baue eine Eisenspitzhacke (3 Eisen)', goal: 1, val: function(){ return owns('spitzhacke', 'diamantspitzhacke', 'netheritspitzhacke'); }, reward: [['fackel', 8]], xp: 15 },
+  { title: 'Bau dir einen Schild oder eine Rüstung', goal: 1, val: function(){ return owns('schild', 'ruestung', 'lederruestung', 'diamantruestung', 'netheritruestung'); }, reward: [['goldapfel', 1]], xp: 15 },
+  { title: 'Finde Diamanten (ganz tief unten)', goal: 1, val: function(){ return gotCount('diamant'); }, reward: [['eisen', 4]], xp: 25 },
+  { title: 'Baue eine Diamantspitzhacke', goal: 1, val: function(){ return owns('diamantspitzhacke', 'netheritspitzhacke'); }, reward: [['diamant', 1]], xp: 30 },
+  { title: 'Sammle 10 Obsidian für ein Netherportal', goal: 10, val: function(){ return gotCount('obsidian'); }, reward: [['goldapfel', 1]], xp: 30 },
+  { title: 'Baue ein Netherportal und betritt den Nether', goal: 1, val: function(){ return S().netherVisits || 0; }, reward: [['goldapfel', 1]], xp: 40 },
+  { title: 'Finde eine Netherfestung', goal: 1, val: function(){ return S().fortsFound || 0; }, reward: [['brot', 4]], xp: 40 },
+  { title: 'Besiege 3 Lohen (für Lohenruten)', goal: 3, val: function(){ return K('lohe'); }, reward: [['lohenrute', 1]], xp: 40 },
+  { title: 'Besiege 5 Endermen (für Enderperlen)', goal: 5, val: function(){ return K('endermann'); }, reward: [['enderperle', 1]], xp: 40 },
+  { title: 'Crafte 12 Enderaugen (Enderperle + Lohenstaub)', goal: 12, val: function(){ return (state.inv.enderauge || 0) + (S().eyesPlaced || 0) + (S().eyesBroken || 0); }, reward: [['brot', 4]], xp: 40 },
+  { title: 'Wirf Enderaugen und folge ihnen zur Festung', goal: 1, val: function(){ return (S().structTypes || {}).festung || 0; }, reward: [['goldapfel', 1]], xp: 50, target: 'festung' },
+  { title: 'Setze 12 Augen in die Rahmen: das Endportal öffnet sich', goal: 1, val: function(){ return S().mcPortal || 0; }, reward: [], xp: 60, target: 'festung' },
+  { title: 'Spring ins Endportal', goal: 1, val: function(){ return S().endVisits || 0; }, reward: [], xp: 60, target: 'festung' },
+  { title: 'Zerstöre die 10 Endkristalle auf den Säulen', goal: 10, val: function(){ return S().crystals || 0; }, reward: [['pfeil', 16]], xp: 60, target: 'end' },
+  { title: 'Besiege den Enderdrachen!', goal: 1, val: function(){ return S().enderDragon || 0; }, reward: [['diamant', 3]], xp: 300, target: 'drache' }
+];
+if (MC){ QUESTS.length = 0; Array.prototype.push.apply(QUESTS, MC_QUESTS); }
+
+ACHIEVEMENTS.push(
+  { id: 'mc_holz', title: 'Holz holen', test: function(){ return gotCount('holz') >= 1; } },
+  { id: 'mc_diamant', title: 'Diamanten!', test: function(){ return gotCount('diamant') >= 1; } },
+  { id: 'mc_nether', title: 'Wir müssen tiefer gehen (Nether)', test: function(){ return (S().netherVisits || 0) >= 1; } },
+  { id: 'mc_auge', title: 'Auge in Auge (Endportal)', test: function(){ return (S().mcPortal || 0) >= 1; } },
+  { id: 'mc_end', title: 'Das End?', test: function(){ return (S().endVisits || 0) >= 1; } },
+  { id: 'mc_drache', title: 'Befreie das End (Enderdrache)', test: function(){ return (S().enderDragon || 0) >= 1; } }
+);
+BESTIARY.push(
+  { kind: 'schwein', name: 'Schwein', info: 'mit Karotten anlocken' },
+  { kind: 'frostbite', name: 'Frostbite', info: 'Eis-Zombie im Schnee, friert ein', hostile: true },
+  { kind: 'endkristall', name: 'Endkristall', info: 'heilt den Enderdrachen', hostile: true },
+  { kind: 'enderdrache', name: 'Enderdrache', info: 'Endboss im End', hostile: true }
+);
+
+/* ---------------------------------------------------------------- Speichern */
+
+var _extraSave = extraSaveData;
+extraSaveData = function(){
+  var d = _extraSave();
+  d.x4 = { dragonDead: X4.dragonDead, style: MC ? 'minecraft' : 'waldwacht', mcq: MC ? state.questIndex : X4.mcq, wwq: MC ? X4.wwq : state.questIndex };
+  return d;
+};
+var _applyExtra = applyExtraSave;
+applyExtraSave = function(data){
+  _applyExtra(data);
+  var x = data && data.x150 && data.x150.x4;
+  X4.dragonDead = !!(x && x.dragonDead);
+  var wasMC = x ? x.style === 'minecraft' : false;
+  X4.wwq = x ? (wasMC ? (x.wwq || 0) : (data.questIndex || 0)) : (data.questIndex || 0);
+  X4.mcq = x ? (wasMC ? (data.questIndex || 0) : (x.mcq || 0)) : 0;
+  state.questIndex = MC ? X4.mcq : X4.wwq;
+};
+
+/* ---------------------------------------------------------------- Startmenü: Spielstil wählen */
+
+Array.prototype.slice.call(document.querySelectorAll('[data-style]')).forEach(function(b){
+  b.addEventListener('click', function(){
+    if (gameStarted) return;
+    var v = b.getAttribute('data-style');
+    if (v === settings.style || (!settings.style && v === 'minecraft')) return;
+    settings.style = v; saveSettings();
+    location.reload();
+  });
+});
+var _refreshMenu = refreshMenu;
+refreshMenu = function(){
+  _refreshMenu();
+  Array.prototype.slice.call(document.querySelectorAll('[data-style]')).forEach(function(b){ b.setAttribute('aria-pressed', (b.getAttribute('data-style') === 'minecraft') === MC ? 'true' : 'false'); });
+  var tb = el('thirstBox'); if (tb) tb.closest('label').hidden = MC;
+};
+refreshMenu();
+
+X4.travelTo = travelTo; X4.enterEnd = enterEnd; X4.leaveEnd = leaveEnd; X4.setupDragonFight = setupDragonFight; X4.checkEndPortal = checkEndPortal;
+X4.nearestFestung = nearestFestung; X4.throwEye = throwEye;
+
+})();
+
 /* ================================================================ Start, Testzugang und Ende */
 
 drawUI();
@@ -20678,7 +22157,7 @@ var worldMs = 0;
 
 
 BL.debug = {
-  getState: function(){ return state; }, settings: settings, x3: X3,
+  getState: function(){ return state; }, settings: settings, x3: X3, x4: X4,
   enemies: enemies, animals: animals, nests: nests, structures: structures, wave: wave, chests: chests, crates: crates,
   dolly: dolly, hands: hands, pickups: pickups, weather: weather, trader: trader,
   companion: function(){ return companion; },
@@ -20716,7 +22195,7 @@ BL.debug = {
     smithArrive: smithArrive, grantWish: grantWish, lightningStrike: lightningStrike, useFarm: useFarm, collectProduce: collectProduce, teleportFrom: teleportFrom,
     addStructure: addStructure, createEnemy: createEnemy, createAnimal: createAnimal, craft: function(id){ return craft(RECIPE_BY_ID[id]); }, useItem: useItem,
     eatItem: eatItem, newDaily: newDaily, unlockVault: unlockVault, throwItem: throwItem, swing: swing, onNewDay: onNewDay, launchShot: launchShot,
-    explode: explode, animalInteract: animalInteract, reportError: reportError, gestureTabData: gestureTabData, uiState: uiState, recipesForTab: recipesForTab, trade: trade };
+    explode: explode, animalInteract: animalInteract, reportError: reportError, gestureTabData: gestureTabData, uiState: uiState, recipesForTab: recipesForTab, trade: trade, damageCreature: damageCreature };
     return fns[name].apply(null, args); }
 };
 
