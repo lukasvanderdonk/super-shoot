@@ -306,6 +306,8 @@ class Vorausschau:
         self.neu_gemessen = 0  # Messungen in dieser Sitzung
         self.meldungen = []
         self._vorlauf = None
+        self.bild_abstand = 1.0 / BILDER_PRO_SEKUNDE  # gemessen: so oft schaut der Bot wirklich hin
+        self.letztes_bild = None
         self.neues_spiel()
 
     def gelernt(self):
@@ -430,52 +432,56 @@ class Vorausschau:
             self.klick = None
             return None
 
+        if self.letztes_bild is not None and 0 < jetzt - self.letztes_bild < 0.5:
+            self.bild_abstand = 0.9 * self.bild_abstand + 0.1 * (jetzt - self.letztes_bild)
+        self.letztes_bild = jetzt
         abstand = info["abstand"]
         self._verfolge_rahmen(info["rahmen_x"], jetzt, abstand)
         if self.klick is not None and self.gerade_gesprungen and info["auf_rot"] and not self.klick["gesehen"]:
             # Nach einem vorausschauenden Klick kommt der Rahmen auf Rot an: Jetzt wissen
             # wir genau, wann - besser als die Vorhersage.
-            self.klick["ankunft"], self.klick["gesehen"] = jetzt, True
+            self.klick["ankunft"], self.klick["gesehen"] = self.ankunft(self.takt()) or jetzt, True
         self._pruefe_klick(info, jetzt, abstand)
         if self.klick is not None:
             return None  # erst abwarten, was der letzte Klick bewirkt hat
 
         L = self.vorlauf()
         T = self.takt()
+        x, rot = info["rahmen_x"], info["rot_x"]
 
-        # Regel 1: Der Rahmen steht auf Rot -> klicken, wenn der Klick noch rechtzeitig ankommt.
+        # Plan: Wann kommt der Rahmen auf Rot an (oder kam er an, wenn er schon drauf
+        # steht), und wann muss der Klick los, damit er in der Mitte dieser Zeit ankommt?
+        # Das gilt fuer "auf Sicht" (0 Felder) und "vorausschauend" (1-4 Felder) gleich.
+        if T is not None and self.ankuenfte and x is not None and rot is not None:
+            d = (rot - x) / abstand
+            felder = 0 if info["auf_rot"] else int(round(abs(d)))
+            vor_dem_rahmen = felder == 0 or (self.richtung and (d > 0) == (self.richtung > 0))
+            if vor_dem_rahmen and felder <= 4:
+                if felder > 0 and self.neu_gemessen == 0 and not self.hat_startwert and not self.erfahrung:
+                    return None  # erst einmal selbst messen, wie lange ein Klick braucht
+                ankunft_rot = self.ankunft(T) + felder * T
+                klick_zeit = ankunft_rot + ZIEL * T - L
+                if jetzt < klick_zeit - 0.5 * self.bild_abstand:
+                    return None  # noch nicht (das naechste Bild ist naeher dran)
+                if jetzt + L > ankunft_rot + (1 - SICHERHEIT) * T:
+                    return None  # kaeme zu spaet an - beim naechsten Durchgang
+                art = "auf Sicht" if felder == 0 else "vorausschauend, %d Feld frueher" % felder
+                return self._klicke(info, jetzt, art, ankunft_rot, T, felder == 0)
+            return None
+
+        # Tempo noch unbekannt (Spielbeginn, gleich nach einem Treffer): auf Sicht, aber nur,
+        # wenn der Klick sicher frueh genug ankommt.
         if info["auf_rot"]:
             vorsichtig = self.takt_vorsichtig()
-            ankunft = self.letzte_ankunft
-            if self.ankuenfte:
-                ankunft = min(self.ankunft(T), self.ankuenfte[-1])
+            ankunft = self.ankuenfte[-1] if self.ankuenfte else self.letzte_ankunft
             if ankunft is not None and vorsichtig is not None:
                 if jetzt + L > ankunft + vorsichtig * SICHT_GRENZE:
-                    return None  # kaeme zu spaet an - lieber vorausschauend beim naechsten Durchgang
+                    return None  # kaeme zu spaet an - lieber beim naechsten Durchgang
             # Nur wenn klar ist, seit wann der Rahmen auf Rot steht, taugt der Klick zum Lernen.
             nuetzlich = bool(self.ankuenfte) and self.ankuenfte[-1] == self.letzte_ankunft
             return self._klicke(info, jetzt, "auf Sicht", self.ankuenfte[-1] if nuetzlich else None,
                                 self.bestes_tempo(), True)
-
-        # Regel 2: Der Rahmen ist so schnell, dass der Klick vorher losgeschickt werden muss.
-        if self.neu_gemessen == 0 and not self.hat_startwert and not self.erfahrung:
-            return None  # erst einmal selbst messen, wie lange ein Klick braucht
-        x, rot = info["rahmen_x"], info["rot_x"]
-        if T is None or x is None or rot is None or not self.richtung or not self.ankuenfte:
-            return None
-        d = (rot - x) / abstand
-        felder = int(round(abs(d)))
-        if not 1 <= felder <= 4 or (d > 0) != (self.richtung > 0):
-            return None  # rotes Feld liegt nicht direkt vor dem Rahmen
-        ankunft_rot = self.ankunft(T) + felder * T
-        klick_zeit = ankunft_rot + ZIEL * T - L
-        if klick_zeit >= ankunft_rot:
-            return None  # nicht noetig: auf Sicht klicken reicht
-        if jetzt < klick_zeit - 0.5 / BILDER_PRO_SEKUNDE:
-            return None  # noch nicht (das naechste Bild ist naeher dran)
-        if jetzt + L > ankunft_rot + (1 - SICHERHEIT) * T:
-            return None  # Moment verpasst
-        return self._klicke(info, jetzt, "vorausschauend, %d Feld frueher" % felder, ankunft_rot, T, False)
+        return None
 
     # ------------------------------------------------------------ intern
 
@@ -719,6 +725,7 @@ def main():
     # dass "Zeiger sichtbar" wirklich "Menue offen" bedeutet.
     zeiger_geprueft = False
     leiste_wieder = None  # seit wann die Leiste nach dem Fang wieder zu sehen ist
+    bilder_im_spiel = 0
     bild_takt = 1.0 / BILDER_PRO_SEKUNDE
 
     with mss.mss() as kamera:
@@ -767,7 +774,10 @@ def main():
                 sag("Bildschirmfoto ging nicht (%s) - versuche es gleich nochmal." % fehler)
                 time.sleep(0.5)
                 continue
-            bild = np.asarray(roh)[:, :, 2::-1]  # BGRA -> RGB
+            # Grosse Fenster: Die Felder sind riesig, da reicht jedes 2. oder 3. Pixel - so
+            # schaut der Bot viel oefter hin (wichtig fuer den richtigen Zeitpunkt).
+            raster = max(1, breite // 960)
+            bild = np.asarray(roh)[::raster, ::raster, 2::-1]  # BGRA -> RGB
             info = erkenne(bild)
 
             if tasten.neu(VK_F10):
@@ -790,7 +800,7 @@ def main():
 
             if zustand == "auswerfen":
                 if info is not None:
-                    zustand, seit, treffer = "spiel", jetzt, 0  # Minispiel laeuft schon
+                    zustand, seit, treffer, bilder_im_spiel = "spiel", jetzt, 0, 0  # Minispiel laeuft schon
                     vorausschau.neues_spiel()
                 else:
                     rechtsklick()
@@ -800,7 +810,7 @@ def main():
             elif zustand == "warten":
                 if info is not None:
                     sag("Biss! Minispiel laeuft.")
-                    zustand, seit, treffer = "spiel", jetzt, 0
+                    zustand, seit, treffer, bilder_im_spiel = "spiel", jetzt, 0, 0
                     vorausschau.neues_spiel()
                 elif jetzt - seit > WARTEN_MAX:
                     sag("Kein Biss nach %d s - ich hole ein und werfe neu aus." % WARTEN_MAX)
@@ -809,6 +819,7 @@ def main():
                     zustand = "auswerfen"
 
             elif zustand == "spiel":
+                bilder_im_spiel += 1
                 grund = vorausschau.schritt(info, jetzt)
                 for meldung in vorausschau.meldungen:
                     sag(meldung)
@@ -822,7 +833,8 @@ def main():
                         vorausschau.vorlauf() * 1000))
                 elif jetzt - zuletzt_leiste > SPIEL_VORBEI_NACH:
                     runden += 1
-                    sag("Minispiel vorbei (%d Klicks). Schon %d Minispiele gespielt." % (treffer, runden))
+                    sag("Minispiel vorbei (%d Klicks, %d Bilder/s). Schon %d Minispiele gespielt." % (
+                        treffer, bilder_im_spiel / max(0.1, jetzt - seit), runden))
                     speichere_gelerntes(vorausschau.gelernt())
                     zustand, seit = "nach_fang", jetzt
 
@@ -834,7 +846,7 @@ def main():
                 elif leiste_wieder is None:
                     leiste_wieder = jetzt
                 if leiste_wieder is not None and jetzt - leiste_wieder > 0.3:
-                    zustand, leiste_wieder = "spiel", None
+                    zustand, leiste_wieder, seit, bilder_im_spiel = "spiel", None, jetzt, 0
                     vorausschau.neues_spiel()
                 elif leiste_wieder is None and jetzt - seit > NACH_FANG_PAUSE:
                     zustand = "auswerfen"

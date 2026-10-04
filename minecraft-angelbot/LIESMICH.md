@@ -59,6 +59,9 @@ Was er gelernt hat, merkt er sich in `angelbot_gelernt.json` (neben
   **F10** drücken. Neben `Angel-Bot.bat` liegt dann ein Bild `diagnose_….png` – schick es Claude,
   dann kann der Bot angepasst werden.
 - **Kein Biss**: Nach 60 Sekunden ohne Biss holt der Bot die Angel ein und wirft neu aus.
+- **Bilder/s**: Am Ende jedes Minispiels steht, wie oft der Bot pro Sekunde
+  hingeschaut hat. Unter etwa 15 wird er ungenauer – dann hilft es, andere
+  Programme zu schließen.
 
 ## Einstellungen
 
