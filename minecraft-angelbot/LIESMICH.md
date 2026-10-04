@@ -5,17 +5,12 @@ rechtsklicken, wenn der weiße Rahmen auf dem roten Feld steht, und danach wiede
 auswerfen. Er schaut dafür nur auf das Minecraft-Fenster und klickt nur, solange
 Minecraft vorne ist und kein Menü (Inventar, Chat, Pause) offen ist.
 
-## Einmal vorbereiten
-
-1. **Python installieren** von <https://www.python.org/downloads/windows/>.
-   Beim Installieren unten das Häkchen **„Add python.exe to PATH“** setzen.
-2. Diesen Ordner `minecraft-angelbot` auf deinen PC holen (z. B. als ZIP von GitHub
-   herunterladen und entpacken).
-
 ## Angeln lassen
 
-1. **`start.bat` doppelklicken.** Beim ersten Mal installiert es noch zwei Pakete
-   (`mss` und `numpy`). Falls Windows „Der Computer wurde geschützt“ zeigt:
+1. **`Angel-Bot.bat` doppelklicken.** Das ist alles in einer Datei: Sie findet
+   ein vorhandenes Python von selbst. Fehlt Python, installiert sie es (das dauert
+   beim ersten Mal ein paar Minuten), dazu die Pakete `mss` und `numpy`.
+   Falls Windows „Der Computer wurde geschützt“ zeigt:
    „Weitere Informationen“ → „Trotzdem ausführen“.
 2. In Minecraft: **Fenster groß machen** (maximieren), damit die ganze Leiste zu
    sehen ist. Angel in die Hand nehmen (noch **nicht** auswerfen) und aufs Wasser schauen.
@@ -35,11 +30,12 @@ Im schwarzen Fenster steht immer, was der Bot gerade macht.
   schmal. Fenster maximieren oder in Minecraft unter *Optionen → Grafikeinstellungen →
   GUI-Größe* einen kleineren Wert nehmen.
 - **Der Bot merkt den Biss nicht oder klickt nicht**: Während das Minispiel läuft
-  **F10** drücken. Im Ordner liegt dann ein Bild `diagnose_….png` – schick es Claude,
+  **F10** drücken. Neben `Angel-Bot.bat` liegt dann ein Bild `diagnose_….png` – schick es Claude,
   dann kann der Bot angepasst werden.
 - **Kein Biss**: Nach 60 Sekunden ohne Biss holt der Bot die Angel ein und wirft neu aus.
 
 ## Einstellungen
 
-Ganz oben in `angelbot.py` stehen ein paar Zahlen, die du ändern kannst, z. B.
+`Angel-Bot.bat` mit dem Editor öffnen: Unter „Einstellungen“ im Python-Teil stehen
+ein paar Zahlen, die du ändern kannst, z. B.
 `WARTEN_MAX` (wie lange er auf einen Biss wartet) oder `NACH_FANG_PAUSE`.
