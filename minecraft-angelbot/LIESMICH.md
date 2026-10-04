@@ -36,17 +36,19 @@ Wäre es sicher zu spät, lässt er den Durchgang lieber aus, statt einen Haken 
 riskieren.
 
 Er lernt dabei aus jedem Klick:
-- **Antwortzeit:** Zeit vom Klick, bis das rote Feld springt (Treffer) oder ein
-  rotes X erscheint (Fehlklick). Bei langsamer Verbindung können das 0,6 s und
-  mehr sein – dann klickt er eben ein Feld früher.
-- **Zu früh oder zu spät?** Im selben Bild wie das rote X sieht er, wo der Rahmen
-  war, als sein Klick ankam: noch vor Rot (zu früh) oder schon dahinter (zu spät).
-  Danach klickt er entsprechend später oder früher.
+- **Vorlauf (wie viel früher klicken):** Bei jedem Treffer weiß er: Der richtige
+  Vorlauf liegt in einem bestimmten Bereich – sonst wäre der Klick zu früh oder zu
+  spät angekommen. Bei jedem Fehlklick weiß er: Er liegt *nicht* in diesem Bereich.
+  Aus den letzten 30 Klicks nimmt er den Vorlauf, der zu den meisten Ergebnissen
+  passt (die Mitte davon). Neuere Klicks zählen mehr. Das klappt auch, wenn der
+  Server Treffer und rote X erst verzögert anzeigt.
+- **Antwortzeit:** Zeit vom Klick, bis das rote Feld springt oder ein rotes X
+  erscheint. Sie dient als Startwert und als Obergrenze für den Vorlauf.
 - **Tempo-Gedächtnis:** wie schnell der Rahmen nach dem 1., 2., 3. … Treffer
   normalerweise ist – so kann er direkt nach einem Treffer schon vorausschauen.
 
 Was er gelernt hat, merkt er sich in `angelbot_gelernt.json` (neben
-`Angel-Bot.bat`). Löschst du die Datei, fängt er wieder bei 150 ms an.
+`Angel-Bot.bat`). Löschst du die Datei, fängt er wieder von vorne an.
 
 ## Wenn etwas nicht klappt
 
