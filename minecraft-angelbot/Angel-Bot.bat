@@ -94,8 +94,10 @@ So funktioniert das Minispiel:
 Je naeher der Fang, desto schneller springt der Rahmen. Darum schaut der Bot
 voraus: Er misst, wie schnell der Rahmen ist und wie lange sein Klick bis zum
 Server braucht. Waere der Rahmen schon weiter, wenn der Klick ankommt, klickt
-er entsprechend frueher - wenn noetig schon ein oder zwei Felder vorher.
-Nach jedem Treffer und jedem Fehlklick lernt er dazu und merkt sich das.
+er entsprechend frueher - wenn noetig schon ein paar Felder vorher.
+Nach jedem Treffer und jedem Fehlklick lernt er dazu und merkt sich das:
+wie lange ein Klick braucht, ob er zuletzt zu frueh oder zu spaet war und wie
+schnell der Rahmen nach dem 1., 2., 3. ... Treffer normalerweise ist.
 
 Der Bot schaut sich dafuer den Bildschirm an (nur das Minecraft-Fenster) und
 klickt selbst. Er klickt nur, solange Minecraft das aktive Fenster ist und
@@ -116,6 +118,7 @@ WARTEN_MAX = 60.0        # Sekunden ohne Biss, dann einholen und neu auswerfen
 NACH_FANG_PAUSE = 1.5    # Sekunden nach dem Fang, bevor neu ausgeworfen wird
 SPIEL_VORBEI_NACH = 0.6  # so lange muss die Leiste weg sein, dann ist das Spiel vorbei
 VERZOEGERUNG_START = 0.15  # Sekunden, bis ein Klick beim Server ist und man es sieht (wird gelernt)
+VERZOEGERUNG_MAX = 1.5   # mehr als das gilt als Ruckler und wird nicht gelernt
 ZIEL = 0.5               # wo im Zeitfenster "Rahmen steht auf Rot" der Klick ankommen soll (0.5 = Mitte)
 SICHERHEIT = 0.2         # so viel vom Ende des Zeitfensters wird gemieden (Fehlklick kostet einen Haken!)
 LERN_DATEI = "angelbot_gelernt.json"
@@ -202,7 +205,12 @@ def erkenne(bild):
     while y1 < hoehe - 1 and zeilen_summe[y1 + 1] >= schwelle:
         y1 += 1
     h = y1 - y0 + 1
-    if h < 3 or h > feld * 2:
+    # Die Felder sind etwa doppelt so breit wie hoch und randvoll mit Farbe.
+    # Buchstaben (Chat, ein ausblendendes "Yeah!" vor hellem Himmel) oder Herzen nicht.
+    if h < 6 or not 1.6 <= feld / h <= 3.2:
+        return None
+    voll = [farbig[y0:y1 + 1, s:e].mean() for (s, e), g in zip(felder, gleich) if g]
+    if sum(1 for v in voll if v > 0.75) < 3:
         return None
 
     # 4. Rotes Feld: Spalten, die in der Leiste ueberwiegend rot sind.
@@ -258,27 +266,47 @@ class Vorausschau:
     Schneller Rahmen: Ein Klick braucht eine Weile, bis der Server ihn hat und man
     das Ergebnis sieht (die "Verzoegerung"). Waere der Rahmen bis dahin schon
     weiter, klickt der Bot vorher - so, dass der Klick in der Mitte der Zeit
-    ankommt, in der der Rahmen auf Rot steht. Die Verzoegerung misst er bei jedem
-    Treffer (so lange dauert es, bis das rote Feld springt) und korrigiert sie
-    nach jedem Fehlklick.
+    ankommt, in der der Rahmen auf Rot steht.
+
+    Was er dabei lernt (und in LERN_DATEI speichert):
+    - die Verzoegerung: Zeit vom Klick, bis das rote Feld springt (Treffer) oder
+      ein rotes X erscheint (Fehlklick),
+    - einen Versatz: Bei einem Fehlklick sieht er im selben Bild wie das X, wo der
+      Rahmen war, als der Klick beim Server ankam - noch vor Rot (zu frueh) oder
+      schon dahinter (zu spaet) - und klickt danach entsprechend spaeter/frueher,
+    - das Tempo-Gedaechtnis: wie schnell der Rahmen nach dem 1., 2., 3. ... Treffer
+      normalerweise ist.
     """
 
     def __init__(self, gelernt=None):
-        start = (gelernt or {}).get("verzoegerung")
+        gelernt = gelernt or {}
+        start = gelernt.get("verzoegerung")
         # Der Wert vom letzten Mal ist nur ein Startwert - neue Messungen ersetzen ihn schnell.
-        self.messungen = [float(start)] if isinstance(start, (int, float)) and 0.02 < start < 0.45 else []
+        self.hat_startwert = isinstance(start, (int, float)) and 0.02 < start < VERZOEGERUNG_MAX
+        self.messungen = [float(start)] if self.hat_startwert else []
+        versatz = gelernt.get("versatz", 0.0)
+        self.versatz = min(0.3, max(-0.3, float(versatz))) if isinstance(versatz, (int, float)) else 0.0
+        self.tempo = {}  # Treffer im Spiel -> gemessene Sekunden pro Feld
+        for stufe, werte in (gelernt.get("tempo") or {}).items():
+            try:
+                self.tempo[int(stufe)] = [float(w) for w in werte if 0.03 < float(w) < 2.0][-7:]
+            except (TypeError, ValueError):
+                pass
         self.neu_gemessen = 0  # Messungen in dieser Sitzung
         self.meldungen = []
         self.neues_spiel()
 
     def gelernt(self):
-        return {"verzoegerung": round(self.verzoegerung(), 4)}
+        return {"verzoegerung": round(self.verzoegerung(), 4),
+                "versatz": round(self.versatz, 4),
+                "tempo": {str(k): [round(w, 3) for w in v] for k, v in sorted(self.tempo.items()) if v}}
 
     def neues_spiel(self):
         self.rahmen_x = None   # letzte gesehene Rahmenposition (Pixel)
         self.richtung = 0      # +1 = nach rechts, -1 = nach links, 0 = unbekannt
         self.ankuenfte = []    # wann der Rahmen auf den letzten Feldern angekommen ist (lueckenlos)
         self.takt_alt = None   # Tempo vor dem letzten Treffer
+        self.treffer = 0       # Treffer in diesem Spiel
         self.klick = None      # letzter Klick, dessen Ergebnis noch aussteht
 
     # ---------------------------------------------------------- Schaetzungen
@@ -286,18 +314,29 @@ class Vorausschau:
     def verzoegerung(self):
         if not self.messungen:
             return VERZOEGERUNG_START
-        return min(0.45, max(0.03, float(np.median(self.messungen[-5:]))))
+        return min(VERZOEGERUNG_MAX, max(0.03, float(np.median(self.messungen[-5:]))))
 
     def vorlauf(self):
-        """Um so viel frueher muss geklickt werden, als man es sieht. Das ist die
-        gemessene Verzoegerung ohne die Wartezeit auf den naechsten Server-Tick:
-        Die steckt zwar in jeder Messung (im Schnitt ein halber Tick), verschiebt
-        aber nicht, wann der Klick ankommen muss."""
-        return max(0.02, self.verzoegerung() - SERVER_TICK / 2)
+        """Um so viel frueher muss geklickt werden, als man es sieht: die gemessene
+        Verzoegerung ohne die Wartezeit auf den naechsten Server-Tick (die steckt in
+        jeder Messung, im Schnitt ein halber Tick, verschiebt aber nicht, wann der
+        Klick ankommen muss) - und dazu der aus Fehlklicks gelernte Versatz."""
+        return max(0.02, self.verzoegerung() - SERVER_TICK / 2 - self.versatz)
+
+    def gemerktes_tempo(self):
+        werte = self.tempo.get(self.treffer)
+        return float(np.median(werte)) if werte else None
 
     def takt(self):
         """Sekunden pro Feld, gemessen seit dem letzten Treffer (der Rahmen wird mit
-        jedem Treffer schneller). Wird er gerade schneller, zaehlt der neueste Wert."""
+        jedem Treffer schneller). Wird er gerade schneller, zaehlt der neueste Wert.
+        Nach nur einem Schritt hilft das Tempo-Gedaechtnis, wenn es dazu passt."""
+        if len(self.ankuenfte) == 2:
+            einzeln = self.ankuenfte[1] - self.ankuenfte[0]
+            gemerkt = self.gemerktes_tempo()
+            if gemerkt and abs(einzeln - gemerkt) < 0.2 * gemerkt:
+                return gemerkt
+            return None
         if len(self.ankuenfte) < 3:
             return None
         abstaende = np.diff(self.ankuenfte[-4:])
@@ -315,6 +354,9 @@ class Vorausschau:
             kuerzester = float(np.min(np.diff(self.ankuenfte[-4:])))
             T = self.takt()
             return kuerzester if T is None else min(T, kuerzester)
+        gemerkt = self.gemerktes_tempo()
+        if gemerkt is not None:
+            return gemerkt * 0.9
         if self.takt_alt is not None:
             return self.takt_alt * 0.7  # nach einem Treffer ist er schneller geworden
         return None
@@ -336,7 +378,7 @@ class Vorausschau:
         """Fuer jedes Bild aufrufen. Gibt einen Grund zurueck, wenn jetzt geklickt werden soll."""
         if info is None:
             # Leiste weg kurz nach einem Klick: das war der letzte, entscheidende Treffer.
-            if self.klick is not None and jetzt - self.klick["zeit"] < 1.0:
+            if self.klick is not None and jetzt - self.klick["zeit"] < VERZOEGERUNG_MAX:
                 self._lerne(jetzt - self.klick["zeit"])
             self.klick = None
             return None
@@ -361,14 +403,14 @@ class Vorausschau:
             return self._klicke(info, jetzt, "auf Sicht")
 
         # Regel 2: Der Rahmen ist so schnell, dass der Klick vorher losgeschickt werden muss.
-        if self.neu_gemessen == 0:
+        if self.neu_gemessen == 0 and not self.hat_startwert:
             return None  # erst einmal selbst messen, wie lange ein Klick braucht
         x, rot = info["rahmen_x"], info["rot_x"]
-        if T is None or x is None or rot is None or not self.richtung:
+        if T is None or x is None or rot is None or not self.richtung or not self.ankuenfte:
             return None
         d = (rot - x) / abstand
         felder = int(round(abs(d)))
-        if not 1 <= felder <= 2 or (d > 0) != (self.richtung > 0):
+        if not 1 <= felder <= 4 or (d > 0) != (self.richtung > 0):
             return None  # rotes Feld liegt nicht direkt vor dem Rahmen
         ankunft_rot = self.ankunft(T) + felder * T
         klick_zeit = ankunft_rot + ZIEL * T - L
@@ -405,28 +447,49 @@ class Vorausschau:
         if k is None:
             return
         h = info["y1"] - info["y0"] + 1
+        dauer = jetzt - k["zeit"]
         if info["rot_x"] is not None and k["rot_x"] is not None and abs(info["rot_x"] - k["rot_x"]) > abstand * 0.5:
-            dauer = jetzt - k["zeit"]
             self._lerne(dauer)
             self.meldungen.append("    Treffer! (Antwort nach %d ms)" % (dauer * 1000))
             self.klick = None
+            T = self.takt()
+            if T is not None:  # fuers Tempo-Gedaechtnis
+                self.tempo.setdefault(self.treffer, []).append(T)
+                del self.tempo[self.treffer][:-7]
             # Der Server startet den Schritt-Takt neu und der Rahmen wird schneller.
-            self.takt_alt = self.takt() or self.takt_vorsichtig() or self.takt_alt
+            self.takt_alt = T or self.takt_vorsichtig() or self.takt_alt
             self.ankuenfte = []
+            self.treffer += 1
         elif info["rot_unten"] > k["rot_unten"] + max(20, h * h * 0.15):
-            if k["art"] == "auf Sicht":
-                faktor, warum = 1.25, "zu spaet - ich klicke ab jetzt frueher"
+            erwartet = self.verzoegerung()
+            passt = self.neu_gemessen < 3 or 0.5 * erwartet <= dauer <= 1.5 * erwartet + 0.1
+            self._lerne(dauer)  # auch ein Fehlklick zeigt, wie lange ein Klick braucht
+            # Im selben Bild wie das X steht der Rahmen dort, wo er war, als der Klick ankam.
+            T = self.takt() or self.takt_vorsichtig() or 0.3
+            if not passt:
+                warum = "kam ungewoehnlich frueh/spaet (Lag?) - daraus lerne ich nichts"
+            elif info["rahmen_x"] is not None and info["rot_x"] is not None and self.richtung:
+                d = (info["rot_x"] - info["rahmen_x"]) / abstand
+                if round(d) != 0 and (d > 0) == (self.richtung > 0):
+                    self.versatz = min(0.3, self.versatz + 0.25 * T)
+                    warum = "zu frueh (Rahmen war noch nicht da) - ich klicke ab jetzt etwas spaeter"
+                elif round(d) != 0:
+                    self.versatz = max(-0.3, self.versatz - 0.25 * T)
+                    warum = "zu spaet (Rahmen war schon weiter) - ich klicke ab jetzt etwas frueher"
+                else:
+                    # Rahmen steht auf Rot und trotzdem X: Der Klick kam im selben Server-Tick
+                    # an, in dem der Rahmen ankam, aber knapp davor - also ein bisschen zu frueh.
+                    self.versatz = min(0.3, self.versatz + SERVER_TICK / 2)
+                    warum = "ganz knapp zu frueh - ich klicke ab jetzt ein kleines bisschen spaeter"
             else:
-                faktor, warum = 0.75, "zu frueh - ich klicke ab jetzt etwas spaeter"
-            self.messungen = [m * faktor for m in (self.messungen or [VERZOEGERUNG_START])]
-            self.meldungen.append("    Daneben (Haken weg), %s. Verzoegerung jetzt %d ms."
-                                  % (warum, self.verzoegerung() * 1000))
+                warum = "Rahmen nicht zu sehen"
+            self.meldungen.append("    Daneben (Haken weg, Antwort nach %d ms), %s." % (dauer * 1000, warum))
             self.klick = None
-        elif jetzt - k["zeit"] > 1.0:
+        elif dauer > VERZOEGERUNG_MAX:
             self.klick = None  # kein Ergebnis zu sehen - weitermachen
 
     def _lerne(self, dauer):
-        if 0.02 < dauer < 0.45:  # laenger = Ruckler/Lag, nicht typisch
+        if 0.02 < dauer < VERZOEGERUNG_MAX:
             self.messungen.append(dauer)
             del self.messungen[:-9]
             self.neu_gemessen += 1
