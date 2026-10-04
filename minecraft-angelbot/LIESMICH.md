@@ -60,8 +60,9 @@ Was er gelernt hat, merkt er sich in `angelbot_gelernt.json` (neben
   dann kann der Bot angepasst werden.
 - **Kein Biss**: Nach 60 Sekunden ohne Biss holt der Bot die Angel ein und wirft neu aus.
 - **Bilder/s**: Am Ende jedes Minispiels steht, wie oft der Bot pro Sekunde
-  hingeschaut hat. Unter etwa 15 wird er ungenauer – dann hilft es, andere
-  Programme zu schließen.
+  hingeschaut hat. Unter etwa 25 wird er ungenauer – dann hilft es, das
+  Minecraft-Fenster kleiner zu machen (mittlerer Knopf oben rechts), aber nur so
+  weit, dass die ganze Leiste noch zu sehen ist. Andere Programme schließen hilft auch.
 
 ## Einstellungen
 
