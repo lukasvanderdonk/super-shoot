@@ -131,6 +131,8 @@ BILDER_PRO_SEKUNDE = 60  # wie oft der Bildschirm angeschaut wird
 # Nur dieser Streifen des Fensters wird angeschaut (Anteil der Fensterhoehe).
 STREIFEN_OBEN = 0.20
 STREIFEN_UNTEN = 0.65
+FELDER = 10              # so viele Felder hat die Leiste
+GUI_BREITE = 400         # so breit ist die Leiste in Minecraft-GUI-Einheiten (10 Felder x 40)
 
 
 # ------------------------------------------------------------------ Erkennung
@@ -155,7 +157,7 @@ def laeufe(zeile):
     return list(zip(starts, enden))
 
 
-def erkenne(bild):
+def erkenne(bild, mitte_x=None):
     """Sucht die Minispiel-Leiste im Bild.
 
     Rueckgabe: None, wenn keine Leiste zu sehen ist, sonst ein dict mit
@@ -165,8 +167,13 @@ def erkenne(bild):
       feld      ungefaehre Breite eines Felds in Pixeln
       abstand   Abstand von Feldmitte zu Feldmitte in Pixeln
       rot_unten rote Pixel unter der Leiste (rote X auf den Haken = Fehlklicks)
-      abgeschnitten  True, wenn die Leiste an den Fensterrand stoesst
+      rot_feld, rahmen_feld  Feld-Nummern (nur der Unterschied zaehlt) oder None
+      abgeschnitten  True, wenn ein Feld ganz am Rand so gut wie nicht zu sehen ist
+      versteckt Pixel der Leiste, die links und rechts aus dem Fenster ragen
       y0, y1    obere / untere Zeile der Leiste
+
+    mitte_x: wo die Fenstermitte im Bild liegt (Standard: Bildmitte). Die Leiste steht
+    als Minecraft-Titel immer in der Mitte des Fensters.
     """
     hoehe, breite = bild.shape[:2]
     tuerkis, rot, weiss = farb_masken(bild)
@@ -224,23 +231,49 @@ def erkenne(bild):
     rand = max(2, int(round(h * 0.6)))
     oben = weiss[max(0, y0 - rand):y0].any(axis=0)
     unten = weiss[y1 + 1:min(hoehe, y1 + 1 + rand)].any(axis=0)
-    rahmen_spalten = oben & unten
-    rahmen_stuecke = [(s, e) for s, e in laeufe(rahmen_spalten) if e - s >= feld * 0.15]
+    rahmen_roh = oben & unten
+    # Der Rahmen umschliesst ein ganzes Feld. Schmalere Stuecke sind Schrift ueber und unter
+    # der Leiste (z. B. von der Punkte-Tafel des Servers) - die zaehlen nicht. Nur am
+    # Bildrand darf der Rahmen angeschnitten sein.
+    rahmen_spalten = np.zeros_like(rahmen_roh)
+    rahmen_stuecke = []
+    for s, e in laeufe(rahmen_roh):
+        if e - s >= feld * 0.6 or ((s == 0 or e == breite) and e - s >= feld * 0.15):
+            rahmen_spalten[s:e] = True
+            rahmen_stuecke.append((s, e))
 
     # 6. Steht der Rahmen auf dem roten Feld? (Am Fensterrand kann das Feld halb
     #    abgeschnitten sein, darum reicht schon ein Stueck davon.)
     im_rahmen_rot = int((rot_spalten & rahmen_spalten).sum())
     auf_rot = im_rahmen_rot >= max(2, feld * 0.15)
 
-    # 7. Reicht die Leiste bis an den Fensterrand? Dann ist sie vermutlich abgeschnitten.
-    zeile = farbig[y0:y1 + 1].any(axis=0) | rahmen_spalten
-    abgeschnitten = bool(zeile[:2].any() or zeile[-2:].any())
+    # 7. Feld-Raster: Wo liegen die Feldmitten? Aus den ganz sichtbaren Feldern bestimmt -
+    #    so wird auch ein am Fensterrand halb abgeschnittenes Feld richtig eingeordnet.
+    winkel = 2 * np.pi * np.array(mitten) / abstand
+    phase = float(np.angle(np.exp(1j * winkel).mean()) / (2 * np.pi))
 
-    # 8. Rote Pixel unter der Leiste: Dort erscheint bei einem Fehlklick ein rotes X
-    #    auf einem der Haken. Steigt die Zahl, war der Klick daneben.
+    def feld_nr(x):
+        return None if x is None else int(round(x / abstand - phase))
+
+    # 8. Ragt die Leiste ueber den Fensterrand? Sie steht als Minecraft-Titel in der Mitte
+    #    des Fensters, ragt also links und rechts gleich weit hinaus. Ist vom aeussersten
+    #    Feld weniger als ein Fuenftel zu sehen, kann dort ein rotes Feld unbemerkt liegen.
+    zeile = farbig[y0:y1 + 1].any(axis=0) | rahmen_spalten
+    am_rand = bool(zeile[:2].any() or zeile[-2:].any())
+    leiste = FELDER * abstand - (abstand - feld)
+    versteckt = max(0.0, (leiste - breite) / 2) if am_rand else 0.0
+    abgeschnitten = versteckt > 0.8 * feld
+
+    # 9. Rote Pixel unter der Leiste: Dort erscheint bei einem Fehlklick ein rotes X
+    #    auf einem der Haken. Steigt die Zahl, war der Klick daneben. Nur links schauen:
+    #    Die Haken stehen links und rechts unter der Leiste (die X erscheinen auf beiden
+    #    Seiten), rechts kann aber die Punkte-Tafel des Servers mit roter Schrift stehen.
+    mitte = breite / 2.0 if mitte_x is None else mitte_x
     u0 = min(hoehe, y1 + 1 + int(h * 0.8))
     u1 = min(hoehe, y1 + 1 + int(h * 3))
-    rot_unten = int(rot[u0:u1].sum())
+    hx0 = int(max(0, mitte - 5.3 * abstand))
+    hx1 = int(min(breite, max(hx0, mitte - 2.0 * abstand)))
+    rot_unten = int(rot[u0:u1, hx0:hx1].sum())
 
     def mitte(stuecke):
         if not stuecke:
@@ -252,9 +285,12 @@ def erkenne(bild):
         "auf_rot": bool(auf_rot),
         "rot_x": mitte(rot_stuecke),
         "rahmen_x": mitte(rahmen_stuecke),
+        "rot_feld": feld_nr(mitte(rot_stuecke)),
+        "rahmen_feld": feld_nr(mitte(rahmen_stuecke)),
         "feld": feld,
         "abstand": abstand,
         "abgeschnitten": abgeschnitten,
+        "versteckt": versteckt,
         "rot_unten": rot_unten,
         "y0": y0,
         "y1": y1,
@@ -447,14 +483,13 @@ class Vorausschau:
 
         L = self.vorlauf()
         T = self.takt()
-        x, rot = info["rahmen_x"], info["rot_x"]
 
         # Plan: Wann kommt der Rahmen auf Rot an (oder kam er an, wenn er schon drauf
         # steht), und wann muss der Klick los, damit er in der Mitte dieser Zeit ankommt?
         # Das gilt fuer "auf Sicht" (0 Felder) und "vorausschauend" (1-4 Felder) gleich.
-        if T is not None and self.ankuenfte and x is not None and rot is not None:
-            d = (rot - x) / abstand
-            felder = 0 if info["auf_rot"] else int(round(abs(d)))
+        if T is not None and self.ankuenfte and info["rot_feld"] is not None and info["rahmen_feld"] is not None:
+            d = info["rot_feld"] - info["rahmen_feld"]
+            felder = 0 if info["auf_rot"] else abs(d)
             vor_dem_rahmen = felder == 0 or (self.richtung and (d > 0) == (self.richtung > 0))
             if vor_dem_rahmen and felder <= 4:
                 if felder > 0 and self.neu_gemessen == 0 and not self.hat_startwert and not self.erfahrung:
@@ -675,6 +710,21 @@ def sag(text):
     print(time.strftime("%H:%M:%S"), text, flush=True)
 
 
+def rand_tipp(info, raster, fensterbreite):
+    """Was tun, wenn die Leiste breiter als das Fenster ist? Die Leiste ist GUI_BREITE
+    Minecraft-Einheiten breit; die GUI-Groesse sagt, wie viele Pixel eine Einheit hat."""
+    gui_jetzt = max(1, round(info["abstand"] * raster * FELDER / GUI_BREITE))
+    gui_passt = int(fensterbreite // (GUI_BREITE * 1.02))
+    text = ("Achtung: Die Leiste ist breiter als das Minecraft-Fenster - ganz links und rechts"
+            " ist je ein Feld nicht zu sehen. Liegt das rote Feld dort, kann ich es nicht"
+            " treffen. ")
+    if 1 <= gui_passt < gui_jetzt:
+        return text + ("Abhilfe: In Minecraft unter Optionen -> Grafikeinstellungen die"
+                       " GUI-Groesse auf %d stellen (jetzt %d), oder das Fenster breiter machen."
+                       % (gui_passt, gui_jetzt))
+    return text + "Abhilfe: Mach das Minecraft-Fenster breiter."
+
+
 def lade_gelerntes():
     try:
         with open(LERN_DATEI, encoding="utf-8") as datei:
@@ -719,7 +769,7 @@ def main():
     zuletzt_leiste = 0.0
     treffer = 0
     runden = 0
-    rand_gewarnt = False
+    rand_gewarnt = None
     warte_grund = None
     # Erst wenn der Mauszeiger einmal im Spiel versteckt war, wissen wir sicher,
     # dass "Zeiger sichtbar" wirklich "Menue offen" bedeutet.
@@ -792,11 +842,9 @@ def main():
             jetzt = bild_zeit
             if info is not None:
                 zuletzt_leiste = jetzt
-                if info["abgeschnitten"] and not rand_gewarnt:
-                    rand_gewarnt = True
-                    sag("Achtung: Die Leiste ist am Fensterrand abgeschnitten! Liegt das rote Feld"
-                        " ausserhalb, kann ich es nicht sehen. Mach das Minecraft-Fenster gross"
-                        " (maximieren) oder stell in den Optionen die GUI-Groesse kleiner.")
+                if info["abgeschnitten"] and rand_gewarnt != (breite, hoehe):
+                    rand_gewarnt = (breite, hoehe)  # pro Fenstergroesse einmal sagen
+                    sag(rand_tipp(info, raster, breite))
 
             if zustand == "auswerfen":
                 if info is not None:

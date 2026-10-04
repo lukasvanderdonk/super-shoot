@@ -12,8 +12,9 @@ Minecraft vorne ist und kein Menü (Inventar, Chat, Pause) offen ist.
    beim ersten Mal ein paar Minuten), dazu die Pakete `mss` und `numpy`.
    Falls Windows „Der Computer wurde geschützt“ zeigt:
    „Weitere Informationen“ → „Trotzdem ausführen“.
-2. In Minecraft: **Fenster groß machen** (maximieren), damit die ganze Leiste zu
-   sehen ist. Angel in die Hand nehmen (noch **nicht** auswerfen) und aufs Wasser schauen.
+2. Minecraft-Fenster hinstellen, wo du willst: maximiert, halber Bildschirm links
+   oder rechts oder ein Viertel (oben/unten, links/rechts). Angel in die Hand nehmen
+   (noch **nicht** auswerfen) und aufs Wasser schauen.
 3. **F8 drücken** – los geht's.
 
 | Taste | Was passiert |
@@ -23,6 +24,18 @@ Minecraft vorne ist und kein Menü (Inventar, Chat, Pause) offen ist.
 | F12   | Bot beenden |
 
 Im schwarzen Fenster steht immer, was der Bot gerade macht.
+
+## Fenstergröße und -position
+
+Der Bot funktioniert in jeder Fensterlage. Wichtig ist nur:
+- **Minecraft muss das aktive Fenster sein.** Andere Fenster dürfen daneben zu
+  sehen sein – klickst du aber hinein, pausiert der Bot, bis Minecraft wieder vorne ist.
+- **Die ganze Leiste muss ins Fenster passen.** Die Leiste steht in der Mitte des
+  Fensters und ist in hohen, schmalen Fenstern (halber Bildschirm) manchmal breiter
+  als das Fenster. Ist ein Feld ganz außen ein bisschen abgeschnitten, ist das egal.
+  Fehlt ein ganzes Feld, sagt der Bot Bescheid und nennt die **GUI-Größe**, die du in
+  Minecraft unter *Optionen → Grafikeinstellungen* einstellen solltest.
+- Die Punkte-Tafel des Servers rechts stört nicht.
 
 ## Vorausschauen und Dazulernen
 
@@ -52,9 +65,9 @@ Was er gelernt hat, merkt er sich in `angelbot_gelernt.json` (neben
 
 ## Wenn etwas nicht klappt
 
-- **„Die Leiste ist am Fensterrand abgeschnitten“**: Das Minecraft-Fenster ist zu
-  schmal. Fenster maximieren oder in Minecraft unter *Optionen → Grafikeinstellungen →
-  GUI-Größe* einen kleineren Wert nehmen.
+- **„Die Leiste ist breiter als das Minecraft-Fenster“**: Die GUI-Größe einstellen,
+  die der Bot nennt (*Optionen → Grafikeinstellungen → GUI-Größe*), oder das Fenster
+  breiter machen.
 - **Der Bot merkt den Biss nicht oder klickt nicht**: Während das Minispiel läuft
   **F10** drücken. Neben `Angel-Bot.bat` liegt dann ein Bild `diagnose_….png` – schick es Claude,
   dann kann der Bot angepasst werden.
