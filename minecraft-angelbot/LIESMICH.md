@@ -24,6 +24,21 @@ Minecraft vorne ist und kein Menü (Inventar, Chat, Pause) offen ist.
 
 Im schwarzen Fenster steht immer, was der Bot gerade macht.
 
+## Vorausschauen und Dazulernen
+
+Je näher der Fang, desto schneller springt der weiße Rahmen – und ein Klick
+daneben kostet einen Haken. Der Bot misst darum bei jedem Schritt, wie schnell
+der Rahmen gerade ist, und bei jedem Treffer, wie lange sein Klick bis zum Server
+braucht (so lange dauert es, bis das rote Feld springt). Käme ein Klick „auf Sicht“
+zu spät an, klickt er vorher – wenn nötig ein oder zwei Felder früher –, sodass
+der Klick in der Mitte der Zeit ankommt, in der der Rahmen auf Rot steht.
+Wäre es sicher zu spät, lässt er den Durchgang lieber aus, statt einen Haken zu
+riskieren. Nach einem Fehlklick korrigiert er sich (zu früh → später klicken,
+zu spät → früher klicken).
+
+Was er gelernt hat, merkt er sich in `angelbot_gelernt.json` (neben
+`Angel-Bot.bat`). Löschst du die Datei, fängt er wieder bei 150 ms an.
+
 ## Wenn etwas nicht klappt
 
 - **„Die Leiste ist am Fensterrand abgeschnitten“**: Das Minecraft-Fenster ist zu
@@ -38,4 +53,5 @@ Im schwarzen Fenster steht immer, was der Bot gerade macht.
 
 `Angel-Bot.bat` mit dem Editor öffnen: Unter „Einstellungen“ im Python-Teil stehen
 ein paar Zahlen, die du ändern kannst, z. B.
-`WARTEN_MAX` (wie lange er auf einen Biss wartet) oder `NACH_FANG_PAUSE`.
+`WARTEN_MAX` (wie lange er auf einen Biss wartet), `NACH_FANG_PAUSE` oder
+`SICHERHEIT` (größer = vorsichtiger, lässt eher einen Durchgang aus).
