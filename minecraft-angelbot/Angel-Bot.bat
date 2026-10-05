@@ -107,8 +107,9 @@ Beim Start fragt der Bot, wie viele Minispiele er spielen soll (danach macht er
 Pause und piept, F8 = nochmal so viele) und auf welchem Platz die Angel liegt.
 
 Nach jedem Auswerfen schaut er im Inventar nach, wie viel Haltbarkeit die Angel
-noch hat (Maus ueber den Angel-Platz, Infokasten lesen). Ist sie unter 5, hoert
-er sofort auf und drueckt einmal die Leertaste - damit die Angel nicht kaputtgeht.
+noch hat (Maus ueber den Angel-Platz, Infokasten lesen). Kann er sie nicht lesen,
+rechnet er mit 1 weniger als beim letzten Mal. Ist sie unter 5, hoert er sofort
+auf und drueckt einmal die Leertaste - damit die Angel nicht kaputtgeht.
 
 Tasten:  F8 = Start / Pause   F10 = Diagnose-Bild speichern   F12 = Beenden
 """
@@ -1004,7 +1005,7 @@ def pruefe_angel(kamera, fenster, platz):
         if not mauszeiger_sichtbar():
             break
     if ergebnis is None:
-        name = time.strftime("diagnose_haltbarkeit_%H%M%S.png")
+        name = "diagnose_haltbarkeit.png"  # immer dieselbe Datei, damit sich keine Bilder stapeln
         mss.tools.to_png(roh.rgb, roh.size, output=name)
         return ("Im Infokasten von Platz %d habe ich keine Haltbarkeit gefunden (Bild: %s)."
                 " Liegt dort die Angel? Ist F3+H an (erweiterte Infos)?" % (platz, name))
@@ -1058,8 +1059,12 @@ def main():
         angel_platz = frage_platz(vorschlag if isinstance(vorschlag, int) and 1 <= vorschlag <= 9 else 1)
         sag("Die Angel liegt auf Platz %d - dort schaue ich nach der Haltbarkeit." % angel_platz)
 
+    # Letzte bekannte Haltbarkeit (auch vom letzten Mal) - zum Weiterrechnen, falls
+    # sie einmal nicht zu lesen ist.
+    haltbarkeit = gelernt.get("haltbarkeit") if isinstance(gelernt.get("haltbarkeit"), int) else None
+
     def speichern():
-        speichere_gelerntes(dict(vorausschau.gelernt(), angel_platz=angel_platz))
+        speichere_gelerntes(dict(vorausschau.gelernt(), angel_platz=angel_platz, haltbarkeit=haltbarkeit))
 
     speichern()  # damit der Platz beim naechsten Mal schon vorgeschlagen wird
     sag("Bereit. Geh in Minecraft, nimm die Angel in die Hand (nicht auswerfen),"
@@ -1164,17 +1169,29 @@ def main():
                         angel_pruefen = False
                         time.sleep(0.6)
                         ergebnis = pruefe_angel(kamera, fenster, angel_platz)
-                        if isinstance(ergebnis, str):
-                            sag(ergebnis + " Zur Sicherheit halte ich an (F8 = weiter).")
+                        if not isinstance(ergebnis, str):
+                            haltbarkeit = ergebnis[0]
+                            text = "Angel: Haltbarkeit %d/%d" % ergebnis
+                        elif haltbarkeit is not None:
+                            # Nicht erkannt: so rechnen, als waere es genau 1 weniger als beim letzten Mal.
+                            haltbarkeit -= 1
+                            sag(ergebnis)
+                            text = "Ich rechne mit Haltbarkeit %d/%d (1 weniger als beim letzten Mal)" % (
+                                haltbarkeit, ANGEL_MAX)
+                        else:
+                            text = None
+                            sag(ergebnis + " Ich kenne noch keinen alten Wert zum Rechnen -"
+                                " zur Sicherheit halte ich an (F8 = weiter).")
                             piep()
                             aktiv = False
-                        elif ergebnis[0] < HALTBARKEIT_MIN:
-                            sag("Angel fast kaputt: Haltbarkeit %d/%d. Ich hoere sofort auf." % ergebnis)
+                        if text and haltbarkeit < HALTBARKEIT_MIN:
+                            sag(text + ". Die Angel ist fast kaputt - ich hoere sofort auf.")
                             taste(VK_SPACE)
                             piep()
                             aktiv = False
-                        else:
-                            sag("Angel: Haltbarkeit %d/%d - weiter geht's." % ergebnis)
+                        elif text:
+                            sag(text + " - weiter geht's.")
+                        speichern()
                         seit = time.monotonic()
 
             elif zustand == "warten":

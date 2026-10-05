@@ -46,9 +46,13 @@ Damit das klappt:
 - **F3+H** ist an (erweiterte Infos) – sonst steht „Haltbarkeit“ nicht im Infokasten.
 - Das Rezeptbuch im Inventar ist zu.
 
-Klappt etwas nicht (Inventar geht nicht auf, keine Haltbarkeit zu lesen, auf dem
-Platz liegt etwas anderes als die Angel), hält der Bot zur Sicherheit an und sagt,
-was los ist. Dann liegt neben `Angel-Bot.bat` ein Bild `diagnose_haltbarkeit_….png`.
+**Kann er die Haltbarkeit nicht lesen** (Inventar geht nicht auf, kein „Haltbarkeit“
+im Infokasten, auf dem Platz liegt etwas anderes als die Angel), rechnet er so, als
+wäre sie **genau 1 weniger als beim letzten Mal**, und angelt weiter. Aufgehört wird
+nur, wenn das unter 5 ist. Den letzten Wert merkt er sich auch für das nächste Mal.
+Kennt er noch gar keinen Wert (gleich das allererste Lesen klappt nicht), hält er
+zur Sicherheit an. Neben `Angel-Bot.bat` liegt dann ein Bild
+`diagnose_haltbarkeit.png` – das kannst du Claude schicken.
 
 ## Fenstergröße und -position
 
