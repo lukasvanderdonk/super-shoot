@@ -103,8 +103,8 @@ Der Bot schaut sich dafuer den Bildschirm an (nur das Minecraft-Fenster) und
 klickt selbst. Er klickt nur, solange Minecraft das aktive Fenster ist und
 kein Menue (Inventar, Chat, Pause) offen ist.
 
-Beim Start fragt der Bot, wie viele Minispiele er spielen soll. Danach macht er
-Pause und piept (F8 = nochmal so viele).
+Beim Start fragt der Bot, wie viele Minispiele er spielen soll (danach macht er
+Pause und piept, F8 = nochmal so viele) und auf welchem Platz die Angel liegt.
 
 Nach jedem Auswerfen schaut er im Inventar nach, wie viel Haltbarkeit die Angel
 noch hat (Maus ueber den Angel-Platz, Infokasten lesen). Ist sie unter 5, hoert
@@ -124,7 +124,7 @@ import numpy as np
 
 SPIELE_ZIEL = None       # nach so vielen Minispielen anhalten (None = beim Start fragen, 0 = nie)
 HALTBARKEIT_MIN = 5      # Angel pruefen: Haltbarkeit darunter -> anhalten und Leertaste (0 = nie pruefen)
-ANGEL_PLATZ = 1          # Platz der Angel in der untersten Inventar-Reihe (1 = ganz links ... 9 = ganz rechts)
+ANGEL_PLATZ = None       # Platz der Angel in der untersten Inventar-Reihe, 1 (links) bis 9 (None = beim Start fragen)
 ANGEL_MAX = 64           # volle Haltbarkeit einer Angel (zur Kontrolle, dass es wirklich die Angel ist)
 INVENTAR_TASTE = "I"     # Taste, mit der sich in Minecraft das Inventar oeffnet
 WARTEN_MAX = 60.0        # Sekunden ohne Biss, dann einholen und neu auswerfen
@@ -941,6 +941,23 @@ def frage_anzahl():
         print("Bitte nur eine Zahl eingeben, zum Beispiel 10.")
 
 
+def frage_platz(vorschlag):
+    """Auf welchem Platz der untersten Inventar-Reihe liegt die Angel? 1-9."""
+    if ANGEL_PLATZ is not None:
+        return min(9, max(1, int(ANGEL_PLATZ)))
+    while True:
+        try:
+            antwort = input("Auf welchem Platz liegt die Angel? 1 = ganz links ... 9 = ganz rechts"
+                            " (nur Enter = %d): " % vorschlag).strip()
+        except (EOFError, OSError):
+            return vorschlag
+        if not antwort:
+            return vorschlag
+        if antwort.isdigit() and 1 <= int(antwort) <= 9:
+            return int(antwort)
+        print("Bitte eine Zahl von 1 bis 9 eingeben.")
+
+
 def piep():
     try:
         import winsound
@@ -949,7 +966,7 @@ def piep():
         pass
 
 
-def pruefe_angel(kamera, fenster):
+def pruefe_angel(kamera, fenster, platz):
     """Oeffnet das Inventar, faehrt mit der Maus ueber den Angel-Platz, liest die
     Haltbarkeit aus dem Infokasten und schliesst das Inventar wieder.
     Gibt (haltbarkeit, maximum) zurueck - oder einen Text, was nicht geklappt hat."""
@@ -968,7 +985,7 @@ def pruefe_angel(kamera, fenster):
         inventar = finde_inventar(foto()[1])
     if inventar is None:
         return "Das Inventar ist nicht aufgegangen (Inventar-Taste %s?)." % INVENTAR_TASTE
-    x, y = platz_mitte(inventar, ANGEL_PLATZ)
+    x, y = platz_mitte(inventar, platz)
     maus_hin(links + x, oben + y)
     g = inventar[2]
     ergebnis, roh = None, None
@@ -990,10 +1007,10 @@ def pruefe_angel(kamera, fenster):
         name = time.strftime("diagnose_haltbarkeit_%H%M%S.png")
         mss.tools.to_png(roh.rgb, roh.size, output=name)
         return ("Im Infokasten von Platz %d habe ich keine Haltbarkeit gefunden (Bild: %s)."
-                " Liegt dort die Angel? Ist F3+H an (erweiterte Infos)?" % (ANGEL_PLATZ, name))
+                " Liegt dort die Angel? Ist F3+H an (erweiterte Infos)?" % (platz, name))
     if ergebnis[1] != ANGEL_MAX:
         return ("Auf Platz %d liegt wohl nicht die Angel (volle Haltbarkeit %d statt %d)."
-                " Leg die Angel dorthin oder stell ANGEL_PLATZ richtig ein." % (ANGEL_PLATZ, ergebnis[1], ANGEL_MAX))
+                " Leg die Angel dorthin oder gib beim Start den richtigen Platz an." % (platz, ergebnis[1], ANGEL_MAX))
     return ergebnis
 
 
@@ -1026,7 +1043,8 @@ def main():
 
     dpi_scharf()
     tasten = Tastenwaechter()
-    vorausschau = Vorausschau(lade_gelerntes())
+    gelernt = lade_gelerntes()
+    vorausschau = Vorausschau(gelernt)
 
     print(HILFE)
     if vorausschau.messungen or vorausschau.erfahrung:
@@ -1034,6 +1052,16 @@ def main():
             vorausschau.vorlauf() * 1000, len(vorausschau.erfahrung)))
     ziel = frage_anzahl()
     sag("Ich spiele %s." % ("%d Minispiele und mache dann Pause" % ziel if ziel else "ohne Ende"))
+    angel_platz = 1
+    if HALTBARKEIT_MIN > 0:
+        vorschlag = gelernt.get("angel_platz", 1)
+        angel_platz = frage_platz(vorschlag if isinstance(vorschlag, int) and 1 <= vorschlag <= 9 else 1)
+        sag("Die Angel liegt auf Platz %d - dort schaue ich nach der Haltbarkeit." % angel_platz)
+
+    def speichern():
+        speichere_gelerntes(dict(vorausschau.gelernt(), angel_platz=angel_platz))
+
+    speichern()  # damit der Platz beim naechsten Mal schon vorgeschlagen wird
     sag("Bereit. Geh in Minecraft, nimm die Angel in die Hand (nicht auswerfen),"
         " schau aufs Wasser und druecke F8.")
 
@@ -1135,7 +1163,7 @@ def main():
                     if HALTBARKEIT_MIN > 0 and angel_pruefen:
                         angel_pruefen = False
                         time.sleep(0.6)
-                        ergebnis = pruefe_angel(kamera, fenster)
+                        ergebnis = pruefe_angel(kamera, fenster, angel_platz)
                         if isinstance(ergebnis, str):
                             sag(ergebnis + " Zur Sicherheit halte ich an (F8 = weiter).")
                             piep()
@@ -1180,7 +1208,7 @@ def main():
                     sag("Minispiel %s vorbei (%d Klicks, %d Bilder/s)." % (
                         "%d von %d" % (gespielt, ziel) if ziel else str(runden),
                         treffer, bilder_im_spiel / max(0.1, jetzt - seit)))
-                    speichere_gelerntes(vorausschau.gelernt())
+                    speichern()
                     zustand, seit, fortsetzung = "nach_fang", jetzt, False
                     angel_pruefen = True
                     if ziel and gespielt >= ziel:

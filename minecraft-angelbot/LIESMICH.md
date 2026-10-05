@@ -15,6 +15,9 @@ Minecraft vorne ist und kein Menü (Inventar, Chat, Pause) offen ist.
 2. Der Bot fragt: **Wie viele Minispiele soll ich spielen?** Zahl eintippen und
    Enter – oder nur Enter für „ohne Ende“. Ist die Zahl erreicht, wirft er nicht
    mehr aus, piept und macht Pause. Mit F8 spielt er danach nochmal so viele.
+   Dann fragt er: **Auf welchem Platz liegt die Angel?** 1 = ganz links … 9 = ganz
+   rechts in der untersten Inventar-Reihe. Er merkt sich die Antwort – beim nächsten
+   Mal reicht Enter.
 3. Minecraft-Fenster hinstellen, wo du willst: maximiert, halber Bildschirm links
    oder rechts oder ein Viertel (oben/unten, links/rechts). Angel in die Hand nehmen
    (noch **nicht** auswerfen) und aufs Wasser schauen.
@@ -38,9 +41,8 @@ schließt er das Inventar wieder (Esc) und angelt weiter.
 **Leertaste** und piept.
 
 Damit das klappt:
-- Die Angel liegt **ganz links in der untersten Inventar-Reihe** (Platz 1). Liegt
-  sie woanders, in den Einstellungen `ANGEL_PLATZ` ändern (1 = ganz links … 9 = ganz
-  rechts).
+- Beim Start den richtigen **Platz der Angel** angeben (1 = ganz links … 9 = ganz
+  rechts in der untersten Inventar-Reihe).
 - **F3+H** ist an (erweiterte Infos) – sonst steht „Haltbarkeit“ nicht im Infokasten.
 - Das Rezeptbuch im Inventar ist zu.
 
@@ -105,6 +107,7 @@ Was er gelernt hat, merkt er sich in `angelbot_gelernt.json` (neben
 `Angel-Bot.bat` mit dem Editor öffnen: Unter „Einstellungen“ im Python-Teil stehen
 ein paar Zahlen, die du ändern kannst, z. B.
 `SPIELE_ZIEL` (z. B. `SPIELE_ZIEL = 10`, dann fragt er beim Start nicht mehr; `0` =
-ohne Ende), `HALTBARKEIT_MIN` (ab wann er aufhört; `0` = nicht prüfen), `ANGEL_PLATZ`,
+ohne Ende), `HALTBARKEIT_MIN` (ab wann er aufhört; `0` = nicht prüfen), `ANGEL_PLATZ` (z. B. `7`,
+dann fragt er nicht mehr nach dem Platz),
 `INVENTAR_TASTE`, `WARTEN_MAX` (wie lange er auf einen Biss wartet), `NACH_FANG_PAUSE` oder
 `SICHERHEIT` (größer = vorsichtiger, lässt eher einen Durchgang aus).
