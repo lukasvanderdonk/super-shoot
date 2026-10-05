@@ -127,6 +127,7 @@ SPIELE_ZIEL = None       # nach so vielen Minispielen anhalten (None = beim Star
 HALTBARKEIT_MIN = 5      # Angel pruefen: Haltbarkeit darunter -> anhalten und Leertaste (0 = nie pruefen)
 ANGEL_PLATZ = None       # Platz der Angel in der untersten Inventar-Reihe, 1 (links) bis 9 (None = beim Start fragen)
 ANGEL_MAX = 64           # volle Haltbarkeit einer Angel (zur Kontrolle, dass es wirklich die Angel ist)
+HALTBARKEIT_START = None # Haltbarkeit der Angel beim Start (None = beim Start fragen, z. B. 64 = neue Angel)
 INVENTAR_TASTE = "I"     # Taste, mit der sich in Minecraft das Inventar oeffnet
 WARTEN_MAX = 60.0        # Sekunden ohne Biss, dann einholen und neu auswerfen
 NACH_FANG_PAUSE = 1.5    # Sekunden nach dem Fang, bevor neu ausgeworfen wird
@@ -959,6 +960,25 @@ def frage_platz(vorschlag):
         print("Bitte eine Zahl von 1 bis 9 eingeben.")
 
 
+def frage_haltbarkeit(letzte):
+    """Wie viel Haltbarkeit hat die Angel jetzt? Eine ganz neue Angel zeigt Minecraft
+    im Infokasten erst nach dem ersten Fang an - bis dahin rechnet der Bot mit dieser Zahl."""
+    if HALTBARKEIT_START is not None:
+        return min(ANGEL_MAX, max(0, int(HALTBARKEIT_START)))
+    zuletzt = " - letztes Mal: %d" % letzte if letzte is not None else ""
+    while True:
+        try:
+            antwort = input("Wie viel Haltbarkeit hat die Angel? (nur Enter = %d = neue Angel%s): "
+                            % (ANGEL_MAX, zuletzt)).strip()
+        except (EOFError, OSError):
+            return ANGEL_MAX
+        if not antwort:
+            return ANGEL_MAX
+        if antwort.isdigit() and int(antwort) <= ANGEL_MAX:
+            return int(antwort)
+        print("Bitte eine Zahl von 0 bis %d eingeben." % ANGEL_MAX)
+
+
 def piep():
     try:
         import winsound
@@ -1008,7 +1028,8 @@ def pruefe_angel(kamera, fenster, platz):
         name = "diagnose_haltbarkeit.png"  # immer dieselbe Datei, damit sich keine Bilder stapeln
         mss.tools.to_png(roh.rgb, roh.size, output=name)
         return ("Im Infokasten von Platz %d habe ich keine Haltbarkeit gefunden (Bild: %s)."
-                " Liegt dort die Angel? Ist F3+H an (erweiterte Infos)?" % (platz, name))
+                " Bei einer ganz neuen Angel ist das normal. Sonst: Liegt dort die Angel?"
+                " Ist F3+H an (erweiterte Infos)?" % (platz, name))
     if ergebnis[1] != ANGEL_MAX:
         return ("Auf Platz %d liegt wohl nicht die Angel (volle Haltbarkeit %d statt %d)."
                 " Leg die Angel dorthin oder gib beim Start den richtigen Platz an." % (platz, ergebnis[1], ANGEL_MAX))
@@ -1059,9 +1080,17 @@ def main():
         angel_platz = frage_platz(vorschlag if isinstance(vorschlag, int) and 1 <= vorschlag <= 9 else 1)
         sag("Die Angel liegt auf Platz %d - dort schaue ich nach der Haltbarkeit." % angel_platz)
 
-    # Letzte bekannte Haltbarkeit (auch vom letzten Mal) - zum Weiterrechnen, falls
-    # sie einmal nicht zu lesen ist.
+    # Letzte bekannte Haltbarkeit - zum Weiterrechnen, falls sie einmal nicht zu lesen ist
+    # (eine ganz neue Angel zeigt Minecraft erst nach dem ersten Fang an).
     haltbarkeit = gelernt.get("haltbarkeit") if isinstance(gelernt.get("haltbarkeit"), int) else None
+    if HALTBARKEIT_MIN > 0:
+        haltbarkeit = frage_haltbarkeit(haltbarkeit)
+        if haltbarkeit < HALTBARKEIT_MIN:
+            sag("Achtung: Haltbarkeit %d/%d ist unter %d - kann ich sie im Inventar nicht lesen,"
+                " hoere ich gleich nach dem ersten Auswerfen wieder auf." % (haltbarkeit, ANGEL_MAX, HALTBARKEIT_MIN))
+        else:
+            sag("Die Angel hat %d/%d Haltbarkeit - damit rechne ich, bis ich sie im Inventar lesen kann."
+                % (haltbarkeit, ANGEL_MAX))
 
     def speichern():
         speichere_gelerntes(dict(vorausschau.gelernt(), angel_platz=angel_platz, haltbarkeit=haltbarkeit))

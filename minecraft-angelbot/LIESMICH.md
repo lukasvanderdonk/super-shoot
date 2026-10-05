@@ -18,6 +18,8 @@ Minecraft vorne ist und kein Menü (Inventar, Chat, Pause) offen ist.
    Dann fragt er: **Auf welchem Platz liegt die Angel?** 1 = ganz links … 9 = ganz
    rechts in der untersten Inventar-Reihe. Er merkt sich die Antwort – beim nächsten
    Mal reicht Enter.
+   Zuletzt fragt er: **Wie viel Haltbarkeit hat die Angel?** Bei einer neuen Angel
+   nur Enter (= 64), sonst die Zahl eintippen, z. B. `35`.
 3. Minecraft-Fenster hinstellen, wo du willst: maximiert, halber Bildschirm links
    oder rechts oder ein Viertel (oben/unten, links/rechts). Angel in die Hand nehmen
    (noch **nicht** auswerfen) und aufs Wasser schauen.
@@ -49,10 +51,13 @@ Damit das klappt:
 **Kann er die Haltbarkeit nicht lesen** (Inventar geht nicht auf, kein „Haltbarkeit“
 im Infokasten, auf dem Platz liegt etwas anderes als die Angel), rechnet er so, als
 wäre sie **genau 1 weniger als beim letzten Mal**, und angelt weiter. Aufgehört wird
-nur, wenn das unter 5 ist. Den letzten Wert merkt er sich auch für das nächste Mal.
-Kennt er noch gar keinen Wert (gleich das allererste Lesen klappt nicht), hält er
-zur Sicherheit an. Neben `Angel-Bot.bat` liegt dann ein Bild
-`diagnose_haltbarkeit.png` – das kannst du Claude schicken.
+nur, wenn das unter 5 ist. Neben `Angel-Bot.bat` liegt dann ein Bild
+`diagnose_haltbarkeit.png` – das kannst du Claude schicken, wenn es öfter passiert.
+
+**Neue Angel:** Minecraft zeigt die Haltbarkeit erst an, wenn die Angel einmal etwas
+abbekommen hat. Darum fragt der Bot beim Start, wie viel Haltbarkeit die Angel hat
+(nur Enter = 64 = neue Angel). Mit dieser Zahl rechnet er, bis er sie im Inventar
+lesen kann – danach zählt immer der gelesene Wert.
 
 ## Fenstergröße und -position
 
@@ -112,6 +117,7 @@ Was er gelernt hat, merkt er sich in `angelbot_gelernt.json` (neben
 ein paar Zahlen, die du ändern kannst, z. B.
 `SPIELE_ZIEL` (z. B. `SPIELE_ZIEL = 10`, dann fragt er beim Start nicht mehr; `0` =
 ohne Ende), `HALTBARKEIT_MIN` (ab wann er aufhört; `0` = nicht prüfen), `ANGEL_PLATZ` (z. B. `7`,
-dann fragt er nicht mehr nach dem Platz),
+dann fragt er nicht mehr nach dem Platz), `HALTBARKEIT_START` (z. B. `64`, dann fragt er nicht
+mehr nach der Haltbarkeit),
 `INVENTAR_TASTE`, `WARTEN_MAX` (wie lange er auf einen Biss wartet), `NACH_FANG_PAUSE` oder
 `SICHERHEIT` (größer = vorsichtiger, lässt eher einen Durchgang aus).
