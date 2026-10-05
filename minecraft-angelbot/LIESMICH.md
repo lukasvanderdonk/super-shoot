@@ -28,6 +28,26 @@ Minecraft vorne ist und kein Menü (Inventar, Chat, Pause) offen ist.
 
 Im schwarzen Fenster steht immer, was der Bot gerade macht.
 
+## Haltbarkeit der Angel
+
+Damit deine Angel nicht kaputtgeht, schaut der Bot beim Start und nach jedem
+Minispiel nach: Er wirft ganz normal aus, drückt **I** (Inventar), fährt mit der
+Maus über den Angel-Platz und liest im Infokasten „Haltbarkeit: 35/64“. Dann
+schließt er das Inventar wieder (Esc) und angelt weiter.
+**Ist die Haltbarkeit unter 5**, hört er sofort auf, drückt einmal die
+**Leertaste** und piept.
+
+Damit das klappt:
+- Die Angel liegt **ganz links in der untersten Inventar-Reihe** (Platz 1). Liegt
+  sie woanders, in den Einstellungen `ANGEL_PLATZ` ändern (1 = ganz links … 9 = ganz
+  rechts).
+- **F3+H** ist an (erweiterte Infos) – sonst steht „Haltbarkeit“ nicht im Infokasten.
+- Das Rezeptbuch im Inventar ist zu.
+
+Klappt etwas nicht (Inventar geht nicht auf, keine Haltbarkeit zu lesen, auf dem
+Platz liegt etwas anderes als die Angel), hält der Bot zur Sicherheit an und sagt,
+was los ist. Dann liegt neben `Angel-Bot.bat` ein Bild `diagnose_haltbarkeit_….png`.
+
 ## Fenstergröße und -position
 
 Der Bot funktioniert in jeder Fensterlage. Wichtig ist nur:
@@ -85,5 +105,6 @@ Was er gelernt hat, merkt er sich in `angelbot_gelernt.json` (neben
 `Angel-Bot.bat` mit dem Editor öffnen: Unter „Einstellungen“ im Python-Teil stehen
 ein paar Zahlen, die du ändern kannst, z. B.
 `SPIELE_ZIEL` (z. B. `SPIELE_ZIEL = 10`, dann fragt er beim Start nicht mehr; `0` =
-ohne Ende), `WARTEN_MAX` (wie lange er auf einen Biss wartet), `NACH_FANG_PAUSE` oder
+ohne Ende), `HALTBARKEIT_MIN` (ab wann er aufhört; `0` = nicht prüfen), `ANGEL_PLATZ`,
+`INVENTAR_TASTE`, `WARTEN_MAX` (wie lange er auf einen Biss wartet), `NACH_FANG_PAUSE` oder
 `SICHERHEIT` (größer = vorsichtiger, lässt eher einen Durchgang aus).

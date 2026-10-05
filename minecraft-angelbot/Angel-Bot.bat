@@ -106,10 +106,15 @@ kein Menue (Inventar, Chat, Pause) offen ist.
 Beim Start fragt der Bot, wie viele Minispiele er spielen soll. Danach macht er
 Pause und piept (F8 = nochmal so viele).
 
+Nach jedem Auswerfen schaut er im Inventar nach, wie viel Haltbarkeit die Angel
+noch hat (Maus ueber den Angel-Platz, Infokasten lesen). Ist sie unter 5, hoert
+er sofort auf und drueckt einmal die Leertaste - damit die Angel nicht kaputtgeht.
+
 Tasten:  F8 = Start / Pause   F10 = Diagnose-Bild speichern   F12 = Beenden
 """
 
 import json
+import re
 import sys
 import time
 
@@ -118,6 +123,10 @@ import numpy as np
 # ---------------------------------------------------------------- Einstellungen
 
 SPIELE_ZIEL = None       # nach so vielen Minispielen anhalten (None = beim Start fragen, 0 = nie)
+HALTBARKEIT_MIN = 5      # Angel pruefen: Haltbarkeit darunter -> anhalten und Leertaste (0 = nie pruefen)
+ANGEL_PLATZ = 1          # Platz der Angel in der untersten Inventar-Reihe (1 = ganz links ... 9 = ganz rechts)
+ANGEL_MAX = 64           # volle Haltbarkeit einer Angel (zur Kontrolle, dass es wirklich die Angel ist)
+INVENTAR_TASTE = "I"     # Taste, mit der sich in Minecraft das Inventar oeffnet
 WARTEN_MAX = 60.0        # Sekunden ohne Biss, dann einholen und neu auswerfen
 NACH_FANG_PAUSE = 1.5    # Sekunden nach dem Fang, bevor neu ausgeworfen wird
 SPIEL_VORBEI_NACH = 0.6  # so lange muss die Leiste weg sein, dann ist das Spiel vorbei
@@ -596,6 +605,160 @@ class Vorausschau:
         return art
 
 
+# ------------------------------------------------------------- Haltbarkeit lesen
+
+# Die Ziffern der Minecraft-Schrift (je 5 x 7 Pixel) und der Schraegstrich.
+SCHRIFT = {
+    "0": [".###.", "#...#", "#..##", "#.#.#", "##..#", "#...#", ".###."],
+    "1": ["..#..", ".##..", "..#..", "..#..", "..#..", "..#..", "#####"],
+    "2": [".###.", "#...#", "....#", "..##.", ".#...", "#...#", "#####"],
+    "3": [".###.", "#...#", "....#", "..##.", "....#", "#...#", ".###."],
+    "4": ["...##", "..#.#", ".#..#", "#...#", "#####", "....#", "....#"],
+    "5": ["#####", "#....", "####.", "....#", "....#", "#...#", ".###."],
+    "6": ["..##.", ".#...", "#....", "####.", "#...#", "#...#", ".###."],
+    "7": ["#####", "#...#", "....#", "...#.", "..#..", "..#..", "..#.."],
+    "8": [".###.", "#...#", "#...#", ".###.", "#...#", "#...#", ".###."],
+    "9": [".###.", "#...#", "#...#", ".####", "....#", "...#.", ".##.."],
+    "/": ["....#", "...#.", "...#.", "..#..", ".#...", ".#...", "#...."],
+}
+_VORLAGEN = {z: np.array([[c == "#" for c in reihe] for reihe in muster]) for z, muster in SCHRIFT.items()}
+
+
+def finde_infokasten(bild, p):
+    """Sucht den dunkel-lila Infokasten (Tooltip) -> (x0, y0, x1, y1) oder None.
+    p = Bild-Pixel pro Minecraft-Pixel."""
+    r = bild[:, :, 0].astype(np.int16)
+    g = bild[:, :, 1].astype(np.int16)
+    b = bild[:, :, 2].astype(np.int16)
+    # Dunkles Lila (Hintergrund 16,0,16 und lila Rand): rot und blau deutlich ueber gruen.
+    maske = (r - g >= 6) & (b - g >= 6) & (r < 70) & (b < 100)
+    # In Kaestchen von 2 Schrift-Pixeln zusammenfassen - so unterbricht die Schrift die Flaeche nicht.
+    k = max(2, int(round(2 * p)))
+    h2, w2 = maske.shape[0] // k, maske.shape[1] // k
+    if h2 < 3 or w2 < 3:
+        return None
+    feld = maske[:h2 * k, :w2 * k].reshape(h2, k, w2, k).mean(axis=(1, 3)) > 0.25
+    # Groesste zusammenhaengende Flaeche suchen
+    gesehen = np.zeros_like(feld)
+    beste = None
+    for sy, sx in zip(*np.nonzero(feld)):
+        if gesehen[sy, sx]:
+            continue
+        stapel, punkte = [(sy, sx)], []
+        gesehen[sy, sx] = True
+        while stapel:
+            y, x = stapel.pop()
+            punkte.append((y, x))
+            for ny, nx in ((y + 1, x), (y - 1, x), (y, x + 1), (y, x - 1)):
+                if 0 <= ny < h2 and 0 <= nx < w2 and feld[ny, nx] and not gesehen[ny, nx]:
+                    gesehen[ny, nx] = True
+                    stapel.append((ny, nx))
+        if beste is None or len(punkte) > len(beste):
+            beste = punkte
+    if beste is None or len(beste) < 12:
+        return None
+    ys = [q[0] for q in beste]
+    xs = [q[1] for q in beste]
+    return min(xs) * k, min(ys) * k, (max(xs) + 1) * k, (max(ys) + 1) * k
+
+
+def lies_zeile(helligkeit, p):
+    """Liest eine Textzeile (helligkeit = max(R,G,B) je Pixel) bei p Bild-Pixeln pro
+    Schrift-Pixel. Gibt die erkannten Zeichen zurueck (Ziffern und /, sonst ?)."""
+    bestes = None
+    schritt = max(0.2, p / 6)
+    for oy in np.arange(0, p, schritt):
+        for ox in np.arange(0, p, schritt):
+            reihen = int((helligkeit.shape[0] - oy) / p)
+            spalten = int((helligkeit.shape[1] - ox) / p)
+            if reihen < 7 or spalten < 5:
+                continue
+            ys = np.minimum((oy + (np.arange(reihen) + 0.5) * p).astype(int), helligkeit.shape[0] - 1)
+            xs = np.minimum((ox + (np.arange(spalten) + 0.5) * p).astype(int), helligkeit.shape[1] - 1)
+            werte = helligkeit[np.ix_(ys, xs)].astype(float)
+            # Scharf getroffen: Messpunkte liegen mitten in Strichen oder mitten im Hintergrund
+            klar = np.abs(werte - 140).mean()
+            if bestes is None or klar > bestes[0]:
+                bestes = (klar, werte > 140)
+    if bestes is None:
+        return ""
+    raster = bestes[1]
+    tinte = raster.sum(axis=1)
+    start = int(np.argmax([tinte[i:i + 7].sum() for i in range(raster.shape[0] - 6)]))
+    g = raster[start:start + 7]
+    text, s, leer = "", None, 0
+    for i, v in enumerate(list(g.any(axis=0)) + [False]):
+        if v and s is None:
+            if leer >= 3 and text:
+                text += " "
+            s, leer = i, 0
+        elif not v:
+            leer += 1
+            if s is not None:
+                zeichen = g[:, s:i]
+                if zeichen.shape[1] == 5:
+                    abst = {z: int((v_ != zeichen).sum()) for z, v_ in _VORLAGEN.items()}
+                    z = min(abst, key=abst.get)
+                    text += z if abst[z] <= 3 else "?"
+                else:
+                    text += "?"
+                s = None
+    return text
+
+
+def lies_haltbarkeit(bild, p):
+    """Liest "Haltbarkeit: 35/64" aus dem Infokasten -> (35, 64) oder None.
+    p = Bild-Pixel pro Minecraft-Pixel (die GUI-Groesse)."""
+    kasten = finde_infokasten(bild, p)
+    if kasten is None:
+        return None
+    x0, y0, x1, y1 = kasten
+    helligkeit = bild[y0:y1, x0:x1].max(axis=2)
+    zeilen = (helligkeit > 140).sum(axis=1) > 0
+    # Helle Reihen zu Textzeilen zusammenfassen (Umlaut-Punkte gehoeren zur Zeile darunter)
+    gruppen = []
+    for y in np.flatnonzero(zeilen):
+        if gruppen and y - gruppen[-1][1] <= 2 * p:
+            gruppen[-1][1] = y
+        else:
+            gruppen.append([y, y])
+    for oben, unten in gruppen:
+        if unten - oben < 4 * p:
+            continue
+        teil = helligkeit[max(0, int(oben - p)):min(len(zeilen), int(unten + 2 * p))]
+        treffer = re.search(r"(\d+) ?/ ?(\d+)", lies_zeile(teil, p))
+        if treffer:
+            return int(treffer.group(1)), int(treffer.group(2))
+    return None
+
+
+def finde_inventar(bild):
+    """Sucht das hellgraue Inventar-Fenster -> (links, oben, g) in Bild-Pixeln oder None.
+    Das Inventar ist 176 x 166 Minecraft-Pixel gross; g = Bild-Pixel pro Minecraft-Pixel."""
+    r = bild[:, :, 0].astype(np.int16)
+    g_ = bild[:, :, 1].astype(np.int16)
+    b = bild[:, :, 2].astype(np.int16)
+    maske = (np.abs(r - 198) < 6) & (np.abs(g_ - 198) < 6) & (np.abs(b - 198) < 6)
+    spalten = maske.sum(axis=0)
+    zeilen = maske.sum(axis=1)
+    if spalten.max() < 10 or zeilen.max() < 10:
+        return None
+    xs = np.flatnonzero(spalten >= spalten.max() * 0.15)
+    ys = np.flatnonzero(zeilen >= zeilen.max() * 0.15)
+    breite, hoehe = xs[-1] - xs[0] + 1, ys[-1] - ys[0] + 1
+    g = breite / 170.0  # die graue Flaeche ist etwa 170 der 176 Pixel breit
+    if g <= 0 or not 0.85 < (hoehe / g) / 160.0 < 1.15:
+        return None  # keine Inventar-Form
+    mitte_x, mitte_y = (xs[0] + xs[-1] + 1) / 2.0, (ys[0] + ys[-1] + 1) / 2.0
+    return mitte_x - 88 * g, mitte_y - 83 * g, g
+
+
+def platz_mitte(inventar, platz):
+    """Mitte von Platz 1-9 der untersten Inventar-Reihe (Schnellleiste) in Bild-Pixeln."""
+    links, oben, g = inventar
+    return links + (8 + 18 * (platz - 1) + 8) * g, oben + (142 + 8) * g
+
+
 # ------------------------------------------------------- Windows: Maus, Tasten
 
 if sys.platform == "win32":
@@ -604,9 +767,12 @@ if sys.platform == "win32":
 
     user32 = ctypes.WinDLL("user32", use_last_error=True)
 
+    MOUSEEVENTF_MOVE = 0x0001
     MOUSEEVENTF_RIGHTDOWN = 0x0008
     MOUSEEVENTF_RIGHTUP = 0x0010
+    KEYEVENTF_KEYUP = 0x0002
     INPUT_MOUSE = 0
+    INPUT_KEYBOARD = 1
 
     class MOUSEINPUT(ctypes.Structure):
         _fields_ = [
@@ -618,9 +784,18 @@ if sys.platform == "win32":
             ("dwExtraInfo", ctypes.POINTER(ctypes.c_ulong)),
         ]
 
+    class KEYBDINPUT(ctypes.Structure):
+        _fields_ = [
+            ("wVk", wintypes.WORD),
+            ("wScan", wintypes.WORD),
+            ("dwFlags", wintypes.DWORD),
+            ("time", wintypes.DWORD),
+            ("dwExtraInfo", ctypes.POINTER(ctypes.c_ulong)),
+        ]
+
     class INPUT(ctypes.Structure):
         class _U(ctypes.Union):
-            _fields_ = [("mi", MOUSEINPUT), ("_pad", ctypes.c_byte * 32)]
+            _fields_ = [("mi", MOUSEINPUT), ("ki", KEYBDINPUT), ("_pad", ctypes.c_byte * 32)]
 
         _anonymous_ = ("u",)
         _fields_ = [("type", wintypes.DWORD), ("u", _U)]
@@ -643,11 +818,30 @@ if sys.platform == "win32":
     user32.GetClientRect.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.RECT)]
     user32.ClientToScreen.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.POINT)]
     user32.GetCursorInfo.argtypes = [ctypes.POINTER(CURSORINFO)]
+    user32.MapVirtualKeyW.argtypes = [wintypes.UINT, wintypes.UINT]
+    user32.MapVirtualKeyW.restype = wintypes.UINT
+    user32.SetCursorPos.argtypes = [ctypes.c_int, ctypes.c_int]
 
-    def _maus(flag):
+    def _maus(flag, dx=0, dy=0):
         inp = INPUT(type=INPUT_MOUSE)
-        inp.mi = MOUSEINPUT(0, 0, 0, flag, 0, None)
+        inp.mi = MOUSEINPUT(dx, dy, 0, flag, 0, None)
         user32.SendInput(1, ctypes.byref(inp), ctypes.sizeof(INPUT))
+
+    def taste(vk):
+        """Eine Taste einmal kurz druecken (mit Scancode, den braucht Minecraft)."""
+        scan = user32.MapVirtualKeyW(vk, 0)
+        for flag in (0, KEYEVENTF_KEYUP):
+            inp = INPUT(type=INPUT_KEYBOARD)
+            inp.ki = KEYBDINPUT(vk, scan, flag, 0, None)
+            user32.SendInput(1, ctypes.byref(inp), ctypes.sizeof(INPUT))
+            time.sleep(0.05)
+
+    def maus_hin(x, y):
+        """Mauszeiger an eine Bildschirmstelle setzen (im Inventar)."""
+        user32.SetCursorPos(int(round(x)), int(round(y)))
+        time.sleep(0.03)
+        _maus(MOUSEEVENTF_MOVE, 1, 0)  # kleiner Ruck, damit Minecraft es sicher bemerkt
+        _maus(MOUSEEVENTF_MOVE, -1, 0)
 
     def rechtsklick():
         _maus(MOUSEEVENTF_RIGHTDOWN)
@@ -693,6 +887,7 @@ if sys.platform == "win32":
                 pass
 
 VK_F8, VK_F10, VK_F12 = 0x77, 0x79, 0x7B
+VK_ESCAPE, VK_SPACE = 0x1B, 0x20
 
 
 # ------------------------------------------------------------------ Hauptteil
@@ -754,6 +949,54 @@ def piep():
         pass
 
 
+def pruefe_angel(kamera, fenster):
+    """Oeffnet das Inventar, faehrt mit der Maus ueber den Angel-Platz, liest die
+    Haltbarkeit aus dem Infokasten und schliesst das Inventar wieder.
+    Gibt (haltbarkeit, maximum) zurueck - oder einen Text, was nicht geklappt hat."""
+    import mss.tools
+    links, oben, breite, hoehe = fenster
+    bereich = {"left": links, "top": oben, "width": breite, "height": hoehe}
+
+    def foto():
+        roh = kamera.grab(bereich)
+        return roh, np.asarray(roh)[:, :, 2::-1]
+
+    taste(ord(INVENTAR_TASTE.upper()))
+    inventar, ende = None, time.monotonic() + 2.0
+    while inventar is None and time.monotonic() < ende:
+        time.sleep(0.1)
+        inventar = finde_inventar(foto()[1])
+    if inventar is None:
+        return "Das Inventar ist nicht aufgegangen (Inventar-Taste %s?)." % INVENTAR_TASTE
+    x, y = platz_mitte(inventar, ANGEL_PLATZ)
+    maus_hin(links + x, oben + y)
+    g = inventar[2]
+    ergebnis, roh = None, None
+    for versuch in range(5):
+        time.sleep(0.15)
+        roh, bild = foto()
+        # Der Infokasten steht neben der Maus - nur dort suchen (geht schneller).
+        x0, x1 = int(max(0, x - 250 * g)), int(min(breite, x + 250 * g))
+        y0 = int(max(0, y - 200 * g))
+        ergebnis = lies_haltbarkeit(bild[y0:, x0:x1], g)
+        if ergebnis:
+            break
+    taste(VK_ESCAPE)  # Inventar zu
+    for _ in range(30):
+        time.sleep(0.05)
+        if not mauszeiger_sichtbar():
+            break
+    if ergebnis is None:
+        name = time.strftime("diagnose_haltbarkeit_%H%M%S.png")
+        mss.tools.to_png(roh.rgb, roh.size, output=name)
+        return ("Im Infokasten von Platz %d habe ich keine Haltbarkeit gefunden (Bild: %s)."
+                " Liegt dort die Angel? Ist F3+H an (erweiterte Infos)?" % (ANGEL_PLATZ, name))
+    if ergebnis[1] != ANGEL_MAX:
+        return ("Auf Platz %d liegt wohl nicht die Angel (volle Haltbarkeit %d statt %d)."
+                " Leg die Angel dorthin oder stell ANGEL_PLATZ richtig ein." % (ANGEL_PLATZ, ergebnis[1], ANGEL_MAX))
+    return ergebnis
+
+
 def lade_gelerntes():
     try:
         with open(LERN_DATEI, encoding="utf-8") as datei:
@@ -802,6 +1045,7 @@ def main():
     runden = 0              # Minispiele insgesamt
     gespielt = 0            # Minispiele fuer das Ziel (zaehlt nach "Fertig" neu)
     fortsetzung = False     # Leiste kam nach dem Fang wieder: dasselbe Minispiel, nicht neu zaehlen
+    angel_pruefen = True    # nach dem naechsten Auswerfen die Haltbarkeit der Angel pruefen
     rand_gewarnt = None
     warte_grund = None
     # Erst wenn der Mauszeiger einmal im Spiel versteckt war, wissen wir sicher,
@@ -821,6 +1065,7 @@ def main():
             if tasten.neu(VK_F8):
                 aktiv = not aktiv
                 zustand = "auswerfen"
+                angel_pruefen = True
                 seit = time.monotonic()
                 warte_grund = None
                 sag("LAEUFT" if aktiv else "PAUSE (F8 = weiter)")
@@ -887,6 +1132,22 @@ def main():
                     rechtsklick()
                     sag("Ausgeworfen, warte auf einen Biss ...")
                     zustand, seit = "warten", jetzt
+                    if HALTBARKEIT_MIN > 0 and angel_pruefen:
+                        angel_pruefen = False
+                        time.sleep(0.6)
+                        ergebnis = pruefe_angel(kamera, fenster)
+                        if isinstance(ergebnis, str):
+                            sag(ergebnis + " Zur Sicherheit halte ich an (F8 = weiter).")
+                            piep()
+                            aktiv = False
+                        elif ergebnis[0] < HALTBARKEIT_MIN:
+                            sag("Angel fast kaputt: Haltbarkeit %d/%d. Ich hoere sofort auf." % ergebnis)
+                            taste(VK_SPACE)
+                            piep()
+                            aktiv = False
+                        else:
+                            sag("Angel: Haltbarkeit %d/%d - weiter geht's." % ergebnis)
+                        seit = time.monotonic()
 
             elif zustand == "warten":
                 if info is not None:
@@ -921,6 +1182,7 @@ def main():
                         treffer, bilder_im_spiel / max(0.1, jetzt - seit)))
                     speichere_gelerntes(vorausschau.gelernt())
                     zustand, seit, fortsetzung = "nach_fang", jetzt, False
+                    angel_pruefen = True
                     if ziel and gespielt >= ziel:
                         sag("Fertig: %d Minispiele gespielt! Ich mache Pause."
                             " F8 = nochmal %d spielen, F12 = beenden." % (gespielt, ziel))
