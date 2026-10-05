@@ -103,6 +103,9 @@ Der Bot schaut sich dafuer den Bildschirm an (nur das Minecraft-Fenster) und
 klickt selbst. Er klickt nur, solange Minecraft das aktive Fenster ist und
 kein Menue (Inventar, Chat, Pause) offen ist.
 
+Beim Start fragt der Bot, wie viele Minispiele er spielen soll. Danach macht er
+Pause und piept (F8 = nochmal so viele).
+
 Tasten:  F8 = Start / Pause   F10 = Diagnose-Bild speichern   F12 = Beenden
 """
 
@@ -114,6 +117,7 @@ import numpy as np
 
 # ---------------------------------------------------------------- Einstellungen
 
+SPIELE_ZIEL = None       # nach so vielen Minispielen anhalten (None = beim Start fragen, 0 = nie)
 WARTEN_MAX = 60.0        # Sekunden ohne Biss, dann einholen und neu auswerfen
 NACH_FANG_PAUSE = 1.5    # Sekunden nach dem Fang, bevor neu ausgeworfen wird
 SPIEL_VORBEI_NACH = 0.6  # so lange muss die Leiste weg sein, dann ist das Spiel vorbei
@@ -725,6 +729,31 @@ def rand_tipp(info, raster, fensterbreite):
     return text + "Abhilfe: Mach das Minecraft-Fenster breiter."
 
 
+def frage_anzahl():
+    """Nach wie vielen Minispielen soll der Bot anhalten? 0 = nie."""
+    if SPIELE_ZIEL is not None:
+        return max(0, int(SPIELE_ZIEL))
+    while True:
+        try:
+            antwort = input("Wie viele Minispiele soll ich spielen? Zahl eingeben und Enter"
+                            " (nur Enter = ohne Ende): ").strip()
+        except (EOFError, OSError):
+            return 0
+        if not antwort:
+            return 0
+        if antwort.isdigit():
+            return int(antwort)
+        print("Bitte nur eine Zahl eingeben, zum Beispiel 10.")
+
+
+def piep():
+    try:
+        import winsound
+        winsound.MessageBeep()
+    except Exception:
+        pass
+
+
 def lade_gelerntes():
     try:
         with open(LERN_DATEI, encoding="utf-8") as datei:
@@ -760,6 +789,8 @@ def main():
     if vorausschau.messungen or vorausschau.erfahrung:
         sag("Vom letzten Mal gelernt: Vorlauf %d ms (aus %d Klicks)" % (
             vorausschau.vorlauf() * 1000, len(vorausschau.erfahrung)))
+    ziel = frage_anzahl()
+    sag("Ich spiele %s." % ("%d Minispiele und mache dann Pause" % ziel if ziel else "ohne Ende"))
     sag("Bereit. Geh in Minecraft, nimm die Angel in die Hand (nicht auswerfen),"
         " schau aufs Wasser und druecke F8.")
 
@@ -768,7 +799,9 @@ def main():
     seit = time.monotonic()
     zuletzt_leiste = 0.0
     treffer = 0
-    runden = 0
+    runden = 0              # Minispiele insgesamt
+    gespielt = 0            # Minispiele fuer das Ziel (zaehlt nach "Fertig" neu)
+    fortsetzung = False     # Leiste kam nach dem Fang wieder: dasselbe Minispiel, nicht neu zaehlen
     rand_gewarnt = None
     warte_grund = None
     # Erst wenn der Mauszeiger einmal im Spiel versteckt war, wissen wir sicher,
@@ -880,11 +913,19 @@ def main():
                         treffer, grund, "%.2f s/Feld" % tempo if tempo else "?",
                         vorausschau.vorlauf() * 1000))
                 elif jetzt - zuletzt_leiste > SPIEL_VORBEI_NACH:
-                    runden += 1
-                    sag("Minispiel vorbei (%d Klicks, %d Bilder/s). Schon %d Minispiele gespielt." % (
-                        treffer, bilder_im_spiel / max(0.1, jetzt - seit), runden))
+                    if not fortsetzung:
+                        runden += 1
+                        gespielt += 1
+                    sag("Minispiel %s vorbei (%d Klicks, %d Bilder/s)." % (
+                        "%d von %d" % (gespielt, ziel) if ziel else str(runden),
+                        treffer, bilder_im_spiel / max(0.1, jetzt - seit)))
                     speichere_gelerntes(vorausschau.gelernt())
-                    zustand, seit = "nach_fang", jetzt
+                    zustand, seit, fortsetzung = "nach_fang", jetzt, False
+                    if ziel and gespielt >= ziel:
+                        sag("Fertig: %d Minispiele gespielt! Ich mache Pause."
+                            " F8 = nochmal %d spielen, F12 = beenden." % (gespielt, ziel))
+                        piep()
+                        aktiv, gespielt = False, 0
 
             elif zustand == "nach_fang":
                 # Nach dem Fang zeigt der Server die Leiste manchmal noch einmal kurz an.
@@ -895,6 +936,7 @@ def main():
                     leiste_wieder = jetzt
                 if leiste_wieder is not None and jetzt - leiste_wieder > 0.3:
                     zustand, leiste_wieder, seit, bilder_im_spiel = "spiel", None, jetzt, 0
+                    fortsetzung = True
                     vorausschau.neues_spiel()
                 elif leiste_wieder is None and jetzt - seit > NACH_FANG_PAUSE:
                     zustand = "auswerfen"

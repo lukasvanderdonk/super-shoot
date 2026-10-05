@@ -12,10 +12,13 @@ Minecraft vorne ist und kein Menü (Inventar, Chat, Pause) offen ist.
    beim ersten Mal ein paar Minuten), dazu die Pakete `mss` und `numpy`.
    Falls Windows „Der Computer wurde geschützt“ zeigt:
    „Weitere Informationen“ → „Trotzdem ausführen“.
-2. Minecraft-Fenster hinstellen, wo du willst: maximiert, halber Bildschirm links
+2. Der Bot fragt: **Wie viele Minispiele soll ich spielen?** Zahl eintippen und
+   Enter – oder nur Enter für „ohne Ende“. Ist die Zahl erreicht, wirft er nicht
+   mehr aus, piept und macht Pause. Mit F8 spielt er danach nochmal so viele.
+3. Minecraft-Fenster hinstellen, wo du willst: maximiert, halber Bildschirm links
    oder rechts oder ein Viertel (oben/unten, links/rechts). Angel in die Hand nehmen
    (noch **nicht** auswerfen) und aufs Wasser schauen.
-3. **F8 drücken** – los geht's.
+4. **F8 drücken** – los geht's.
 
 | Taste | Was passiert |
 |-------|--------------|
@@ -81,5 +84,6 @@ Was er gelernt hat, merkt er sich in `angelbot_gelernt.json` (neben
 
 `Angel-Bot.bat` mit dem Editor öffnen: Unter „Einstellungen“ im Python-Teil stehen
 ein paar Zahlen, die du ändern kannst, z. B.
-`WARTEN_MAX` (wie lange er auf einen Biss wartet), `NACH_FANG_PAUSE` oder
+`SPIELE_ZIEL` (z. B. `SPIELE_ZIEL = 10`, dann fragt er beim Start nicht mehr; `0` =
+ohne Ende), `WARTEN_MAX` (wie lange er auf einen Biss wartet), `NACH_FANG_PAUSE` oder
 `SICHERHEIT` (größer = vorsichtiger, lässt eher einen Durchgang aus).
