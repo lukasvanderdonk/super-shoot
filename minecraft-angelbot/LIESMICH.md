@@ -15,6 +15,9 @@ Minecraft vorne ist und kein Menü (Inventar, Chat, Pause) offen ist.
 2. Der Bot fragt: **Wie viele Minispiele soll ich spielen?** Zahl eintippen und
    Enter – oder nur Enter für „ohne Ende“. Ist die Zahl erreicht, wirft er nicht
    mehr aus, piept und macht Pause. Mit F8 spielt er danach nochmal so viele.
+   Dann fragt er: **Soll ich den Laptop ausschalten? Nach wie vielen Stunden?**
+   Zum Beispiel `2` (oder `1,5` oder `90 min`) – oder nur Enter, dann bleibt der
+   Laptop an. Mehr dazu unten bei „Laptop ausschalten“.
    Dann fragt er: **Auf welchem Platz liegt die Angel?** 1 = ganz links … 9 = ganz
    rechts in der untersten Inventar-Reihe. Er merkt sich die Antwort – beim nächsten
    Mal reicht Enter.
@@ -58,6 +61,17 @@ nur, wenn das unter 5 ist. Neben `Angel-Bot.bat` liegt dann ein Bild
 abbekommen hat. Darum fragt der Bot beim Start, wie viel Haltbarkeit die Angel hat
 (nur Enter = 64 = neue Angel). Mit dieser Zahl rechnet er, bis er sie im Inventar
 lesen kann – danach zählt immer der gelesene Wert.
+
+## Laptop ausschalten
+
+Gibst du beim Start Stunden an, zum Beispiel `2`, sagt der Bot, um wie viel Uhr er
+aufhört. 5 Minuten vorher sagt er Bescheid. Ist die Zeit um, spielt er ein
+laufendes Minispiel noch fertig, hört dann auf und lässt Windows in **1 Minute**
+herunterfahren (offene Programme wie Minecraft werden dabei geschlossen).
+Die Zeit läuft auch, wenn der Bot gerade Pause macht.
+
+**Doch nicht ausschalten?** In der Minute davor: Windows-Taste + R drücken,
+`shutdown /a` eintippen, Enter. Vorher reicht es, den Bot mit F12 zu beenden.
 
 ## Fenstergröße und -position
 
@@ -116,7 +130,7 @@ Was er gelernt hat, merkt er sich in `angelbot_gelernt.json` (neben
 `Angel-Bot.bat` mit dem Editor öffnen: Unter „Einstellungen“ im Python-Teil stehen
 ein paar Zahlen, die du ändern kannst, z. B.
 `SPIELE_ZIEL` (z. B. `SPIELE_ZIEL = 10`, dann fragt er beim Start nicht mehr; `0` =
-ohne Ende), `HALTBARKEIT_MIN` (ab wann er aufhört; `0` = nicht prüfen), `ANGEL_PLATZ` (z. B. `7`,
+ohne Ende), `AUSSCHALTEN_NACH` (Stunden, z. B. `2`; `0` = nie ausschalten und nicht fragen), `HALTBARKEIT_MIN` (ab wann er aufhört; `0` = nicht prüfen), `ANGEL_PLATZ` (z. B. `7`,
 dann fragt er nicht mehr nach dem Platz), `HALTBARKEIT_START` (z. B. `64`, dann fragt er nicht
 mehr nach der Haltbarkeit),
 `INVENTAR_TASTE`, `WARTEN_MAX` (wie lange er auf einen Biss wartet), `NACH_FANG_PAUSE` oder

@@ -104,7 +104,8 @@ klickt selbst. Er klickt nur, solange Minecraft das aktive Fenster ist und
 kein Menue (Inventar, Chat, Pause) offen ist.
 
 Beim Start fragt der Bot, wie viele Minispiele er spielen soll (danach macht er
-Pause und piept, F8 = nochmal so viele) und auf welchem Platz die Angel liegt.
+Pause und piept, F8 = nochmal so viele), ob er den Laptop nach ein paar Stunden
+ausschalten soll und auf welchem Platz die Angel liegt.
 
 Nach jedem Auswerfen schaut er im Inventar nach, wie viel Haltbarkeit die Angel
 noch hat (Maus ueber den Angel-Platz, Infokasten lesen). Kann er sie nicht lesen,
@@ -116,6 +117,7 @@ Tasten:  F8 = Start / Pause   F10 = Diagnose-Bild speichern   F12 = Beenden
 
 import json
 import re
+import subprocess
 import sys
 import time
 
@@ -124,6 +126,7 @@ import numpy as np
 # ---------------------------------------------------------------- Einstellungen
 
 SPIELE_ZIEL = None       # nach so vielen Minispielen anhalten (None = beim Start fragen, 0 = nie)
+AUSSCHALTEN_NACH = None  # Laptop nach so vielen Stunden ausschalten (None = beim Start fragen, 0 = nie)
 HALTBARKEIT_MIN = 5      # Angel pruefen: Haltbarkeit darunter -> anhalten und Leertaste (0 = nie pruefen)
 ANGEL_PLATZ = None       # Platz der Angel in der untersten Inventar-Reihe, 1 (links) bis 9 (None = beim Start fragen)
 ANGEL_MAX = 64           # volle Haltbarkeit einer Angel (zur Kontrolle, dass es wirklich die Angel ist)
@@ -943,6 +946,40 @@ def frage_anzahl():
         print("Bitte nur eine Zahl eingeben, zum Beispiel 10.")
 
 
+def frage_ausschalten():
+    """Nach wie vielen Stunden soll der Laptop ausgehen? 0 = nie."""
+    if AUSSCHALTEN_NACH is not None:
+        return max(0.0, float(AUSSCHALTEN_NACH))
+    while True:
+        try:
+            antwort = input("Soll ich den Laptop ausschalten? Nach wie vielen Stunden? z. B. 2 oder 1,5"
+                            " (nur Enter = nicht ausschalten): ").strip().lower()
+        except (EOFError, OSError):
+            return 0.0
+        if not antwort or antwort in ("n", "nein"):
+            return 0.0
+        zahl = re.sub(r"[^0-9,.]", "", antwort).replace(",", ".")
+        try:
+            stunden = float(zahl)
+        except ValueError:
+            stunden = -1.0
+        if "min" in antwort:
+            stunden /= 60
+        if 0 <= stunden <= 24:
+            return stunden
+        print("Bitte die Stunden als Zahl eingeben, zum Beispiel 2 oder 1,5 (oder 90 min).")
+
+
+def laptop_ausschalten():
+    """Windows in 1 Minute herunterfahren. Abbrechen geht mit: shutdown /a"""
+    try:
+        return subprocess.run(["shutdown", "/s", "/t", "60", "/c",
+                               "Angel-Bot: Der Laptop geht in 1 Minute aus."
+                               " Abbrechen: Windows-Taste + R, shutdown /a eintippen, Enter."]).returncode == 0
+    except OSError:
+        return False
+
+
 def frage_platz(vorschlag):
     """Auf welchem Platz der untersten Inventar-Reihe liegt die Angel? 1-9."""
     if ANGEL_PLATZ is not None:
@@ -1074,6 +1111,14 @@ def main():
             vorausschau.vorlauf() * 1000, len(vorausschau.erfahrung)))
     ziel = frage_anzahl()
     sag("Ich spiele %s." % ("%d Minispiele und mache dann Pause" % ziel if ziel else "ohne Ende"))
+    stunden = frage_ausschalten()
+    ausschalten_um, ausschalten_gewarnt = None, True
+    if stunden > 0:
+        ausschalten_um = time.monotonic() + stunden * 3600
+        ausschalten_gewarnt = stunden * 60 <= 10  # bei weniger als 10 Minuten nicht extra vorwarnen
+        minuten = round(stunden * 60)
+        sag("In %d:%02d Stunden (um %s Uhr) hoere ich auf und schalte den Laptop aus." % (
+            minuten // 60, minuten % 60, time.strftime("%H:%M", time.localtime(time.time() + stunden * 3600))))
     angel_platz = 1
     if HALTBARKEIT_MIN > 0:
         vorschlag = gelernt.get("angel_platz", 1)
@@ -1131,6 +1176,24 @@ def main():
                 seit = time.monotonic()
                 warte_grund = None
                 sag("LAEUFT" if aktiv else "PAUSE (F8 = weiter)")
+
+            # Laptop ausschalten, wenn die Zeit um ist (auch in der Pause).
+            if ausschalten_um is not None:
+                nun = time.monotonic()
+                if not ausschalten_gewarnt and nun >= ausschalten_um - 300:
+                    ausschalten_gewarnt = True
+                    sag("In 5 Minuten schalte ich den Laptop aus.")
+                # Ein laufendes Minispiel noch fertig spielen (hoechstens 1 Minute laenger).
+                if nun >= ausschalten_um and (zustand != "spiel" or not aktiv or nun >= ausschalten_um + 60):
+                    speichern()
+                    sag("Die Zeit ist um - ich hoere auf. Minispiele gespielt: %d" % runden)
+                    if laptop_ausschalten():
+                        sag("Der Laptop geht in 1 Minute aus. Abbrechen: Windows-Taste + R,"
+                            " shutdown /a eintippen, Enter.")
+                    else:
+                        sag("Ausschalten hat nicht geklappt - bitte selbst ausschalten.")
+                    piep()
+                    return
 
             # Nur arbeiten, wenn Minecraft vorne ist und kein Menue offen ist.
             fenster = minecraft_fenster()
