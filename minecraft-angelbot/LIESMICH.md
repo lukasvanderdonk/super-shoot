@@ -23,6 +23,8 @@ Minecraft vorne ist und kein Menü (Inventar, Chat, Pause) offen ist.
    | 2 | Leertaste drücken, dann Pause und piepen |
    | 3 | Bot beenden |
    | 4 | Laptop ausschalten (in 1 Minute, abbrechen: Windows-Taste + R, `shutdown /a`, Enter) |
+   | 5 | Deine **Aufnahme** abspielen, dann Pause und piepen |
+   | 6 | Deine **Aufnahme** abspielen, dann weiter angeln (nochmal so viele) |
 
    Er merkt sich deine Wahl – beim nächsten Mal reicht Enter.
    Dann fragt er: **Soll ich den Laptop ausschalten? Nach wie vielen Stunden?**
@@ -41,6 +43,7 @@ Minecraft vorne ist und kein Menü (Inventar, Chat, Pause) offen ist.
 | Taste | Was passiert |
 |-------|--------------|
 | F8    | Start / Pause |
+| F9    | Aufnahme starten / fertig |
 | F10   | Diagnose-Bild speichern (was der Bot gerade sieht) |
 | F12   | Bot beenden |
 
@@ -71,6 +74,35 @@ nur, wenn das unter 5 ist. Neben `Angel-Bot.bat` liegt dann ein Bild
 abbekommen hat. Darum fragt der Bot beim Start, wie viel Haltbarkeit die Angel hat
 (nur Enter = 64 = neue Angel). Mit dieser Zahl rechnet er, bis er sie im Inventar
 lesen kann – danach zählt immer der gelesene Wert.
+
+## Aufnahme (Nr. 5 und 6)
+
+Du kannst dem Bot vormachen, was er nach den Minispielen tun soll – zum Beispiel
+Fische verkaufen (Chat öffnen, Befehl tippen, Enter) oder in eine Truhe legen.
+Er macht es dann genau so nach: dieselben Tasten und Klicks, gleich lang und im
+gleichen Takt.
+
+1. **In Minecraft F9 drücken** (nicht im schwarzen Fenster). Der Bot macht Pause
+   und schreibt „AUFNAHME läuft“.
+2. Vormachen, was er später machen soll. Er merkt sich Tasten (auch wie lange du
+   sie hältst), Maustasten, Mausrad und Mausbewegungen – im Spiel als Kameradrehung,
+   im Inventar oder in einer Truhe als Stelle, an der der Mauszeiger steht.
+3. **Wieder F9 drücken.** Er schreibt, was drin ist, zum Beispiel
+   „Aufnahme gespeichert (6.2 s: 14 Tasten, 2 Klicks)“. Mit F8 angelt er weiter.
+
+Beim Start bei „Was soll ich machen …“ **5** oder **6** wählen. Die Aufnahme bleibt
+gespeichert (`angelbot_aufnahme.json`) – eine neue mit F9 ersetzt die alte.
+
+Gut zu wissen:
+- Aufgenommen wird nur, was in Minecraft passiert. F8, F9, F10 und F12 sind nicht drin.
+- Lass das Minecraft-Fenster beim Abspielen genauso groß wie beim Aufnehmen –
+  sonst treffen Klicks im Inventar nicht dieselbe Stelle.
+- Bei **6** angelt er danach gleich weiter. Hör beim Aufnehmen darum so auf, wie
+  du angefangen hast: Angel in der Hand, Blick aufs Wasser.
+- Abbrechen: **F8** drücken oder ein anderes Fenster anklicken – dann hört er sofort
+  auf und lässt keine Taste gedrückt.
+- In Minecraft unter *Optionen → Steuerung → Maus* „Rohe Eingabe“ an lassen
+  (ist normalerweise an), dann dreht sich die Kamera genau wie beim Aufnehmen.
 
 ## Laptop ausschalten
 
@@ -140,7 +172,7 @@ Was er gelernt hat, merkt er sich in `angelbot_gelernt.json` (neben
 `Angel-Bot.bat` mit dem Editor öffnen: Unter „Einstellungen“ im Python-Teil stehen
 ein paar Zahlen, die du ändern kannst, z. B.
 `SPIELE_ZIEL` (z. B. `SPIELE_ZIEL = 10`, dann fragt er beim Start nicht mehr; `0` =
-ohne Ende), `NACH_ZIEL` (was danach passiert, `1` bis `4` wie oben, dann fragt er nicht mehr), `AUSSCHALTEN_NACH` (Stunden, z. B. `2`; `0` = nie ausschalten und nicht fragen), `HALTBARKEIT_MIN` (ab wann er aufhört; `0` = nicht prüfen), `ANGEL_PLATZ` (z. B. `7`,
+ohne Ende), `NACH_ZIEL` (was danach passiert, `1` bis `6` wie oben, dann fragt er nicht mehr), `AUSSCHALTEN_NACH` (Stunden, z. B. `2`; `0` = nie ausschalten und nicht fragen), `HALTBARKEIT_MIN` (ab wann er aufhört; `0` = nicht prüfen), `ANGEL_PLATZ` (z. B. `7`,
 dann fragt er nicht mehr nach dem Platz), `HALTBARKEIT_START` (z. B. `64`, dann fragt er nicht
 mehr nach der Haltbarkeit),
 `INVENTAR_TASTE`, `WARTEN_MAX` (wie lange er auf einen Biss wartet), `NACH_FANG_PAUSE` oder

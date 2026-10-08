@@ -104,21 +104,27 @@ klickt selbst. Er klickt nur, solange Minecraft das aktive Fenster ist und
 kein Menue (Inventar, Chat, Pause) offen ist.
 
 Beim Start fragt der Bot, wie viele Minispiele er spielen soll und was danach
-passiert (Pause, Leertaste, Bot beenden oder Laptop ausschalten), ob er den Laptop
-nach ein paar Stunden ausschalten soll und auf welchem Platz die Angel liegt.
+passiert (Pause, Leertaste, Bot beenden, Laptop ausschalten oder eine Aufnahme
+abspielen), ob er den Laptop nach ein paar Stunden ausschalten soll und auf
+welchem Platz die Angel liegt.
+
+Aufnahme: In Minecraft F9 druecken, vormachen, was der Bot spaeter machen soll
+(Tasten, Klicks, Mausrad, Maus), wieder F9 druecken. Der Bot merkt sich, was du
+wann und wie lange gemacht hast, und spielt es nach den Minispielen genau so ab.
 
 Nach jedem Auswerfen schaut er im Inventar nach, wie viel Haltbarkeit die Angel
 noch hat (Maus ueber den Angel-Platz, Infokasten lesen). Kann er sie nicht lesen,
 rechnet er mit 1 weniger als beim letzten Mal. Ist sie unter 5, hoert er sofort
 auf und drueckt einmal die Leertaste - damit die Angel nicht kaputtgeht.
 
-Tasten:  F8 = Start / Pause   F10 = Diagnose-Bild speichern   F12 = Beenden
+Tasten:  F8 = Start / Pause   F9 = Aufnahme an/aus   F10 = Diagnose-Bild   F12 = Beenden
 """
 
 import json
 import re
 import subprocess
 import sys
+import threading
 import time
 
 import numpy as np
@@ -127,7 +133,8 @@ import numpy as np
 
 SPIELE_ZIEL = None       # nach so vielen Minispielen anhalten (None = beim Start fragen, 0 = nie)
 NACH_ZIEL = None         # wenn alle Minispiele gespielt sind: 1 = Pause, 2 = Leertaste + Pause,
-                         # 3 = Bot beenden, 4 = Laptop ausschalten (None = beim Start fragen)
+                         # 3 = Bot beenden, 4 = Laptop ausschalten, 5 = Aufnahme abspielen + Pause,
+                         # 6 = Aufnahme abspielen + weiter angeln (None = beim Start fragen)
 AUSSCHALTEN_NACH = None  # Laptop nach so vielen Stunden ausschalten (None = beim Start fragen, 0 = nie)
 HALTBARKEIT_MIN = 5      # Angel pruefen: Haltbarkeit darunter -> anhalten und Leertaste (0 = nie pruefen)
 ANGEL_PLATZ = None       # Platz der Angel in der untersten Inventar-Reihe, 1 (links) bis 9 (None = beim Start fragen)
@@ -144,6 +151,7 @@ SICHERHEIT = 0.2         # so viel vom Ende des Zeitfensters wird gemieden (Fehl
 SICHT_GRENZE = 0.6       # "auf Sicht" nur klicken, wenn der Klick in den ersten 60 % der Zeit auf Rot ankommt
 ERFAHRUNG = 30           # aus so vielen der letzten Klicks lernt er den richtigen Vorlauf
 LERN_DATEI = "angelbot_gelernt.json"
+AUFNAHME_DATEI = "angelbot_aufnahme.json"
 SERVER_TICK = 0.05       # Minecraft-Server rechnen in Schritten von 50 ms
 BILDER_PRO_SEKUNDE = 60  # wie oft der Bildschirm angeschaut wird
 
@@ -855,6 +863,186 @@ if sys.platform == "win32":
         time.sleep(0.04)
         _maus(MOUSEEVENTF_RIGHTUP)
 
+    # Fuer das Abspielen einer Aufnahme
+    KEYEVENTF_EXTENDEDKEY, KEYEVENTF_SCANCODE = 0x0001, 0x0008
+    MOUSEEVENTF_WHEEL = 0x0800
+    # Maustaste 1-5 (links, rechts, Mitte, Seite 1, Seite 2): (runter, hoch, mouseData)
+    _KNOPF = {1: (0x0002, 0x0004, 0), 2: (0x0008, 0x0010, 0), 3: (0x0020, 0x0040, 0),
+              4: (0x0080, 0x0100, 1), 5: (0x0080, 0x0100, 2)}
+
+    def taste_roh(scan, e0, runter):
+        """Eine Taste nach ihrem Scancode druecken oder loslassen (so wie aufgenommen)."""
+        flag = KEYEVENTF_SCANCODE | (KEYEVENTF_EXTENDEDKEY if e0 else 0) | (0 if runter else KEYEVENTF_KEYUP)
+        inp = INPUT(type=INPUT_KEYBOARD)
+        inp.ki = KEYBDINPUT(0, scan, flag, 0, None)
+        user32.SendInput(1, ctypes.byref(inp), ctypes.sizeof(INPUT))
+
+    def maus_knopf(nummer, runter):
+        an, aus, daten = _KNOPF[nummer]
+        inp = INPUT(type=INPUT_MOUSE)
+        inp.mi = MOUSEINPUT(0, 0, daten, an if runter else aus, 0, None)
+        user32.SendInput(1, ctypes.byref(inp), ctypes.sizeof(INPUT))
+
+    def maus_rad(schritte):
+        inp = INPUT(type=INPUT_MOUSE)
+        inp.mi = MOUSEINPUT(0, 0, schritte & 0xFFFFFFFF, MOUSEEVENTF_WHEEL, 0, None)
+        user32.SendInput(1, ctypes.byref(inp), ctypes.sizeof(INPUT))
+
+    def maus_relativ(dx, dy):
+        """Maus bewegen wie eine echte Maus - im Spiel dreht das die Kamera. In kleinen
+        Schritten, damit die Mausbeschleunigung von Windows grosse Spruenge nicht vergroessert."""
+        schritte = max(1, -(-max(abs(dx), abs(dy)) // 6))
+        for i in range(schritte):
+            _maus(MOUSEEVENTF_MOVE, dx * (i + 1) // schritte - dx * i // schritte,
+                  dy * (i + 1) // schritte - dy * i // schritte)
+
+    def zeiger_hin(x, y):
+        user32.SetCursorPos(int(round(x)), int(round(y)))
+
+    def zeiger_position():
+        punkt = wintypes.POINT()
+        user32.GetCursorPos(ctypes.byref(punkt))
+        return punkt.x, punkt.y
+
+    # Fuer die Aufnahme: "Raw Input" bekommt Tasten, Klicks, Mausrad und Mausbewegungen
+    # auch dann, wenn Minecraft die Maus einfaengt (im Spiel) - in einem eigenen Thread.
+    WM_DESTROY, WM_CLOSE, WM_INPUT = 0x0002, 0x0010, 0x00FF
+    RID_INPUT, RIM_TYPEMOUSE, RIM_TYPEKEYBOARD = 0x10000003, 0, 1
+    RIDEV_REMOVE, RIDEV_INPUTSINK = 0x0001, 0x0100
+    RI_KEY_BREAK, RI_KEY_E0, RI_KEY_E1 = 1, 2, 4
+    RI_MOUSE_WHEEL, MOUSE_MOVE_ABSOLUTE = 0x0400, 1
+    HWND_MESSAGE = (1 << (8 * ctypes.sizeof(ctypes.c_void_p))) - 3
+    LRESULT = ctypes.c_ssize_t
+    WNDPROC = ctypes.WINFUNCTYPE(LRESULT, wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM)
+
+    class WNDCLASSW(ctypes.Structure):
+        _fields_ = [
+            ("style", wintypes.UINT), ("lpfnWndProc", WNDPROC), ("cbClsExtra", ctypes.c_int),
+            ("cbWndExtra", ctypes.c_int), ("hInstance", wintypes.HINSTANCE), ("hIcon", wintypes.HICON),
+            ("hCursor", wintypes.HANDLE), ("hbrBackground", wintypes.HBRUSH),
+            ("lpszMenuName", wintypes.LPCWSTR), ("lpszClassName", wintypes.LPCWSTR),
+        ]
+
+    class RAWINPUTDEVICE(ctypes.Structure):
+        _fields_ = [("usUsagePage", wintypes.USHORT), ("usUsage", wintypes.USHORT),
+                    ("dwFlags", wintypes.DWORD), ("hwndTarget", wintypes.HWND)]
+
+    class RAWINPUTHEADER(ctypes.Structure):
+        _fields_ = [("dwType", wintypes.DWORD), ("dwSize", wintypes.DWORD),
+                    ("hDevice", wintypes.HANDLE), ("wParam", wintypes.WPARAM)]
+
+    class RAWMOUSE(ctypes.Structure):
+        _fields_ = [("usFlags", wintypes.USHORT), ("_luecke", wintypes.USHORT),
+                    ("usButtonFlags", wintypes.USHORT), ("usButtonData", wintypes.USHORT),
+                    ("ulRawButtons", wintypes.ULONG), ("lLastX", wintypes.LONG), ("lLastY", wintypes.LONG),
+                    ("ulExtraInformation", wintypes.ULONG)]
+
+    class RAWKEYBOARD(ctypes.Structure):
+        _fields_ = [("MakeCode", wintypes.USHORT), ("Flags", wintypes.USHORT), ("Reserved", wintypes.USHORT),
+                    ("VKey", wintypes.USHORT), ("Message", wintypes.UINT), ("ExtraInformation", wintypes.ULONG)]
+
+    class RAWINPUT(ctypes.Structure):
+        class _D(ctypes.Union):
+            _fields_ = [("mouse", RAWMOUSE), ("keyboard", RAWKEYBOARD)]
+
+        _fields_ = [("header", RAWINPUTHEADER), ("data", _D)]
+
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel32.GetModuleHandleW.argtypes = [wintypes.LPCWSTR]
+    kernel32.GetModuleHandleW.restype = wintypes.HMODULE
+    user32.RegisterClassW.argtypes = [ctypes.POINTER(WNDCLASSW)]
+    user32.RegisterClassW.restype = wintypes.ATOM
+    user32.CreateWindowExW.argtypes = [
+        wintypes.DWORD, wintypes.LPCWSTR, wintypes.LPCWSTR, wintypes.DWORD, ctypes.c_int, ctypes.c_int,
+        ctypes.c_int, ctypes.c_int, wintypes.HWND, wintypes.HMENU, wintypes.HINSTANCE, wintypes.LPVOID]
+    user32.CreateWindowExW.restype = wintypes.HWND
+    user32.DefWindowProcW.argtypes = [wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM]
+    user32.DefWindowProcW.restype = LRESULT
+    user32.DestroyWindow.argtypes = [wintypes.HWND]
+    user32.PostMessageW.argtypes = [wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM]
+    user32.PostQuitMessage.argtypes = [ctypes.c_int]
+    user32.GetMessageW.argtypes = [ctypes.POINTER(wintypes.MSG), wintypes.HWND, wintypes.UINT, wintypes.UINT]
+    user32.GetMessageW.restype = wintypes.BOOL
+    user32.TranslateMessage.argtypes = [ctypes.POINTER(wintypes.MSG)]
+    user32.DispatchMessageW.argtypes = [ctypes.POINTER(wintypes.MSG)]
+    user32.DispatchMessageW.restype = LRESULT
+    user32.RegisterRawInputDevices.argtypes = [ctypes.POINTER(RAWINPUTDEVICE), wintypes.UINT, wintypes.UINT]
+    user32.RegisterRawInputDevices.restype = wintypes.BOOL
+    user32.GetRawInputData.argtypes = [wintypes.HANDLE, wintypes.UINT, wintypes.LPVOID,
+                                       ctypes.POINTER(wintypes.UINT), wintypes.UINT]
+    user32.GetRawInputData.restype = wintypes.UINT
+    user32.GetCursorPos.argtypes = [ctypes.POINTER(wintypes.POINT)]
+
+    _lauschen = {"ziel": None, "klasse": False, "fenster": None, "thread": None}
+
+    def _fensterfunktion(hwnd, nachricht, wparam, lparam):
+        try:
+            ziel = _lauschen["ziel"]
+            if nachricht == WM_INPUT and ziel is not None:
+                daten, groesse = RAWINPUT(), wintypes.UINT(ctypes.sizeof(RAWINPUT))
+                if user32.GetRawInputData(lparam, RID_INPUT, ctypes.byref(daten), ctypes.byref(groesse),
+                                          ctypes.sizeof(RAWINPUTHEADER)) not in (0, 0xFFFFFFFF):
+                    if daten.header.dwType == RIM_TYPEKEYBOARD:
+                        k = daten.data.keyboard
+                        ziel.roh_taste(k.MakeCode, bool(k.Flags & RI_KEY_E0), bool(k.Flags & RI_KEY_E1),
+                                       k.VKey, not k.Flags & RI_KEY_BREAK)
+                    elif daten.header.dwType == RIM_TYPEMOUSE:
+                        m = daten.data.mouse
+                        relativ = not m.usFlags & MOUSE_MOVE_ABSOLUTE
+                        ziel.roh_maus(m.usButtonFlags, ctypes.c_short(m.usButtonData).value,
+                                      m.lLastX if relativ else 0, m.lLastY if relativ else 0)
+            elif nachricht == WM_CLOSE:
+                user32.DestroyWindow(hwnd)
+                return 0
+            elif nachricht == WM_DESTROY:
+                user32.PostQuitMessage(0)
+                return 0
+        except Exception as fehler:
+            print("Fehler bei der Aufnahme:", fehler)
+        return user32.DefWindowProcW(hwnd, nachricht, wparam, lparam)
+
+    _fensterfunktion_c = WNDPROC(_fensterfunktion)
+
+    def _lauscher(bereit):
+        hinst = kernel32.GetModuleHandleW(None)
+        if not _lauschen["klasse"]:
+            klasse = WNDCLASSW(lpfnWndProc=_fensterfunktion_c, hInstance=hinst, lpszClassName="AngelBotAufnahme")
+            _lauschen["klasse"] = bool(user32.RegisterClassW(ctypes.byref(klasse)))
+        hwnd = user32.CreateWindowExW(0, "AngelBotAufnahme", "Angel-Bot", 0, 0, 0, 0, 0,
+                                      HWND_MESSAGE, None, hinst, None)
+        geraete = (RAWINPUTDEVICE * 2)(RAWINPUTDEVICE(1, 2, RIDEV_INPUTSINK, hwnd),   # Maus
+                                       RAWINPUTDEVICE(1, 6, RIDEV_INPUTSINK, hwnd))   # Tastatur
+        if not hwnd or not user32.RegisterRawInputDevices(geraete, 2, ctypes.sizeof(RAWINPUTDEVICE)):
+            if hwnd:
+                user32.DestroyWindow(hwnd)
+            bereit.set()
+            return
+        _lauschen["fenster"] = hwnd
+        bereit.set()
+        nachricht = wintypes.MSG()
+        while user32.GetMessageW(ctypes.byref(nachricht), None, 0, 0) > 0:
+            user32.TranslateMessage(ctypes.byref(nachricht))
+            user32.DispatchMessageW(ctypes.byref(nachricht))
+        geraete = (RAWINPUTDEVICE * 2)(RAWINPUTDEVICE(1, 2, RIDEV_REMOVE, None),
+                                       RAWINPUTDEVICE(1, 6, RIDEV_REMOVE, None))
+        user32.RegisterRawInputDevices(geraete, 2, ctypes.sizeof(RAWINPUTDEVICE))
+
+    def starte_lauscher(ziel):
+        """Ab jetzt bekommt ziel.roh_taste / ziel.roh_maus alle Tasten und Mausaktionen."""
+        _lauschen["ziel"], _lauschen["fenster"] = ziel, None
+        bereit = threading.Event()
+        _lauschen["thread"] = threading.Thread(target=_lauscher, args=(bereit,), daemon=True)
+        _lauschen["thread"].start()
+        bereit.wait(3.0)
+        return _lauschen["fenster"] is not None
+
+    def stoppe_lauscher():
+        _lauschen["ziel"] = None
+        if _lauschen["fenster"]:
+            user32.PostMessageW(_lauschen["fenster"], WM_CLOSE, 0, 0)
+            _lauschen["thread"].join(3.0)
+        _lauschen["fenster"] = None
+
     def taste_gedrueckt(vk):
         return bool(user32.GetAsyncKeyState(vk) & 0x8000)
 
@@ -893,7 +1081,7 @@ if sys.platform == "win32":
             except Exception:
                 pass
 
-VK_F8, VK_F10, VK_F12 = 0x77, 0x79, 0x7B
+VK_F8, VK_F9, VK_F10, VK_F12 = 0x77, 0x78, 0x79, 0x7B
 VK_ESCAPE, VK_SPACE = 0x1B, 0x20
 
 
@@ -914,6 +1102,173 @@ class Tastenwaechter:
 
 def sag(text):
     print(time.strftime("%H:%M:%S"), text, flush=True)
+
+
+class Aufnahme:
+    """Nimmt auf, was man in Minecraft macht und wann: Tasten, Maustasten, Mausrad und
+    Mausbewegungen. Ereignisse (Zeit in Sekunden ab der ersten Aktion):
+      ["t", zeit, scancode, e0, runter]     Taste
+      ["k", zeit, knopf, runter]            Maustaste 1-5
+      ["r", zeit, schritte]                 Mausrad
+      ["b", zeit, dx, dy, x, y]             Maus bewegt (dx/dy wie die Maus, x/y = Zeiger
+                                            ab Fenstermitte - das braucht man in Menues)
+    """
+    BOT_TASTEN = (VK_F8, VK_F9, VK_F10, VK_F12)
+    BOT_SCANCODES = (0x42, 0x43, 0x44, 0x58)   # dieselben Tasten als Scancode (F8, F9, F10, F12)
+    BEWEGUNG_TAKT = 0.01   # Mausbewegungen werden alle 10 ms zusammengefasst
+
+    def __init__(self):
+        self.ereignisse = []
+        self.tasten_unten, self.knoepfe_unten = set(), set()
+        self.bewegung = None             # [zeit, dx, dy] - angefangene Mausbewegung
+        self.fenster, self.fenster_zeit = None, -1.0
+        self.sperre = threading.Lock()
+
+    def _minecraft(self, jetzt):
+        """Nur aufnehmen, was in Minecraft passiert (nicht das Klicken ins Bot-Fenster)."""
+        if jetzt - self.fenster_zeit > 0.05:
+            self.fenster, self.fenster_zeit = minecraft_fenster(), jetzt
+        return self.fenster
+
+    def _bewegung_fertig(self):
+        if self.bewegung is None:
+            return
+        zeit, dx, dy = self.bewegung
+        self.bewegung = None
+        x = y = None
+        if self.fenster is not None:
+            links, oben, breite, hoehe = self.fenster
+            zx, zy = zeiger_position()
+            x, y = int(round(zx - links - breite / 2)), int(round(zy - oben - hoehe / 2))
+        self.ereignisse.append(["b", zeit, dx, dy, x, y])
+
+    def _druck(self, unten, schluessel, runter, jetzt):
+        """Gedrueckt/losgelassen - nur echte Wechsel, und Loslassen nur, wenn das Druecken drin ist."""
+        if runter:
+            if schluessel in unten or self._minecraft(jetzt) is None:
+                return False
+            unten.add(schluessel)
+        else:
+            if schluessel not in unten:
+                return False
+            unten.discard(schluessel)
+        self._bewegung_fertig()
+        return True
+
+    def roh_taste(self, scan, e0, e1, vk, runter):
+        # Bot-Tasten, Sondercodes (Pause-Taste, "falsches Shift" vor Pfeiltasten) weglassen
+        if (e1 or not scan or vk in self.BOT_TASTEN or vk == 0xFF or (not e0 and scan in self.BOT_SCANCODES)
+                or (e0 and scan in (0x2A, 0x36))):
+            return
+        with self.sperre:
+            jetzt = time.monotonic()
+            if self._druck(self.tasten_unten, (scan, int(e0)), runter, jetzt):
+                self.ereignisse.append(["t", jetzt, scan, int(e0), int(runter)])
+
+    def roh_maus(self, knopf_flags, rad, dx, dy):
+        with self.sperre:
+            jetzt = time.monotonic()
+            if (dx or dy) and self._minecraft(jetzt) is not None:
+                if self.bewegung is not None and jetzt - self.bewegung[0] >= self.BEWEGUNG_TAKT:
+                    self._bewegung_fertig()
+                if self.bewegung is None:
+                    self.bewegung = [jetzt, 0, 0]
+                self.bewegung[1] += dx
+                self.bewegung[2] += dy
+            for knopf in range(1, 6):
+                for runter, bit in ((True, 1 << (2 * knopf - 2)), (False, 1 << (2 * knopf - 1))):
+                    if knopf_flags & bit and self._druck(self.knoepfe_unten, knopf, runter, jetzt):
+                        self.ereignisse.append(["k", jetzt, knopf, int(runter)])
+            if knopf_flags & 0x0400 and rad and self._minecraft(jetzt) is not None:
+                self._bewegung_fertig()
+                self.ereignisse.append(["r", jetzt, rad])
+
+    def stopp(self):
+        """Aufnahme beenden: liefert die Ereignisse, Zeiten ab der ersten Aktion."""
+        with self.sperre:
+            jetzt = time.monotonic()
+            self._bewegung_fertig()
+            for scan, e0 in sorted(self.tasten_unten):   # noch gedrueckt? Am Ende loslassen.
+                self.ereignisse.append(["t", jetzt, scan, e0, 0])
+            for knopf in sorted(self.knoepfe_unten):
+                self.ereignisse.append(["k", jetzt, knopf, 0])
+            self.tasten_unten.clear()
+            self.knoepfe_unten.clear()
+            if not self.ereignisse:
+                return []
+            null = self.ereignisse[0][1]
+            return [[e[0], round(e[1] - null, 3)] + e[2:] for e in self.ereignisse]
+
+
+def aufnahme_text(ereignisse):
+    """Kurzbeschreibung: wie lang, wie viele Tasten und Klicks."""
+    tasten = sum(1 for e in ereignisse if e[0] == "t" and e[4])
+    klicks = sum(1 for e in ereignisse if e[0] == "k" and e[3])
+    rad = sum(1 for e in ereignisse if e[0] == "r")
+    maus = any(e[0] == "b" for e in ereignisse)
+    teile = ["%d Tasten" % tasten, "%d Klicks" % klicks]
+    if rad:
+        teile.append("%d x Mausrad" % rad)
+    if maus:
+        teile.append("Maus bewegt")
+    return "%.1f s: %s" % (ereignisse[-1][1] if ereignisse else 0.0, ", ".join(teile))
+
+
+def lade_aufnahme():
+    try:
+        with open(AUFNAHME_DATEI, encoding="utf-8") as datei:
+            ereignisse = json.load(datei).get("ereignisse", [])
+        if all(isinstance(e, list) and len(e) >= 3 and e[0] in "tkrb" for e in ereignisse):
+            return ereignisse
+    except Exception:
+        pass
+    return []
+
+
+def speichere_aufnahme(ereignisse):
+    with open(AUFNAHME_DATEI, "w", encoding="utf-8") as datei:
+        json.dump({"ereignisse": ereignisse}, datei)
+
+
+def spiele_ab(ereignisse, tasten):
+    """Spielt eine Aufnahme genau so ab, wie sie aufgenommen wurde. Liefert None, wenn alles
+    abgespielt ist, "F12" bei F12, sonst den Grund fuer den Abbruch."""
+    tasten_unten, knoepfe_unten = set(), set()
+    start = time.monotonic()
+    try:
+        for e in ereignisse:
+            while True:
+                if tasten.neu(VK_F12):
+                    return "F12"
+                if tasten.neu(VK_F8):
+                    return "Aufnahme abgebrochen (F8)."
+                fenster = minecraft_fenster()
+                if fenster is None:
+                    return "Minecraft ist nicht mehr vorne - ich habe die Aufnahme abgebrochen."
+                rest = start + e[1] - time.monotonic()
+                if rest <= 0:
+                    break
+                time.sleep(min(rest, 0.02))
+            if e[0] == "t":
+                taste_roh(e[2], e[3], e[4])
+                (tasten_unten.add if e[4] else tasten_unten.discard)((e[2], e[3]))
+            elif e[0] == "k":
+                maus_knopf(e[2], e[3])
+                (knoepfe_unten.add if e[3] else knoepfe_unten.discard)(e[2])
+            elif e[0] == "r":
+                maus_rad(e[2])
+            elif e[0] == "b":
+                if mauszeiger_sichtbar() and e[4] is not None:   # Menue offen: Zeiger an dieselbe Stelle
+                    links, oben, breite, hoehe = fenster
+                    zeiger_hin(links + breite / 2 + e[4], oben + hoehe / 2 + e[5])
+                else:                                           # im Spiel: Kamera drehen
+                    maus_relativ(e[2], e[3])
+        return None
+    finally:
+        for scan, e0 in tasten_unten:    # nichts gedrueckt lassen
+            taste_roh(scan, e0, 0)
+        for knopf in knoepfe_unten:
+            maus_knopf(knopf, 0)
 
 
 def rand_tipp(info, raster, fensterbreite):
@@ -949,7 +1304,8 @@ def frage_anzahl():
 
 
 ZIEL_AKTIONEN = ("Pause machen und piepen (F8 = nochmal)", "Leertaste druecken, dann Pause",
-                 "Bot beenden", "Laptop ausschalten")
+                 "Bot beenden", "Laptop ausschalten", "Aufnahme abspielen (F9 = aufnehmen), dann Pause",
+                 "Aufnahme abspielen, dann weiter angeln (nochmal so viele)")
 
 
 def frage_nach_ziel(ziel, vorschlag):
@@ -1147,6 +1503,14 @@ def main():
     if ziel:
         nach_ziel = frage_nach_ziel(ziel, nach_ziel)
         sag("Wenn die %d Minispiele gespielt sind: %s." % (ziel, ZIEL_AKTIONEN[nach_ziel - 1]))
+        if nach_ziel >= 5:
+            vorhanden = lade_aufnahme()
+            if vorhanden:
+                sag("Die Aufnahme vom letzten Mal ist da (%s). Mit F9 kannst du eine neue machen."
+                    % aufnahme_text(vorhanden))
+            else:
+                sag("Es gibt noch keine Aufnahme. So geht's: In Minecraft F9 druecken, vormachen, was"
+                    " ich machen soll, wieder F9 druecken.")
     stunden = frage_ausschalten()
     ausschalten_um, ausschalten_gewarnt = None, True
     if stunden > 0:
@@ -1198,21 +1562,48 @@ def main():
     leiste_wieder = None  # seit wann die Leiste nach dem Fang wieder zu sehen ist
     bilder_im_spiel = 0
     bild_takt = 1.0 / BILDER_PRO_SEKUNDE
+    aufnahme = None         # laeuft gerade eine Aufnahme (F9)?
 
     with mss.mss() as kamera:
         while True:
             start = time.monotonic()
 
             if tasten.neu(VK_F12):
+                if aufnahme is not None:
+                    stoppe_lauscher()
                 sag("Beendet. Minispiele gespielt: %d" % runden)
                 return
+            if tasten.neu(VK_F9):
+                if aufnahme is None:
+                    aufnahme = Aufnahme()
+                    if starte_lauscher(aufnahme):
+                        aktiv = False
+                        sag("AUFNAHME laeuft. Mach jetzt in Minecraft vor, was ich nach den Minispielen"
+                            " machen soll - ich merke mir, was du wann und wie lange machst."
+                            " Fertig? Wieder F9 druecken.")
+                    else:
+                        aufnahme = None
+                        sag("Die Aufnahme laesst sich hier leider nicht starten.")
+                else:
+                    stoppe_lauscher()
+                    ereignisse = aufnahme.stopp()
+                    aufnahme = None
+                    if ereignisse:
+                        speichere_aufnahme(ereignisse)
+                        sag("Aufnahme gespeichert (%s). F8 = weiter angeln." % aufnahme_text(ereignisse))
+                    else:
+                        sag("In der Aufnahme ist nichts drin - ich nehme nur auf, was in Minecraft passiert."
+                            " Die alte Aufnahme bleibt.")
             if tasten.neu(VK_F8):
-                aktiv = not aktiv
-                zustand = "auswerfen"
-                angel_pruefen = True
-                seit = time.monotonic()
-                warte_grund = None
-                sag("LAEUFT" if aktiv else "PAUSE (F8 = weiter)")
+                if aufnahme is not None:
+                    sag("Erst die Aufnahme mit F9 beenden.")
+                else:
+                    aktiv = not aktiv
+                    zustand = "auswerfen"
+                    angel_pruefen = True
+                    seit = time.monotonic()
+                    warte_grund = None
+                    sag("LAEUFT" if aktiv else "PAUSE (F8 = weiter)")
 
             # Laptop ausschalten, wenn die Zeit um ist (auch in der Pause).
             if ausschalten_um is not None:
@@ -1365,9 +1756,30 @@ def main():
                         if nach_ziel == 2:
                             taste(VK_SPACE)
                             sag("Leertaste gedrueckt.")
-                        sag("Ich mache Pause. F8 = nochmal %d spielen, F12 = beenden." % ziel)
-                        piep()
-                        aktiv, gespielt = False, 0
+                        weiter = False
+                        if nach_ziel >= 5:
+                            ereignisse = lade_aufnahme()
+                            if not ereignisse:
+                                sag("Es gibt noch keine Aufnahme (F9).")
+                            else:
+                                time.sleep(NACH_FANG_PAUSE)   # Fang erst ganz fertig werden lassen
+                                sag("Ich spiele die Aufnahme ab (%s). F8 = abbrechen." % aufnahme_text(ereignisse))
+                                abbruch = spiele_ab(ereignisse, tasten)
+                                if abbruch == "F12":
+                                    sag("Beendet. Minispiele gespielt: %d" % runden)
+                                    return
+                                if abbruch:
+                                    sag(abbruch)
+                                else:
+                                    sag("Aufnahme fertig abgespielt.")
+                                    weiter = nach_ziel == 6
+                        if weiter:
+                            sag("Ich angle weiter: nochmal %d Minispiele." % ziel)
+                            gespielt, seit = 0, time.monotonic()
+                        else:
+                            sag("Ich mache Pause. F8 = nochmal %d spielen, F12 = beenden." % ziel)
+                            piep()
+                            aktiv, gespielt = False, 0
 
             elif zustand == "nach_fang":
                 # Nach dem Fang zeigt der Server die Leiste manchmal noch einmal kurz an.
