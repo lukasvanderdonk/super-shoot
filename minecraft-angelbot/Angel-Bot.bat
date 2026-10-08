@@ -103,9 +103,9 @@ Der Bot schaut sich dafuer den Bildschirm an (nur das Minecraft-Fenster) und
 klickt selbst. Er klickt nur, solange Minecraft das aktive Fenster ist und
 kein Menue (Inventar, Chat, Pause) offen ist.
 
-Beim Start fragt der Bot, wie viele Minispiele er spielen soll (danach macht er
-Pause und piept, F8 = nochmal so viele), ob er den Laptop nach ein paar Stunden
-ausschalten soll und auf welchem Platz die Angel liegt.
+Beim Start fragt der Bot, wie viele Minispiele er spielen soll und was danach
+passiert (Pause, Leertaste, Bot beenden oder Laptop ausschalten), ob er den Laptop
+nach ein paar Stunden ausschalten soll und auf welchem Platz die Angel liegt.
 
 Nach jedem Auswerfen schaut er im Inventar nach, wie viel Haltbarkeit die Angel
 noch hat (Maus ueber den Angel-Platz, Infokasten lesen). Kann er sie nicht lesen,
@@ -126,6 +126,8 @@ import numpy as np
 # ---------------------------------------------------------------- Einstellungen
 
 SPIELE_ZIEL = None       # nach so vielen Minispielen anhalten (None = beim Start fragen, 0 = nie)
+NACH_ZIEL = None         # wenn alle Minispiele gespielt sind: 1 = Pause, 2 = Leertaste + Pause,
+                         # 3 = Bot beenden, 4 = Laptop ausschalten (None = beim Start fragen)
 AUSSCHALTEN_NACH = None  # Laptop nach so vielen Stunden ausschalten (None = beim Start fragen, 0 = nie)
 HALTBARKEIT_MIN = 5      # Angel pruefen: Haltbarkeit darunter -> anhalten und Leertaste (0 = nie pruefen)
 ANGEL_PLATZ = None       # Platz der Angel in der untersten Inventar-Reihe, 1 (links) bis 9 (None = beim Start fragen)
@@ -946,6 +948,29 @@ def frage_anzahl():
         print("Bitte nur eine Zahl eingeben, zum Beispiel 10.")
 
 
+ZIEL_AKTIONEN = ("Pause machen und piepen (F8 = nochmal)", "Leertaste druecken, dann Pause",
+                 "Bot beenden", "Laptop ausschalten")
+
+
+def frage_nach_ziel(ziel, vorschlag):
+    """Was passiert, wenn alle Minispiele gespielt sind? 1-4, siehe ZIEL_AKTIONEN."""
+    if NACH_ZIEL is not None:
+        return min(len(ZIEL_AKTIONEN), max(1, int(NACH_ZIEL)))
+    print("Was soll ich machen, wenn die %d Minispiele gespielt sind?" % ziel)
+    for nummer, text in enumerate(ZIEL_AKTIONEN, 1):
+        print("  %d = %s" % (nummer, text))
+    while True:
+        try:
+            antwort = input("Nummer eingeben (nur Enter = %d): " % vorschlag).strip()
+        except (EOFError, OSError):
+            return vorschlag
+        if not antwort:
+            return vorschlag
+        if antwort.isdigit() and 1 <= int(antwort) <= len(ZIEL_AKTIONEN):
+            return int(antwort)
+        print("Bitte eine Zahl von 1 bis %d eingeben." % len(ZIEL_AKTIONEN))
+
+
 def frage_ausschalten():
     """Nach wie vielen Stunden soll der Laptop ausgehen? 0 = nie."""
     if AUSSCHALTEN_NACH is not None:
@@ -973,11 +998,16 @@ def frage_ausschalten():
 def laptop_ausschalten():
     """Windows in 1 Minute herunterfahren. Abbrechen geht mit: shutdown /a"""
     try:
-        return subprocess.run(["shutdown", "/s", "/t", "60", "/c",
-                               "Angel-Bot: Der Laptop geht in 1 Minute aus."
-                               " Abbrechen: Windows-Taste + R, shutdown /a eintippen, Enter."]).returncode == 0
+        geklappt = subprocess.run(["shutdown", "/s", "/t", "60", "/c",
+                                   "Angel-Bot: Der Laptop geht in 1 Minute aus."
+                                   " Abbrechen: Windows-Taste + R, shutdown /a eintippen, Enter."]).returncode == 0
     except OSError:
-        return False
+        geklappt = False
+    if geklappt:
+        sag("Der Laptop geht in 1 Minute aus. Abbrechen: Windows-Taste + R, shutdown /a eintippen, Enter.")
+    else:
+        sag("Ausschalten hat nicht geklappt - bitte selbst ausschalten.")
+    piep()
 
 
 def frage_platz(vorschlag):
@@ -1110,7 +1140,13 @@ def main():
         sag("Vom letzten Mal gelernt: Vorlauf %d ms (aus %d Klicks)" % (
             vorausschau.vorlauf() * 1000, len(vorausschau.erfahrung)))
     ziel = frage_anzahl()
-    sag("Ich spiele %s." % ("%d Minispiele und mache dann Pause" % ziel if ziel else "ohne Ende"))
+    sag("Ich spiele %s." % ("%d Minispiele" % ziel if ziel else "ohne Ende"))
+    nach_ziel = gelernt.get("nach_ziel", 1)
+    if not (isinstance(nach_ziel, int) and 1 <= nach_ziel <= len(ZIEL_AKTIONEN)):
+        nach_ziel = 1
+    if ziel:
+        nach_ziel = frage_nach_ziel(ziel, nach_ziel)
+        sag("Wenn die %d Minispiele gespielt sind: %s." % (ziel, ZIEL_AKTIONEN[nach_ziel - 1]))
     stunden = frage_ausschalten()
     ausschalten_um, ausschalten_gewarnt = None, True
     if stunden > 0:
@@ -1138,7 +1174,8 @@ def main():
                 % (haltbarkeit, ANGEL_MAX))
 
     def speichern():
-        speichere_gelerntes(dict(vorausschau.gelernt(), angel_platz=angel_platz, haltbarkeit=haltbarkeit))
+        speichere_gelerntes(dict(vorausschau.gelernt(), angel_platz=angel_platz, haltbarkeit=haltbarkeit,
+                                 nach_ziel=nach_ziel))
 
     speichern()  # damit der Platz beim naechsten Mal schon vorgeschlagen wird
     sag("Bereit. Geh in Minecraft, nimm die Angel in die Hand (nicht auswerfen),"
@@ -1187,12 +1224,7 @@ def main():
                 if nun >= ausschalten_um and (zustand != "spiel" or not aktiv or nun >= ausschalten_um + 60):
                     speichern()
                     sag("Die Zeit ist um - ich hoere auf. Minispiele gespielt: %d" % runden)
-                    if laptop_ausschalten():
-                        sag("Der Laptop geht in 1 Minute aus. Abbrechen: Windows-Taste + R,"
-                            " shutdown /a eintippen, Enter.")
-                    else:
-                        sag("Ausschalten hat nicht geklappt - bitte selbst ausschalten.")
-                    piep()
+                    laptop_ausschalten()
                     return
 
             # Nur arbeiten, wenn Minecraft vorne ist und kein Menue offen ist.
@@ -1321,8 +1353,19 @@ def main():
                     zustand, seit, fortsetzung = "nach_fang", jetzt, False
                     angel_pruefen = True
                     if ziel and gespielt >= ziel:
-                        sag("Fertig: %d Minispiele gespielt! Ich mache Pause."
-                            " F8 = nochmal %d spielen, F12 = beenden." % (gespielt, ziel))
+                        sag("Fertig: %d Minispiele gespielt!" % gespielt)
+                        if nach_ziel == 3:
+                            sag("Ich beende mich. Minispiele insgesamt: %d" % runden)
+                            piep()
+                            return
+                        if nach_ziel == 4:
+                            sag("Ich schalte den Laptop aus.")
+                            laptop_ausschalten()
+                            return
+                        if nach_ziel == 2:
+                            taste(VK_SPACE)
+                            sag("Leertaste gedrueckt.")
+                        sag("Ich mache Pause. F8 = nochmal %d spielen, F12 = beenden." % ziel)
                         piep()
                         aktiv, gespielt = False, 0
 

@@ -13,8 +13,18 @@ Minecraft vorne ist und kein Menü (Inventar, Chat, Pause) offen ist.
    Falls Windows „Der Computer wurde geschützt“ zeigt:
    „Weitere Informationen“ → „Trotzdem ausführen“.
 2. Der Bot fragt: **Wie viele Minispiele soll ich spielen?** Zahl eintippen und
-   Enter – oder nur Enter für „ohne Ende“. Ist die Zahl erreicht, wirft er nicht
-   mehr aus, piept und macht Pause. Mit F8 spielt er danach nochmal so viele.
+   Enter – oder nur Enter für „ohne Ende“.
+   Hast du eine Zahl eingegeben, fragt er: **Was soll ich machen, wenn die
+   Minispiele gespielt sind?**
+
+   | Nummer | Was passiert |
+   |--------|--------------|
+   | 1 | Pause machen und piepen – mit F8 spielt er nochmal so viele |
+   | 2 | Leertaste drücken, dann Pause und piepen |
+   | 3 | Bot beenden |
+   | 4 | Laptop ausschalten (in 1 Minute, abbrechen: Windows-Taste + R, `shutdown /a`, Enter) |
+
+   Er merkt sich deine Wahl – beim nächsten Mal reicht Enter.
    Dann fragt er: **Soll ich den Laptop ausschalten? Nach wie vielen Stunden?**
    Zum Beispiel `2` (oder `1,5` oder `90 min`) – oder nur Enter, dann bleibt der
    Laptop an. Mehr dazu unten bei „Laptop ausschalten“.
@@ -130,7 +140,7 @@ Was er gelernt hat, merkt er sich in `angelbot_gelernt.json` (neben
 `Angel-Bot.bat` mit dem Editor öffnen: Unter „Einstellungen“ im Python-Teil stehen
 ein paar Zahlen, die du ändern kannst, z. B.
 `SPIELE_ZIEL` (z. B. `SPIELE_ZIEL = 10`, dann fragt er beim Start nicht mehr; `0` =
-ohne Ende), `AUSSCHALTEN_NACH` (Stunden, z. B. `2`; `0` = nie ausschalten und nicht fragen), `HALTBARKEIT_MIN` (ab wann er aufhört; `0` = nicht prüfen), `ANGEL_PLATZ` (z. B. `7`,
+ohne Ende), `NACH_ZIEL` (was danach passiert, `1` bis `4` wie oben, dann fragt er nicht mehr), `AUSSCHALTEN_NACH` (Stunden, z. B. `2`; `0` = nie ausschalten und nicht fragen), `HALTBARKEIT_MIN` (ab wann er aufhört; `0` = nicht prüfen), `ANGEL_PLATZ` (z. B. `7`,
 dann fragt er nicht mehr nach dem Platz), `HALTBARKEIT_START` (z. B. `64`, dann fragt er nicht
 mehr nach der Haltbarkeit),
 `INVENTAR_TASTE`, `WARTEN_MAX` (wie lange er auf einen Biss wartet), `NACH_FANG_PAUSE` oder
