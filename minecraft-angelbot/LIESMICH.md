@@ -44,6 +44,7 @@ Minecraft vorne ist und kein Menü (Inventar, Chat, Pause) offen ist.
 |-------|--------------|
 | F8    | Start / Pause |
 | F9    | Aufnahme starten / fertig |
+| F7    | Aufnahme zum Ausprobieren abspielen (in Minecraft drücken) |
 | F10   | Diagnose-Bild speichern (was der Bot gerade sieht) |
 | F12   | Bot beenden |
 
@@ -88,13 +89,22 @@ gleichen Takt.
    sie hältst), Maustasten, Mausrad und Mausbewegungen – im Spiel als Kameradrehung,
    im Inventar oder in einer Truhe als Stelle, an der der Mauszeiger steht.
 3. **Wieder F9 drücken.** Er schreibt, was drin ist, zum Beispiel
-   „Aufnahme gespeichert (6.2 s: 14 Tasten, 2 Klicks)“. Mit F8 angelt er weiter.
+   „Aufnahme gespeichert (6.2 s: 7 Tasten, 2 Klicks)“ und darunter den Ablauf:
+   `T > UMSCHALT > 7 > S > E > L > L > EINGABE > Rechtsklick > Linksklick im Menue`.
+   So siehst du gleich, ob alles drin ist.
+4. **Ausprobieren:** In Minecraft **F7** drücken – er spielt die Aufnahme sofort ab.
+   Klappt etwas nicht, einfach mit F9 neu aufnehmen. Mit F8 angelt er weiter.
 
 Beim Start bei „Was soll ich machen …“ **5** oder **6** wählen. Die Aufnahme bleibt
 gespeichert (`angelbot_aufnahme.json`) – eine neue mit F9 ersetzt die alte.
 
 Gut zu wissen:
-- Aufgenommen wird nur, was in Minecraft passiert. F8, F9, F10 und F12 sind nicht drin.
+- Aufgenommen wird nur, was in Minecraft passiert. F7, F8, F9, F10 und F12 sind nicht drin.
+- Geht beim Abspielen ein Menü langsamer auf als beim Aufnehmen (Truhe, Shop, Server-Menü),
+  wartet er mit dem Klicken, bis es offen ist – bis zu 5 Sekunden. Geht es gar nicht auf,
+  bricht er ab, statt daneben zu klicken.
+- Hältst du eine Taste gedrückt (z. B. Löschen im Chat), wiederholt sie sich beim
+  Abspielen genauso.
 - Lass das Minecraft-Fenster beim Abspielen genauso groß wie beim Aufnehmen –
   sonst treffen Klicks im Inventar nicht dieselbe Stelle.
 - Bei **6** angelt er danach gleich weiter. Hör beim Aufnehmen darum so auf, wie
