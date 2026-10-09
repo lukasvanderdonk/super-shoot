@@ -12,7 +12,10 @@ Minecraft vorne ist und kein Menü (Inventar, Chat, Pause) offen ist.
    beim ersten Mal ein paar Minuten), dazu die Pakete `mss` und `numpy`.
    Falls Windows „Der Computer wurde geschützt“ zeigt:
    „Weitere Informationen“ → „Trotzdem ausführen“.
-2. Der Bot fragt: **Wie viele Minispiele soll ich spielen?** Zahl eintippen und
+2. Zuerst kommt ein kleines Menü: **1 = Angeln** (nur Enter), **2 = Neue Aufnahme
+   machen**, **3 = Aufnahme ausprobieren**, **4 = Aufnahme löschen** – mehr dazu unten
+   bei „Aufnahmen“.
+   Dann fragt der Bot: **Wie viele Minispiele soll ich spielen?** Zahl eintippen und
    Enter – oder nur Enter für „ohne Ende“.
    Hast du eine Zahl eingegeben, fragt er: **Was soll ich machen, wenn die
    Minispiele gespielt sind?**
@@ -23,9 +26,10 @@ Minecraft vorne ist und kein Menü (Inventar, Chat, Pause) offen ist.
    | 2 | Leertaste drücken, dann Pause und piepen |
    | 3 | Bot beenden |
    | 4 | Laptop ausschalten (in 1 Minute, abbrechen: Windows-Taste + R, `shutdown /a`, Enter) |
-   | 5 | Deine **Aufnahme** abspielen, dann Pause und piepen |
-   | 6 | Deine **Aufnahme** abspielen, dann weiter angeln (nochmal so viele) |
+   | 5 | Eine deiner **Aufnahmen** abspielen, dann Pause und piepen |
+   | 6 | Eine deiner **Aufnahmen** abspielen, dann weiter angeln (nochmal so viele) |
 
+   Bei 5 oder 6 fragt er, welche Aufnahme (wenn du mehrere hast).
    Er merkt sich deine Wahl – beim nächsten Mal reicht Enter.
    Dann fragt er: **Soll ich den Laptop ausschalten? Nach wie vielen Stunden?**
    Zum Beispiel `2` (oder `1,5` oder `90 min`) – oder nur Enter, dann bleibt der
@@ -43,8 +47,8 @@ Minecraft vorne ist und kein Menü (Inventar, Chat, Pause) offen ist.
 | Taste | Was passiert |
 |-------|--------------|
 | F8    | Start / Pause |
-| F9    | Aufnahme starten / fertig |
-| F7    | Aufnahme zum Ausprobieren abspielen (in Minecraft drücken) |
+| F9    | Beim Angeln: Aufnahme starten / fertig |
+| F7    | Beim Angeln: Aufnahme zum Ausprobieren abspielen (in Minecraft drücken) |
 | F10   | Diagnose-Bild speichern (was der Bot gerade sieht) |
 | F12   | Bot beenden |
 
@@ -76,35 +80,46 @@ abbekommen hat. Darum fragt der Bot beim Start, wie viel Haltbarkeit die Angel h
 (nur Enter = 64 = neue Angel). Mit dieser Zahl rechnet er, bis er sie im Inventar
 lesen kann – danach zählt immer der gelesene Wert.
 
-## Aufnahme (Nr. 5 und 6)
+## Aufnahmen (Nr. 5 und 6)
 
 Du kannst dem Bot vormachen, was er nach den Minispielen tun soll – zum Beispiel
 Fische verkaufen (Chat öffnen, Befehl tippen, Enter) oder in eine Truhe legen.
 Er macht es dann genau so nach: dieselben Tasten und Klicks, gleich lang und im
-gleichen Takt.
+gleichen Takt. Du kannst mehrere Aufnahmen mit Namen speichern.
 
-1. **In Minecraft F9 drücken** (nicht im schwarzen Fenster). Der Bot macht Pause
-   und schreibt „AUFNAHME läuft“.
-2. Vormachen, was er später machen soll. Er merkt sich Tasten (auch wie lange du
+**Neue Aufnahme machen:**
+1. Bot starten, im ersten Menü **2** eintippen, Enter.
+2. Einen **Namen** eintippen, z. B. `verkaufen`, Enter.
+3. **In Minecraft gehen.** Ist dort das Pause-Menü offen, mach es zu. Sobald du im
+   Spiel bist, **piept** es – ab jetzt nimmt er auf.
+4. Vormachen, was er später machen soll. Er merkt sich Tasten (auch wie lange du
    sie hältst), Maustasten, Mausrad und Mausbewegungen – im Spiel als Kameradrehung,
    im Inventar oder in einer Truhe als Stelle, an der der Mauszeiger steht.
-3. **Wieder F9 drücken.** Er schreibt, was drin ist, zum Beispiel
-   „Aufnahme gespeichert (6.2 s: 7 Tasten, 2 Klicks)“ und darunter den Ablauf:
+   Im schwarzen Fenster siehst du nebenbei „bisher: 5 Tasten, 1 Klicks“.
+5. **Fertig:** zurück ins schwarze Fenster und **Enter** drücken (oder in Minecraft
+   F9). Er zeigt, was drin ist, zum Beispiel
    `T > UMSCHALT > 7 > S > E > L > L > EINGABE > Rechtsklick > Linksklick im Menue`.
-   So siehst du gleich, ob alles drin ist.
-4. **Ausprobieren:** In Minecraft **F7** drücken – er spielt die Aufnahme sofort ab.
-   Klappt etwas nicht, einfach mit F9 neu aufnehmen. Mit F8 angelt er weiter.
 
-Beim Start bei „Was soll ich machen …“ **5** oder **6** wählen. Die Aufnahme bleibt
-gespeichert (`angelbot_aufnahme.json`) – eine neue mit F9 ersetzt die alte.
+Das Zurückwechseln ins schwarze Fenster (Alt+Tab oder Klick) kommt nicht mit in die
+Aufnahme, das Pause-Menü am Anfang auch nicht.
+
+**Ausprobieren:** im ersten Menü **3**, Aufnahme wählen, in Minecraft gehen – sobald
+du im Spiel bist, spielt er sie ab. Klappt etwas nicht, einfach neu aufnehmen (gleicher
+Name ersetzt die alte). **Löschen:** im ersten Menü **4**.
+
+**Beim Angeln** geht es auch mit Tasten: **F9** in Minecraft startet und beendet eine
+Aufnahme (sie ersetzt die, die bei Nr. 5/6 abgespielt wird), **F7** spielt sie ab.
+
+Gespeichert wird alles in `angelbot_aufnahmen.json` neben `Angel-Bot.bat`.
 
 Gut zu wissen:
-- Aufgenommen wird nur, was in Minecraft passiert. F7, F8, F9, F10 und F12 sind nicht drin.
+- Aufgenommen wird nur, was in Minecraft passiert. F7 bis F12 und die Windows-Taste
+  sind nicht drin.
 - Geht beim Abspielen ein Menü langsamer auf als beim Aufnehmen (Truhe, Shop, Server-Menü),
   wartet er mit dem Klicken, bis es offen ist – bis zu 5 Sekunden. Geht es gar nicht auf,
   bricht er ab, statt daneben zu klicken.
-- Hältst du eine Taste gedrückt (z. B. Löschen im Chat), wiederholt sie sich beim
-  Abspielen genauso.
+- Hältst du im Chat oder in einem Menü eine Taste gedrückt (z. B. Löschen), wiederholt
+  sie sich beim Abspielen.
 - Lass das Minecraft-Fenster beim Abspielen genauso groß wie beim Aufnehmen –
   sonst treffen Klicks im Inventar nicht dieselbe Stelle.
 - Bei **6** angelt er danach gleich weiter. Hör beim Aufnehmen darum so auf, wie
@@ -113,6 +128,8 @@ Gut zu wissen:
   auf und lässt keine Taste gedrückt.
 - In Minecraft unter *Optionen → Steuerung → Maus* „Rohe Eingabe“ an lassen
   (ist normalerweise an), dann dreht sich die Kamera genau wie beim Aufnehmen.
+  Schreibt der Bot „Kamera-Drehen und Mausrad kann ich hier nicht aufnehmen“, gehen
+  Tasten, Klicks und Menüs trotzdem.
 
 ## Laptop ausschalten
 
