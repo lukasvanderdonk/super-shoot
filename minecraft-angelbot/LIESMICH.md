@@ -37,8 +37,10 @@ Minecraft vorne ist und kein Menü (Inventar, Chat, Pause) offen ist.
    Dann fragt er: **Auf welchem Platz liegt die Angel?** 1 = ganz links … 9 = ganz
    rechts in der untersten Inventar-Reihe. Er merkt sich die Antwort – beim nächsten
    Mal reicht Enter.
-   Zuletzt fragt er: **Wie viel Haltbarkeit hat die Angel?** Bei einer neuen Angel
+   Dann fragt er: **Wie viel Haltbarkeit hat die Angel?** Bei einer neuen Angel
    nur Enter (= 64), sonst die Zahl eintippen, z. B. `35`.
+   Zuletzt fragt er: **Wenn die Angel fast kaputt ist: Laptop ausschalten?** `j` oder
+   `n` – er merkt sich die Antwort, beim nächsten Mal reicht Enter.
 3. Minecraft-Fenster hinstellen, wo du willst: maximiert, halber Bildschirm links
    oder rechts oder ein Viertel (oben/unten, links/rechts). Angel in die Hand nehmen
    (noch **nicht** auswerfen) und aufs Wasser schauen.
@@ -61,7 +63,9 @@ Minispiel nach: Er wirft ganz normal aus, drückt **I** (Inventar), fährt mit d
 Maus über den Angel-Platz und liest im Infokasten „Haltbarkeit: 35/64“. Dann
 schließt er das Inventar wieder (Esc) und angelt weiter.
 **Ist die Haltbarkeit unter 5**, hört er sofort auf, drückt einmal die
-**Leertaste** und piept.
+**Leertaste** und piept. Hast du beim Start bei „Laptop ausschalten?“ `j` gesagt,
+fährt er danach den Laptop herunter (in 1 Minute – abbrechen: Windows-Taste + R,
+`shutdown /a`, Enter).
 
 Damit das klappt:
 - Beim Start den richtigen **Platz der Angel** angeben (1 = ganz links … 9 = ganz
@@ -201,6 +205,7 @@ ein paar Zahlen, die du ändern kannst, z. B.
 `SPIELE_ZIEL` (z. B. `SPIELE_ZIEL = 10`, dann fragt er beim Start nicht mehr; `0` =
 ohne Ende), `NACH_ZIEL` (was danach passiert, `1` bis `6` wie oben, dann fragt er nicht mehr), `AUSSCHALTEN_NACH` (Stunden, z. B. `2`; `0` = nie ausschalten und nicht fragen), `HALTBARKEIT_MIN` (ab wann er aufhört; `0` = nicht prüfen), `ANGEL_PLATZ` (z. B. `7`,
 dann fragt er nicht mehr nach dem Platz), `HALTBARKEIT_START` (z. B. `64`, dann fragt er nicht
-mehr nach der Haltbarkeit),
+mehr nach der Haltbarkeit), `KAPUTT_AUSSCHALTEN` (`True` = bei fast kaputter Angel
+Laptop aus, `False` = nicht, dann fragt er nicht mehr),
 `INVENTAR_TASTE`, `WARTEN_MAX` (wie lange er auf einen Biss wartet), `NACH_FANG_PAUSE` oder
 `SICHERHEIT` (größer = vorsichtiger, lässt eher einen Durchgang aus).

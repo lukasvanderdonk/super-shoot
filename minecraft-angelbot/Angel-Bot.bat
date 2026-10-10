@@ -118,7 +118,8 @@ langsamer auf, wartet er darauf. Ausprobieren: Menue "3" oder F7 in Minecraft.
 Nach jedem Auswerfen schaut er im Inventar nach, wie viel Haltbarkeit die Angel
 noch hat (Maus ueber den Angel-Platz, Infokasten lesen). Kann er sie nicht lesen,
 rechnet er mit 1 weniger als beim letzten Mal. Ist sie unter 5, hoert er sofort
-auf und drueckt einmal die Leertaste - damit die Angel nicht kaputtgeht.
+auf und drueckt einmal die Leertaste - damit die Angel nicht kaputtgeht. Wenn du
+willst (Frage beim Start), schaltet er dann auch gleich den Laptop aus.
 
 Tasten:  F8 = Start / Pause   F9 = Aufnahme an/aus   F7 = Aufnahme ausprobieren
          F10 = Diagnose-Bild   F12 = Beenden
@@ -144,6 +145,8 @@ HALTBARKEIT_MIN = 5      # Angel pruefen: Haltbarkeit darunter -> anhalten und L
 ANGEL_PLATZ = None       # Platz der Angel in der untersten Inventar-Reihe, 1 (links) bis 9 (None = beim Start fragen)
 ANGEL_MAX = 64           # volle Haltbarkeit einer Angel (zur Kontrolle, dass es wirklich die Angel ist)
 HALTBARKEIT_START = None # Haltbarkeit der Angel beim Start (None = beim Start fragen, z. B. 64 = neue Angel)
+KAPUTT_AUSSCHALTEN = None  # Angel fast kaputt -> auch den Laptop ausschalten (None = beim Start fragen,
+                           # True = ja, False = nein)
 INVENTAR_TASTE = "I"     # Taste, mit der sich in Minecraft das Inventar oeffnet
 WARTEN_MAX = 60.0        # Sekunden ohne Biss, dann einholen und neu auswerfen
 NACH_FANG_PAUSE = 1.5    # Sekunden nach dem Fang, bevor neu ausgeworfen wird
@@ -1816,6 +1819,22 @@ def frage_platz(vorschlag):
         print("Bitte eine Zahl von 1 bis 9 eingeben.")
 
 
+def frage_kaputt_ausschalten(vorschlag):
+    """Soll der Laptop ausgehen, wenn die Angel fast kaputt ist?"""
+    if KAPUTT_AUSSCHALTEN is not None:
+        return bool(KAPUTT_AUSSCHALTEN)
+    while True:
+        antwort = eingabe("Wenn die Angel fast kaputt ist: Laptop ausschalten? j/n (nur Enter = %s): "
+                          % ("j" if vorschlag else "n"))
+        if not antwort:
+            return vorschlag
+        if antwort.lower()[0] in "jy":
+            return True
+        if antwort.lower()[0] == "n":
+            return False
+        print("Bitte j (ja) oder n (nein) eingeben.")
+
+
 def frage_haltbarkeit(letzte):
     """Wie viel Haltbarkeit hat die Angel jetzt? Eine ganz neue Angel zeigt Minecraft
     im Infokasten erst nach dem ersten Fang an - bis dahin rechnet der Bot mit dieser Zahl."""
@@ -1971,10 +1990,16 @@ def main():
         else:
             sag("Die Angel hat %d/%d Haltbarkeit - damit rechne ich, bis ich sie im Inventar lesen kann."
                 % (haltbarkeit, ANGEL_MAX))
+    kaputt_aus = gelernt.get("kaputt_ausschalten", True) is not False
+    if HALTBARKEIT_MIN > 0:
+        kaputt_aus = frage_kaputt_ausschalten(kaputt_aus)
+        sag("Ist die Angel fast kaputt (unter %d), hoere ich auf, druecke die Leertaste%s." % (
+            HALTBARKEIT_MIN, " und schalte den Laptop aus" if kaputt_aus else ""))
 
     def speichern():
         speichere_gelerntes(dict(vorausschau.gelernt(), angel_platz=angel_platz, haltbarkeit=haltbarkeit,
-                                 nach_ziel=nach_ziel, aufnahme_name=aufnahme_name))
+                                 nach_ziel=nach_ziel, aufnahme_name=aufnahme_name,
+                                 kaputt_ausschalten=kaputt_aus))
 
     speichern()  # damit der Platz beim naechsten Mal schon vorgeschlagen wird
     sag("Bereit. Geh in Minecraft, nimm die Angel in die Hand (nicht auswerfen),"
@@ -2136,6 +2161,11 @@ def main():
                         if text and haltbarkeit < HALTBARKEIT_MIN:
                             sag(text + ". Die Angel ist fast kaputt - ich hoere sofort auf.")
                             taste(VK_SPACE)
+                            if kaputt_aus:
+                                speichern()
+                                sag("Ich schalte den Laptop aus. Minispiele gespielt: %d" % runden)
+                                laptop_ausschalten()
+                                return
                             piep()
                             aktiv = False
                         elif text:
