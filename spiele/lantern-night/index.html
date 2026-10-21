@@ -30,8 +30,8 @@
 [hidden] { display: none !important; }
 html, body { height: 100%; margin: 0; overflow: hidden; overscroll-behavior: none; background: var(--night); color: var(--ink); }
 body { font-family: var(--f-body); font-size: 16px; line-height: 1.4; -webkit-tap-highlight-color: transparent; }
-#game { position: fixed; inset: 0; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
-#cv { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+#game { position: fixed; inset: 0; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+#cv { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
 
 /* Bildschirme */
 .screen {
@@ -88,7 +88,9 @@ h2 { margin: 0; font-family: var(--f-display); font-weight: 800; font-size: clam
 .lv-wrap { width: min(1000px, 100%); margin: auto; display: flex; flex-direction: column; gap: 14px; }
 .lv-head { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 6px 16px; }
 .cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
-@media (max-width: 760px) { .cards { grid-template-columns: minmax(0, 1fr); } }
+.cards.four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+@media (max-width: 1000px) { .cards.four { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 760px) { .cards, .cards.four { grid-template-columns: minmax(0, 1fr); } }
 .card {
   position: relative; display: flex; gap: 14px; align-items: flex-start; min-height: 128px; padding: 18px 16px; text-align: left;
   border: 1px solid var(--line); border-radius: 8px; background: linear-gradient(180deg, rgba(30, 32, 52, .97), rgba(14, 18, 32, .97));
@@ -96,6 +98,7 @@ h2 { margin: 0; font-family: var(--f-display); font-weight: 800; font-size: clam
 }
 .card:nth-child(2) { animation-delay: .05s; }
 .card:nth-child(3) { animation-delay: .1s; }
+.card:nth-child(4) { animation-delay: .15s; }
 @keyframes cardIn { from { transform: translateY(12px); opacity: 0; } to { transform: none; opacity: 1; } }
 .card:hover, .card:focus-visible { border-color: var(--amber); box-shadow: 0 0 0 1px var(--amber), 0 0 32px rgba(255, 184, 77, .22); }
 .card.locked { pointer-events: none; }
@@ -109,21 +112,107 @@ h2 { margin: 0; font-family: var(--f-display); font-weight: 800; font-size: clam
 .card kbd { position: absolute; top: 10px; right: 12px; font-family: var(--f-num); font-size: .8rem; color: var(--ink-dim); border: 1px solid rgba(239, 230, 207, .22); border-radius: 4px; padding: 0 6px; }
 @media (hover: none) { .card kbd { display: none; } }
 
-/* Werkstatt */
+/* Werkstatt: Sternkarte mit vier Pfaden */
+#shop .panel { width: min(1160px, 100%); gap: 14px; }
 .shop-head { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 8px 16px; }
+.shop-meta { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px 18px; }
+.lit { font-family: var(--f-num); color: var(--ink-dim); font-variant-numeric: tabular-nums; }
 .purse { display: inline-flex; align-items: center; gap: 6px; font-family: var(--f-num); font-weight: 700; font-size: 1.5rem; color: var(--amber); font-variant-numeric: tabular-nums; }
 .purse svg { width: 22px; height: 22px; }
-.shop-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 10px; }
-.up { display: flex; align-items: center; gap: 12px; padding: 12px; border: 1px solid rgba(239, 230, 207, .12); border-radius: 8px; background: rgba(255, 255, 255, .03); }
-.up > .ico { flex: none; width: 40px; height: 40px; padding: 8px; border-radius: 50%; background: rgba(255, 184, 77, .13); color: var(--amber); }
-.up-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.up h3 { margin: 0; font-size: 1.05rem; }
-.up p { margin: 0; font-size: .92rem; color: var(--ink-dim); }
-.pips { display: flex; gap: 4px; margin-top: 4px; }
+.tree-wrap {
+  position: relative; height: clamp(300px, 54vh, 830px); overflow: auto; overscroll-behavior: contain; touch-action: pan-x pan-y; cursor: grab;
+  border: 1px solid rgba(239, 230, 207, .12); border-radius: 8px; background: radial-gradient(ellipse at 50% 50%, #131b35 0%, #070a14 75%);
+}
+.tree-wrap.dragging { cursor: grabbing; }
+.tree {
+  position: relative; margin-inline: auto;
+  background-image:
+    radial-gradient(1.2px 1.2px at 23px 41px, rgba(255, 255, 255, .55), transparent),
+    radial-gradient(1px 1px at 97px 13px, rgba(255, 255, 255, .35), transparent),
+    radial-gradient(1.4px 1.4px at 151px 88px, rgba(200, 220, 255, .5), transparent),
+    radial-gradient(1px 1px at 61px 127px, rgba(255, 255, 255, .3), transparent),
+    radial-gradient(1px 1px at 183px 151px, rgba(255, 230, 190, .4), transparent);
+  background-size: 200px 170px;
+}
+.tree svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+.tree line { stroke: var(--c); stroke-width: 2; stroke-linecap: round; opacity: .16; }
+.tree line.avail { opacity: .5; stroke-dasharray: 4 6; }
+.tree line.own { opacity: .9; stroke-width: 3; }
+.br-label { position: absolute; font-family: var(--f-display); font-weight: 800; font-size: 1.7rem; color: var(--c); opacity: .85; pointer-events: none; transform: translateY(-50%); text-shadow: 0 0 18px #000; }
+.node {
+  position: absolute; width: var(--ns); height: var(--ns); transform: translate(-50%, -50%); padding: 0; display: grid; place-items: center;
+  border: 2px solid var(--c); border-radius: 50%; background: #0b1020; color: var(--c); cursor: pointer; transition: box-shadow .15s, background-color .15s;
+}
+.node.act { border-radius: 30%; }
+.node > .ico { width: 55%; height: 55%; }
+.node.locked { opacity: .36; border-style: dashed; }
+.node.avail { box-shadow: 0 0 16px -3px var(--c); }
+.node.part { background: color-mix(in srgb, var(--c) 30%, #0b1020); }
+.node.max { background: var(--c); color: #120d05; box-shadow: 0 0 20px -2px var(--c); }
+.node.root { border-width: 3px; }
+.node:hover { box-shadow: 0 0 0 3px rgba(255, 255, 255, .12), 0 0 22px -2px var(--c); }
+.node.sel { outline: 2px solid var(--ink); outline-offset: 4px; }
+.node b { position: absolute; right: -9px; bottom: -6px; min-width: 26px; padding: 0 4px; border-radius: 8px; border: 1px solid var(--c); background: #0b1020; color: var(--ink); font: 700 .68rem/14px var(--f-num); font-variant-numeric: tabular-nums; }
+@media (prefers-reduced-motion: no-preference) {
+  .node.avail { animation: nodeGlow 2.4s ease-in-out infinite; }
+  @keyframes nodeGlow { 50% { box-shadow: 0 0 26px -1px var(--c); } }
+}
+.node-info { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 14px; padding: 14px; border-radius: 8px; border-left: 3px solid var(--c); background: rgba(255, 255, 255, .04); }
+.node-info > .ico { width: 46px; height: 46px; padding: 10px; border-radius: 50%; background: rgba(255, 255, 255, .06); color: var(--c); }
+.ni-body { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.ni-body h3 { margin: 0; font-size: 1.15rem; }
+.ni-body p { margin: 0; max-width: 62ch; }
+.ni-tag { font-family: var(--f-num); font-weight: 700; font-size: .76rem; letter-spacing: .1em; text-transform: uppercase; color: var(--c); }
+.ni-need { color: var(--ink-dim); font-size: .92rem; }
+@media (max-width: 600px) { .node-info { grid-template-columns: auto minmax(0, 1fr); } .node-info > :last-child:not(.ni-body) { grid-column: 1 / -1; } }
+.pips { display: flex; gap: 4px; margin-top: 3px; }
 .pips i { width: 14px; height: 4px; border-radius: 2px; background: rgba(239, 230, 207, .18); }
-.pips i.on { background: var(--amber); }
-.buy { flex: none; min-width: 84px; font-family: var(--f-num); font-variant-numeric: tabular-nums; }
-.buy svg { color: var(--amber); }
+.pips i.on { background: var(--c, var(--amber)); }
+.buy { flex: none; min-width: 120px; font-family: var(--f-num); font-variant-numeric: tabular-nums; }
+.buy svg { color: #1d1405; }
+.shop-foot { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 0; font-size: .9rem; color: var(--ink-dim); }
+.legend > span { display: inline-flex; align-items: center; gap: 7px; }
+.legend i { width: 14px; height: 14px; border: 2px solid var(--ink-dim); border-radius: 50%; }
+.legend i.sq { border-radius: 30%; }
+
+/* Spielstände */
+.slots { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 760px) { .slots { grid-template-columns: minmax(0, 1fr); } }
+.slot { display: flex; flex-direction: column; gap: 10px; padding: 14px; border-radius: 8px; border: 1px solid rgba(239, 230, 207, .14); background: rgba(255, 255, 255, .03); min-width: 0; }
+.slot.cur { border-color: var(--amber); box-shadow: 0 0 0 1px var(--amber) inset; }
+.slot-name { width: 100%; min-width: 0; padding: 6px 8px; border: 1px solid transparent; border-radius: 5px; background: transparent; color: var(--ink); font: 800 1.15rem var(--f-body); }
+.slot-name:hover, .slot-name:focus { border-color: var(--line); background: rgba(0, 0, 0, .25); }
+.slot-stats { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 0; font-family: var(--f-num); color: var(--ink-dim); font-variant-numeric: tabular-nums; }
+.slot-stats b { color: var(--ink); }
+.slot-night { margin: 0; font-size: .92rem; color: var(--moon); }
+.slot-empty { margin: 0; color: var(--ink-dim); }
+.transfer { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 760px) { .transfer { grid-template-columns: minmax(0, 1fr); } }
+.transfer > div { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.transfer h3 { margin: 0; font-size: 1rem; }
+.transfer p { margin: 0; font-size: .9rem; color: var(--ink-dim); }
+.code { width: 100%; min-height: 64px; resize: vertical; padding: 8px; border-radius: 6px; border: 1px solid rgba(239, 230, 207, .18); background: rgba(0, 0, 0, .3); color: var(--ink); font: .8rem/1.35 ui-monospace, Consolas, monospace; word-break: break-all; user-select: text; -webkit-user-select: text; }
+.note { margin: 0; min-height: 1.3em; font-size: .92rem; color: var(--moon); }
+.note.bad { color: var(--ember); }
+.menu-slot { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 12px; font-family: var(--f-num); color: var(--ink-dim); }
+.menu-slot b { color: var(--ink); }
+#slotsScr .panel { width: min(1000px, 100%); }
+.slot-name { user-select: text; -webkit-user-select: text; }
+p.slot-name { margin: 0; padding-left: 0; }
+.slot-stats svg { width: 14px; height: 14px; margin-right: 3px; vertical-align: -2px; color: var(--amber); }
+
+/* Fähigkeiten im Spiel */
+#abil { position: absolute; right: max(16px, env(safe-area-inset-right, 0px)); bottom: calc(18px + env(safe-area-inset-bottom, 0px)); display: flex; align-items: flex-end; gap: 12px; }
+.ab { position: relative; width: 58px; height: 58px; padding: 0; display: grid; place-items: center; overflow: hidden; border: 2px solid var(--c); border-radius: 30%; background: rgba(8, 11, 22, .82); color: var(--c); pointer-events: auto; cursor: pointer; }
+.ab > .ico { width: 28px; height: 28px; }
+.ab .cd { position: absolute; inset: 0; background: conic-gradient(rgba(4, 6, 14, .8) calc(var(--p, 0) * 360deg), transparent 0); pointer-events: none; }
+.ab.ready { box-shadow: 0 0 18px -4px var(--c); }
+.ab kbd { position: absolute; left: 0; right: 0; bottom: 3px; text-align: center; font: 700 .62rem/1 var(--f-num); letter-spacing: .04em; color: var(--ink); text-shadow: 0 1px 3px #000; }
+span.ab { cursor: default; }
+@media (hover: none) { .ab { width: 66px; height: 66px; } .ab kbd.key { display: none; } }
+#toast { position: absolute; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); padding: 8px 16px; border-radius: 6px; background: rgba(13, 17, 31, .95); border: 1px solid var(--line); font-weight: 700; opacity: 0; transition: opacity .3s; pointer-events: none; z-index: 5; }
+#toast.show { opacity: 1; }
 
 /* Ende einer Nacht */
 .stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 0; }
@@ -210,6 +299,11 @@ h2 { margin: 0; font-family: var(--f-display); font-weight: 800; font-size: clam
       </div>
     </div>
     <div id="banner" aria-live="polite"></div>
+    <div id="abil" hidden>
+      <span class="ab" id="abStar" data-ico="stars" style="--c: #c3a6ff" hidden><i class="cd"></i><kbd id="kStar"></kbd></span>
+      <button class="ab" id="abBeacon" type="button" data-ico="beacon" style="--c: #9fd0ff" hidden><i class="cd"></i><kbd class="key">E</kbd></button>
+      <button class="ab" id="abDash" type="button" data-ico="dash" style="--c: #8fd6a4" hidden><i class="cd"></i><kbd class="key" data-t="kDash"></kbd></button>
+    </div>
   </div>
 
   <section id="menu" class="screen">
@@ -218,8 +312,13 @@ h2 { margin: 0; font-family: var(--f-display); font-weight: 800; font-size: clam
       <h1>Lantern<br>Night</h1>
       <p class="tag" data-t="tagline"></p>
       <div class="menu-btns">
+        <button class="btn primary" id="contBtn" type="button" hidden></button>
         <button class="btn primary" id="playBtn" type="button" data-t="play"></button>
         <button class="btn" id="shopBtn" type="button" data-t="workshop"></button>
+      </div>
+      <div class="menu-slot">
+        <span><span data-t="slotLbl"></span>: <b id="slotName"></b></span>
+        <button class="btn small" id="slotsBtn" type="button" data-t="slots"></button>
       </div>
       <div class="menu-meta">
         <span><span data-t="best"></span>: <b id="bestVal"></b></span>
@@ -239,11 +338,42 @@ h2 { margin: 0; font-family: var(--f-display); font-weight: 800; font-size: clam
     <div class="panel">
       <div class="shop-head">
         <h2 data-t="workshop"></h2>
-        <span class="purse" data-ico="amber"><span id="shopAmber">0</span></span>
+        <div class="shop-meta">
+          <span class="lit" id="litCount"></span>
+          <span class="purse" data-ico="amber"><span id="shopAmber">0</span></span>
+        </div>
       </div>
       <p class="sub" data-t="wsSub"></p>
-      <div class="shop-grid" id="shopGrid"></div>
-      <div class="row"><button class="btn" id="shopBack" type="button" data-t="back"></button></div>
+      <div class="tree-wrap" id="treeWrap"><div class="tree" id="tree"></div></div>
+      <div class="node-info" id="nodeInfo"></div>
+      <div class="shop-foot">
+        <p class="legend"><span><i></i><span data-t="lgTalent"></span></span><span><i class="sq"></i><span data-t="lgAbility"></span></span></p>
+        <button class="btn" id="shopBack" type="button" data-t="back"></button>
+      </div>
+    </div>
+  </section>
+
+  <section id="slotsScr" class="screen dim" hidden>
+    <div class="panel">
+      <h2 data-t="slots"></h2>
+      <p class="sub" data-t="slotsSub"></p>
+      <div class="slots" id="slotList"></div>
+      <div class="transfer">
+        <div>
+          <h3 data-t="exportH"></h3>
+          <p data-t="exportP"></p>
+          <textarea class="code" id="exportCode" rows="3" readonly></textarea>
+          <div class="row"><button class="btn small" id="copyBtn" type="button" data-t="copy"></button></div>
+        </div>
+        <div>
+          <h3 data-t="importH"></h3>
+          <p data-t="importP"></p>
+          <textarea class="code" id="importCode" rows="3"></textarea>
+          <div class="row"><button class="btn small" id="importBtn" type="button" data-t="importBtn"></button></div>
+        </div>
+      </div>
+      <p class="note" id="slotNote" aria-live="polite"></p>
+      <div class="row"><button class="btn" id="slotsBack" type="button" data-t="back"></button></div>
     </div>
   </section>
 
@@ -263,6 +393,7 @@ h2 { margin: 0; font-family: var(--f-display); font-weight: 800; font-size: clam
       <h2 data-t="paused"></h2>
       <div class="col">
         <button class="btn primary" id="resumeBtn" type="button" data-t="resume"></button>
+        <button class="btn" id="saveQuitBtn" type="button" data-t="saveQuit"></button>
         <button class="btn small" id="musBtn2" type="button"></button>
         <button class="btn small" id="sfxBtn2" type="button"></button>
         <button class="btn small" id="quitBtn" type="button" data-t="giveUp"></button>
@@ -288,6 +419,7 @@ h2 { margin: 0; font-family: var(--f-display); font-weight: 800; font-size: clam
       </div>
     </div>
   </section>
+  <div id="toast" role="status"></div>
 </div>
 
 <script>
@@ -312,16 +444,37 @@ h2 { margin: 0; font-family: var(--f-display); font-weight: 800; font-size: clam
   // Zum Testen: __ln.speed > 1 lässt die Zeit schneller laufen, __ln.input steuert den Spieler
   const dbg = { speed: 1, input: null };
 
-  // ---------- Spielstand ----------
-  const SAVE_KEY = 'lantern-night-v1';
-  const defaultSave = () => ({ amber: 0, best: 0, wins: 0, runs: 0, up: {}, music: true, sfx: true, lang: null });
-  let save = defaultSave();
+  // ---------- Spielstände ----------
+  // Drei Spielstände mit eigenem Bernstein, eigener Sternkarte und eigener gespeicherter Nacht.
+  // Musik, Ton und Sprache gelten für alle.
+  const SAVE_KEY = 'lantern-night-v2', OLD_KEY = 'lantern-night-v1';
+  const newSlot = (name = '') => ({ name, amber: 0, best: 0, wins: 0, runs: 0, up: {}, night: null, played: 0 });
+  let store = { v: 2, cur: 0, slots: [null, null, null], music: true, sfx: true, lang: null };
   let storageOk = false;
   try {
     const raw = localStorage.getItem(SAVE_KEY);
-    if (raw) { save = Object.assign(defaultSave(), JSON.parse(raw)); storageOk = true; }
+    if (raw) { store = Object.assign(store, JSON.parse(raw)); storageOk = true; }
+    else {
+      // der alte, einzelne Spielstand wird zu Spielstand 1
+      const old = JSON.parse(localStorage.getItem(OLD_KEY) || 'null');
+      if (old) {
+        store.music = old.music !== false; store.sfx = old.sfx !== false; store.lang = old.lang || null;
+        store.slots[0] = { ...newSlot(), amber: old.amber || 0, best: old.best || 0, wins: old.wins || 0, runs: old.runs || 0, up: old.up || {} };
+        storageOk = true;
+      }
+    }
   } catch (e) { /* kein Speicher verfügbar */ }
-  function persist() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) { /* egal */ } }
+  function fixStore() {
+    store.slots = [0, 1, 2].map(i => (store.slots[i] ? Object.assign(newSlot(), store.slots[i]) : null));
+    store.cur = clamp(store.cur | 0, 0, 2);
+    if (!store.slots[store.cur]) store.slots[store.cur] = newSlot();
+  }
+  fixStore();
+  let save = store.slots[store.cur];   // der aktive Spielstand
+  function persist() {
+    save.played = Date.now();
+    try { localStorage.setItem(SAVE_KEY, JSON.stringify(store)); } catch (e) { /* egal */ }
+  }
 
   // ---------- Texte ----------
   const STR = {
@@ -340,9 +493,20 @@ h2 { margin: 0; font-family: var(--f-display); font-weight: 800; font-size: clam
       record: 'Neue längste Nacht', again: 'Noch eine Nacht', menu: 'Menü',
       bossWarn: 'Der Schattenhirsch erwacht', bossName: 'Schattenhirsch', waveWarn: 'Ein Mottenschwarm naht', dawnSoon: 'Der Himmel wird heller',
       revive: 'Zweite Flamme', maxed: 'Voll', buy: 'Kaufen', amber: 'Bernstein',
-      wsSub: 'Bernstein bleibt nach jeder Nacht erhalten. Hier verbesserst du deine Ausrüstung dauerhaft.',
+      wsSub: 'Bernstein bleibt nach jeder Nacht erhalten. Entzünde damit Sterne auf der Karte: Jeder Pfad schaltet neue Talente und Fähigkeiten frei.',
       bdDrops: 'gesammelt', bdTime: 'für die Zeit', bdWin: 'Sieg',
       berriesName: 'Waldbeeren', berriesDesc: 'Heilt 30 Leben und gibt 5 Bernstein.',
+      lgTalent: 'Talent', lgAbility: 'Fähigkeit', tagTalent: 'Talent', tagAbility: 'Fähigkeit', lit: '{a} / {b} Sterne entzündet',
+      need: 'Entzünde zuerst: {n}', buyFor: 'Entzünden', kDash: 'Leer', kClick: 'Klick', kTap: 'Tippen',
+      slotLbl: 'Spielstand', slots: 'Spielstände', slotN: 'Spielstand {n}',
+      slotsSub: 'Jeder Spielstand hat eigenen Bernstein, eigene Sterne und eine eigene gespeicherte Nacht. Tippe auf den Namen, um ihn zu ändern.',
+      useSlot: 'Spielen', active: 'Aktiv', del: 'Löschen', delSure: 'Wirklich löschen?', newSlot: 'Neu anlegen', emptySlot: 'Leer', rename: 'Name des Spielstands', starsShort: 'Sterne',
+      nightSaved: 'Gespeicherte Nacht: {c} Uhr', cont: 'Nacht fortsetzen · {c}', newNight: 'Neue Nacht', saveQuit: 'Speichern und zum Menü', saved: 'Nacht gespeichert',
+      exportH: 'Spielstand mitnehmen', exportP: 'Kopiere diesen Code und füge ihn auf einem anderen Gerät oder einer anderen Seite ein.',
+      copy: 'Code kopieren', copied: 'Code kopiert', copyManual: 'Code markiert. Kopiere ihn mit Strg+C.',
+      importH: 'Spielstand laden', importP: 'Füge hier einen Speicher-Code ein. Er ersetzt den aktiven Spielstand.',
+      importBtn: 'Code laden', importSure: '„{n}“ ersetzen?', importWarn: 'Klicke nochmal, um „{n}“ zu ersetzen.', imported: 'Spielstand geladen',
+      badCode: 'Dieser Code passt nicht. Prüfe, ob er vollständig ist.', deleted: 'Spielstand gelöscht', switched: 'Spielstand gewechselt',
     },
     en: {
       eyebrow: 'One night in the woods · 10 pm to 6 am',
@@ -359,12 +523,23 @@ h2 { margin: 0; font-family: var(--f-display); font-weight: 800; font-size: clam
       record: 'New longest night', again: 'Another night', menu: 'Menu',
       bossWarn: 'The Shadow Stag awakens', bossName: 'Shadow Stag', waveWarn: 'A swarm of moths is coming', dawnSoon: 'The sky is getting lighter',
       revive: 'Second flame', maxed: 'Maxed', buy: 'Buy', amber: 'amber',
-      wsSub: 'Amber stays with you after every night. Spend it here on permanent upgrades.',
+      wsSub: 'Amber stays with you after every night. Use it to light stars on the map: each path unlocks new talents and abilities.',
       bdDrops: 'collected', bdTime: 'for time', bdWin: 'victory',
       berriesName: 'Forest Berries', berriesDesc: 'Heals 30 health and gives 5 amber.',
+      lgTalent: 'Talent', lgAbility: 'Ability', tagTalent: 'Talent', tagAbility: 'Ability', lit: '{a} / {b} stars lit',
+      need: 'Light first: {n}', buyFor: 'Light', kDash: 'Space', kClick: 'Click', kTap: 'Tap',
+      slotLbl: 'Save', slots: 'Save slots', slotN: 'Save {n}',
+      slotsSub: 'Each save has its own amber, its own stars and its own saved night. Tap the name to change it.',
+      useSlot: 'Play', active: 'Active', del: 'Delete', delSure: 'Really delete?', newSlot: 'Create', emptySlot: 'Empty', rename: 'Save name', starsShort: 'stars',
+      nightSaved: 'Saved night: {c}', cont: 'Continue night · {c}', newNight: 'New night', saveQuit: 'Save and go to menu', saved: 'Night saved',
+      exportH: 'Take your save along', exportP: 'Copy this code and paste it on another device or another site.',
+      copy: 'Copy code', copied: 'Code copied', copyManual: 'Code selected. Copy it with Ctrl+C.',
+      importH: 'Load a save', importP: 'Paste a save code here. It replaces the active save.',
+      importBtn: 'Load code', importSure: 'Replace “{n}”?', importWarn: 'Click again to replace “{n}”.', imported: 'Save loaded',
+      badCode: 'This code does not fit. Check that it is complete.', deleted: 'Save deleted', switched: 'Save switched',
     },
   };
-  let lang = save.lang || ((navigator.language || 'en').toLowerCase().startsWith('de') ? 'de' : 'en');
+  let lang = store.lang || ((navigator.language || 'en').toLowerCase().startsWith('de') ? 'de' : 'en');
   const T = k => STR[lang][k] ?? STR.en[k] ?? k;
   const tf = (k, v) => T(k).replace(/\{(\w+)\}/g, (_, n) => v[n]);
 
@@ -386,6 +561,24 @@ h2 { margin: 0; font-family: var(--f-display); font-weight: 800; font-size: clam
     amber: '<path class="f" d="M12 2.5l7.5 4.8v9.4L12 21.5l-7.5-4.8V7.3z"/>',
     eyes: '<path class="s" d="M2.5 12.5c2.5-5 16.5-5 19 0-2.5 5-16.5 5-19 0z"/><circle class="f" cx="8.6" cy="12.5" r="2.2"/><circle class="f" cx="15.4" cy="12.5" r="2.2"/>',
     berries: '<circle class="f" cx="8.5" cy="14" r="4"/><circle class="f" cx="15.5" cy="15" r="4"/><circle class="f" cx="12" cy="9" r="4"/><path class="s" d="M12 5c1-2 3-2.6 5-2.5"/>',
+    dash: '<path class="s" d="M2.5 8h7M1.5 12h8M2.5 16h7"/><path class="f" d="M12 4.5l9.5 7.5-9.5 7.5 2.6-7.5z"/>',
+    beacon: '<path class="f" d="M9.4 21.5l1.3-11h2.6l1.3 11z"/><circle class="f" cx="12" cy="7" r="2.7"/><path class="s" d="M5 3.5l2.5 2M19 3.5l-2.5 2M3 9h3M18 9h3"/>',
+    crit: '<path class="f" d="M12 2l1.9 6.1L20 5.6l-3.6 5.3L22 14l-6.3.7.4 6.3-4.1-4.8L7.9 21l.4-6.3L2 14l5.6-3.1L4 5.6l6.1 2.5z"/>',
+    pierce: '<circle class="s" cx="9" cy="15" r="3.4"/><path class="s" d="M3 21L20.5 3.5M14.5 3.5h6v6"/>',
+    heat: '<path class="s" d="M3 7.5c2-2 4 2 6 0s4-2 6 0 4 2 6 0M3 12.5c2-2 4 2 6 0s4-2 6 0 4 2 6 0M3 17.5c2-2 4 2 6 0s4-2 6 0 4 2 6 0"/>',
+    pulse2: '<circle class="f" cx="9" cy="12" r="2.6"/><circle class="s" cx="9" cy="12" r="6.2"/><circle class="s" cx="15" cy="12" r="6.2"/>',
+    antlers: '<path class="s" d="M12 21.5v-7.5M12 14c-3.3 0-6-2.3-6-6.3M6 7.7V2.5M6 7.7L3 4.7M8.9 10.6L7.8 6M12 14c3.3 0 6-2.3 6-6.3M18 7.7V2.5M18 7.7l3-3M15.1 10.6L16.2 6"/>',
+    shield: '<path class="f" d="M12 2.5l8 3v6c0 5-3.4 8.6-8 10-4.6-1.4-8-5-8-10v-6z"/>',
+    leaf: '<path class="f" d="M20.5 3.5C10.5 3.5 4 8.6 4 16c0 1.4.3 2.6.8 3.6C7 13 11 10 16 8c-4 3-7.5 6.5-9.6 12.2.9.3 1.7.3 2.6.3 7 0 11.5-6.5 11.5-17z"/>',
+    eye: '<path class="s" d="M2.5 12c3-6 16-6 19 0-3 6-16 6-19 0z"/><circle class="f" cx="12" cy="12" r="3.3"/>',
+    cards: '<rect class="s" x="2.5" y="7" width="7" height="12" rx="1.5"/><rect class="s" x="8.5" y="5" width="7" height="12" rx="1.5"/><rect class="f" x="14.5" y="3" width="7" height="12" rx="1.5"/>',
+    bag: '<path class="f" d="M5 9.5a3 3 0 0 1 3-3h8a3 3 0 0 1 3 3V19a2.5 2.5 0 0 1-2.5 2.5h-9A2.5 2.5 0 0 1 5 19z"/><path class="s" d="M9 6.5V5a3 3 0 0 1 6 0v1.5"/>',
+    book: '<path class="f" d="M4 4.5A2 2 0 0 1 6 2.5h14v15.5H6.5A2.5 2.5 0 0 0 4 20.5z"/><path class="s" d="M4 20.5A1.5 1.5 0 0 0 5.5 22H20"/>',
+    target: '<circle class="s" cx="12" cy="12" r="7.5"/><circle class="f" cx="12" cy="12" r="2.6"/><path class="s" d="M12 1.5v4M12 18.5v4M1.5 12h4M18.5 12h4"/>',
+    bigstar: '<path class="f" d="M12 2.5l2.9 6 6.6.8-4.9 4.5 1.3 6.5L12 17l-5.9 3.3 1.3-6.5L2.5 9.3l6.6-.8z"/>',
+    crater: '<ellipse class="s" cx="12" cy="16.5" rx="9.5" ry="4"/><path class="f" d="M7.5 16c1-4.2 8-4.2 9 0z"/><path class="s" d="M8.5 9.5L7.5 6M12 8.5v-4M15.5 9.5l1-3.5"/>',
+    starswarm: '<path class="f" d="M6 2.5l1.2 3 3 1.2-3 1.2L6 11 4.8 7.9 1.8 6.7l3-1.2zM17.5 6.5l1.2 3 3 1.2-3 1.2-1.2 3-1.2-3-3-1.2 3-1.2zM9 13l1.2 3 3 1.2-3 1.2L9 21.5l-1.2-3.1-3-1.2 3-1.2z"/>',
+    meteor: '<circle class="f" cx="8" cy="16" r="5.2"/><path class="s" d="M11.6 12.4L21 3M13.5 16.2l7-7M7.8 10.5L15 3.3"/>',
   };
   const icon = k => `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">${ICONS[k]}</svg>`;
 
@@ -433,16 +626,65 @@ h2 { margin: 0; font-family: var(--f-display); font-weight: 800; font-size: clam
     feather: { kind: 'p', max: 5, icon: 'feather', name: { de: 'Eulenfeder', en: 'Owl Feather' }, d: { de: '−8 % Abklingzeit', en: '−8% cooldowns' } },
   };
 
-  // ---------- Werkstatt (dauerhaft) ----------
-  const META = [
-    { id: 'vitality', icon: 'cloak', max: 5, cost: [10, 20, 35, 55, 80], name: { de: 'Zähigkeit', en: 'Toughness' }, d: { de: '+10 max. Leben', en: '+10 max health' } },
-    { id: 'power', icon: 'spark', max: 5, cost: [15, 30, 50, 75, 110], name: { de: 'Strahlkraft', en: 'Radiance' }, d: { de: '+6 % Schaden', en: '+6% damage' } },
-    { id: 'swift', icon: 'boots', max: 3, cost: [12, 25, 45], name: { de: 'Leichtfuß', en: 'Light Step' }, d: { de: '+5 % Tempo', en: '+5% move speed' } },
-    { id: 'reach', icon: 'lure', max: 3, cost: [10, 20, 35], name: { de: 'Sammlerhand', en: 'Gatherer' }, d: { de: '+15 % Sammelradius', en: '+15% pickup range' } },
-    { id: 'luck', icon: 'dice', max: 3, cost: [20, 45, 80], name: { de: 'Würfelglück', en: 'Lucky Dice' }, d: { de: '+1 Neu-Würfeln pro Nacht', en: '+1 reroll per night' } },
-    { id: 'greed', icon: 'amber', max: 3, cost: [25, 50, 90], name: { de: 'Bernsteinsucher', en: 'Amber Seeker' }, d: { de: '+15 % Bernstein', en: '+15% amber' } },
-    { id: 'flame', icon: 'wick', max: 1, cost: [120], name: { de: 'Zweite Flamme', en: 'Second Flame' }, d: { de: 'Einmal pro Nacht wieder aufstehen', en: 'Get back up once per night' } },
+  // ---------- Werkstatt: Sternkarte mit vier Pfaden (dauerhaft) ----------
+  // x/y auf einer 1100 × 820 großen Karte, p = Vorgänger, act = Fähigkeit statt Talent.
+  // Die alten Werkstatt-Ids (vitality, power, swift, reach, luck, greed, flame) bleiben, damit Spielstände passen.
+  const BR = {
+    root: { c: '#ffd27a' },
+    glut: { c: '#ffb84d', de: 'Glut', en: 'Ember', x: 60, y: 46 },
+    sterne: { c: '#c3a6ff', de: 'Sterne', en: 'Stars', x: 1040, y: 46, right: true },
+    mantel: { c: '#8fd6a4', de: 'Mantel', en: 'Cloak', x: 60, y: 790 },
+    wander: { c: '#9fd0ff', de: 'Wanderer', en: 'Wanderer', x: 1040, y: 790, right: true },
+  };
+  const mk = (id, br, p, x, y, icon, cost, de, en, dde, den, act = false) => ({ id, br, p, x, y, icon, cost, max: cost.length, name: { de, en }, d: { de: dde, en: den }, act });
+  const TREE = [
+    { id: 'root', br: 'root', x: 550, y: 410, icon: 'wick', cost: [], max: 0, name: { de: 'Deine Laterne', en: 'Your Lantern' },
+      d: { de: 'Von hier wachsen vier Pfade. Entzünde Sterne mit Bernstein, um stärker in die Nacht zu gehen.', en: 'Four paths grow from here. Light stars with amber to face the night stronger.' } },
+    // Glut: Angriff
+    mk('power', 'glut', 'root', 450, 310, 'spark', [15, 30, 50, 75, 110], 'Strahlkraft', 'Radiance', '+6 % Schaden pro Stufe.', '+6% damage per level.'),
+    mk('crit', 'glut', 'power', 370, 215, 'crit', [30, 50, 80, 120], 'Kritisches Licht', 'Critical Light', 'Pro Stufe 5 % Chance auf doppelten Schaden.', 'Each level adds a 5% chance to deal double damage.'),
+    mk('pierce', 'glut', 'crit', 290, 120, 'pierce', [60, 110], 'Durchdringung', 'Piercing Light', 'Lichtfunken durchschlagen pro Stufe einen Schatten mehr.', 'Spark Bolts pierce one more shadow per level.'),
+    mk('wrath', 'glut', 'pierce', 175, 90, 'antlers', [180], 'Hirschjäger', 'Stag Hunter', '+30 % Schaden gegen den Schattenhirsch.', '+30% damage against the Shadow Stag.'),
+    mk('heat', 'glut', 'power', 335, 330, 'heat', [25, 45, 70], 'Hitzewelle', 'Heat Wave', 'Laternenpuls: +10 % Radius pro Stufe.', 'Lantern Pulse: +10% radius per level.'),
+    mk('swarmer', 'glut', 'heat', 225, 255, 'fireflies', [90], 'Schwärmer', 'Swarmer', '+1 Glühwürmchen, sobald du welche hast.', '+1 firefly once you have them.'),
+    mk('double', 'glut', 'heat', 215, 355, 'pulse2', [140], 'Doppelpuls', 'Double Pulse', 'Der Laternenpuls schlägt kurz danach ein zweites Mal zu (60 % Schaden).', 'Lantern Pulse strikes a second time right after (60% damage).'),
+    // Mantel: Verteidigung
+    mk('vitality', 'mantel', 'root', 450, 510, 'cloak', [10, 20, 35, 55, 80], 'Zähigkeit', 'Toughness', '+10 max. Leben pro Stufe.', '+10 max health per level.'),
+    mk('bark', 'mantel', 'vitality', 370, 605, 'shield', [25, 45, 70, 100], 'Rindenhaut', 'Bark Skin', 'Pro Stufe 6 % weniger Schaden.', 'Take 6% less damage per level.'),
+    mk('herbs', 'mantel', 'bark', 290, 700, 'leaf', [35, 60, 95], 'Heilkräuter', 'Healing Herbs', '+0,3 Leben pro Sekunde pro Stufe.', '+0.3 health per second per level.'),
+    mk('berries', 'mantel', 'vitality', 335, 490, 'berries', [20, 40], 'Beerensammler', 'Berry Picker', 'Waldbeeren fallen pro Stufe 60 % öfter und heilen 25 % mehr.', 'Forest berries drop 60% more often and heal 25% more per level.'),
+    mk('dash', 'mantel', 'berries', 215, 465, 'dash', [80, 150], 'Lichtsprung', 'Light Dash',
+      'Fähigkeit: Mit der Leertaste oder dem Knopf springst du ein Stück vorwärts und bist kurz unverwundbar. Abklingzeit 5 s, auf Stufe 2 nur 3,5 s.',
+      'Ability: press Space or the button to leap forward and become briefly invulnerable. Cooldown 5 s, level 2: 3.5 s.', true),
+    mk('flame', 'mantel', 'berries', 225, 585, 'wick', [120], 'Zweite Flamme', 'Second Flame', 'Einmal pro Nacht wieder aufstehen.', 'Get back up once per night.'),
+    mk('flame2', 'mantel', 'flame', 130, 655, 'wick', [300], 'Dritte Flamme', 'Third Flame', 'Ein weiteres Mal pro Nacht wieder aufstehen.', 'Get back up one more time per night.'),
+    // Wanderer: Nützliches
+    mk('swift', 'wander', 'root', 650, 510, 'boots', [12, 25, 45], 'Leichtfuß', 'Light Step', '+5 % Tempo pro Stufe.', '+5% move speed per level.'),
+    mk('reach', 'wander', 'swift', 730, 605, 'lure', [10, 20, 35], 'Sammlerhand', 'Gatherer', '+15 % Sammelradius pro Stufe.', '+15% pickup range per level.'),
+    mk('greed', 'wander', 'reach', 810, 700, 'amber', [25, 50, 90], 'Bernsteinsucher', 'Amber Seeker', '+15 % Bernstein pro Stufe.', '+15% amber per level.'),
+    mk('backpack', 'wander', 'greed', 930, 760, 'bag', [160], 'Wanderrucksack', 'Travel Pack', 'Jede Nacht beginnt mit einer zufälligen zweiten Waffe.', 'Every night starts with a random second weapon.'),
+    mk('luck', 'wander', 'swift', 765, 490, 'dice', [20, 45, 80], 'Würfelglück', 'Lucky Dice', '+1 Neu-Würfeln pro Nacht und Stufe.', '+1 reroll per night per level.'),
+    mk('fourth', 'wander', 'luck', 885, 465, 'cards', [150], 'Vierte Wahl', 'Fourth Choice', 'Beim Stufenaufstieg stehen vier Gaben zur Wahl.', 'Level-ups offer four gifts to choose from.'),
+    mk('farsight', 'wander', 'luck', 875, 585, 'eye', [25, 45, 70], 'Weitblick', 'Far Sight', '+10 % Lichtradius pro Stufe. Schatten im Licht sind langsamer.', '+10% light radius per level. Shadows in your light move slower.'),
+    mk('beacon', 'wander', 'farsight', 970, 655, 'beacon', [120, 200], 'Leuchtfeuer', 'Beacon',
+      'Fähigkeit: Mit E oder dem Knopf löst du eine gewaltige Lichtwelle aus, die alle Schatten zurückschleudert. Abklingzeit 25 s, auf Stufe 2 nur 18 s und doppelter Schaden.',
+      'Ability: press E or the button to unleash a mighty wave of light that hurls every shadow back. Cooldown 25 s, level 2: 18 s and double damage.', true),
+    // Sterne: Sternschnuppen lenken
+    mk('starlore', 'sterne', 'root', 650, 310, 'book', [40], 'Sternenkunde', 'Star Lore', 'Jede Nacht beginnt mit Sternschnuppen (Stufe 1).', 'Every night starts with Falling Stars (level 1).'),
+    mk('starguide', 'sterne', 'starlore', 730, 215, 'target', [60], 'Sternenlenker', 'Star Guide',
+      'Fähigkeit: Klicke oder tippe auf das Spielfeld. Ein paar Sekunden lang schlagen deine Sternschnuppen genau dort ein.',
+      'Ability: click or tap the field. For a few seconds your Falling Stars strike exactly there.', true),
+    mk('starcall', 'sterne', 'starguide', 810, 120, 'stars', [100, 160, 240], 'Sternenruf', 'Star Call',
+      'Fähigkeit: Dein Klick ruft zusätzlich sofort einen Sternenhagel herbei: 3 Sterne, auf Stufe 2 fünf, auf Stufe 3 sieben. Abklingzeit 12 s / 10 s / 8 s.',
+      'Ability: your click also calls down a star shower right away: 3 stars, 5 at level 2, 7 at level 3. Cooldown 12 s / 10 s / 8 s.', true),
+    mk('meteor', 'sterne', 'starcall', 925, 90, 'meteor', [250], 'Meteor', 'Meteor', 'Jeder vierte Stern wird ein Meteor mit dreifachem Schaden und größerem Einschlag.', 'Every fourth star becomes a meteor with triple damage and a bigger impact.'),
+    mk('bigstars', 'sterne', 'starlore', 765, 330, 'bigstar', [30, 55, 85], 'Große Sterne', 'Big Stars', '+15 % Einschlagradius pro Stufe.', '+15% impact radius per level.'),
+    mk('crater', 'sterne', 'bigstars', 875, 255, 'crater', [90, 150], 'Glutkrater', 'Ember Crater', 'Einschläge hinterlassen einen glühenden Krater, der Schatten verbrennt: 2 s, auf Stufe 2 drei Sekunden.', 'Impacts leave a glowing crater that burns shadows: 2 s, 3 s at level 2.'),
+    mk('starswarm', 'sterne', 'bigstars', 885, 355, 'starswarm', [80, 140], 'Sternenschwarm', 'Star Swarm', '+1 Stern pro Salve deiner Sternschnuppen und Stufe.', '+1 star per Falling Stars volley per level.'),
   ];
+  const NODE = Object.fromEntries(TREE.map(t => [t.id, t]));
+  const TOTAL_LIT = TREE.reduce((a, t) => a + t.max, 0);
+  const U = id => save.up[id] || 0;
 
   // ---------- Canvas ----------
   const cv = $('cv');
@@ -783,8 +1025,8 @@ h2 { margin: 0; font-family: var(--f-display); font-weight: 800; font-size: clam
     },
     applyVolumes() {
       if (!this.ctx) return;
-      this.sfx.gain.value = save.sfx ? 0.55 : 0;
-      this.mus.gain.value = save.music ? 0.34 : 0;
+      this.sfx.gain.value = store.sfx ? 0.55 : 0;
+      this.mus.gain.value = store.music ? 0.34 : 0;
     },
     ok(n, gap) {
       const now = this.ctx.currentTime;
@@ -805,7 +1047,7 @@ h2 { margin: 0; font-family: var(--f-display); font-weight: 800; font-size: clam
       s.connect(f); f.connect(g); g.connect(this.sfx); s.start(t, Math.random() * 0.5); s.stop(t + dur + 0.02);
     },
     play(n) {
-      if (!this.ctx || !save.sfx) return;
+      if (!this.ctx || !store.sfx) return;
       const st = s => Math.pow(2, s / 12);
       switch (n) {
         case 'shoot': if (this.ok(n, 0.06)) this.tone(900 + Math.random() * 120, 0.08, 'triangle', 0.03, 1400); break;
@@ -843,7 +1085,7 @@ h2 { margin: 0; font-family: var(--f-display); font-weight: 800; font-size: clam
       if (!this.timer) this.timer = setInterval(() => this.tick(), 90);
     },
     tick() {
-      if (!this.on || !Snd.ctx || !save.music || Snd.ctx.state !== 'running') return;
+      if (!this.on || !Snd.ctx || !store.music || Snd.ctx.state !== 'running') return;
       const c = Snd.ctx, spb = 60 / 84 / 2;
       if (this.next < c.currentTime) this.next = c.currentTime + 0.05;
       while (this.next < c.currentTime + 0.25) {
@@ -875,22 +1117,24 @@ h2 { margin: 0; font-family: var(--f-display); font-weight: 800; font-size: clam
   let shopFrom = 'menu';
   let menuT = 0, shakeAmt = 0;
   const cam = { x: 0, y: 0 };
-  const P = { x: 0, y: 0, r: 12, face: 1, walk: 0, moving: false, inv: 0, hp: 100, maxHp: 100, dead: false, lx: 0, ly: 0 };
+  const P = { x: 0, y: 0, r: 12, face: 1, walk: 0, moving: false, inv: 0, hp: 100, maxHp: 100, dead: false, lx: 0, ly: 0, dx: 1, dy: 0, dashT: 0, crit: 0, armor: 1 };
   let enemies = [], shots = [], spores = [], gems = [], loot = [], parts = [], texts = [], pulses = [], stars = [], flashes = [];
+  let zones = [];                // Glutkrater
   const ff = [];                 // Positionen der Glühwürmchen (x, y, x, y …)
   const motes = Array.from({ length: 30 }, () => ({ x: Math.random() * 1600, y: Math.random() * 1600, vx: rand(-8, 8), vy: rand(-6, 6), f: rand(1, 3), p: rand(0, TAU) }));
 
   const lvOf = id => (run ? run.items[id] || 0 : 0);
   function recalc() {
-    const up = save.up;
-    P.maxHp = 100 + 10 * (up.vitality || 0) + 20 * lvOf('cloak');
-    P.speed = 150 * (1 + 0.05 * (up.swift || 0) + 0.1 * lvOf('boots'));
-    P.magnet = 85 * (1 + 0.15 * (up.reach || 0) + 0.3 * lvOf('lure'));
-    P.regen = 0.4 * lvOf('tea');
-    P.light = 220 * (1 + 0.15 * lvOf('wick'));
+    P.maxHp = 100 + 10 * U('vitality') + 20 * lvOf('cloak');
+    P.speed = 150 * (1 + 0.05 * U('swift') + 0.1 * lvOf('boots'));
+    P.magnet = 85 * (1 + 0.15 * U('reach') + 0.3 * lvOf('lure'));
+    P.regen = 0.4 * lvOf('tea') + 0.3 * U('herbs');
+    P.light = 220 * (1 + 0.15 * lvOf('wick') + 0.1 * U('farsight'));
     P.xpMul = 1 + 0.12 * lvOf('clover');
-    P.dmgMul = (1 + 0.06 * (up.power || 0)) * (1 + 0.1 * lvOf('ember'));
+    P.dmgMul = (1 + 0.06 * U('power')) * (1 + 0.1 * lvOf('ember'));
     P.cdMul = 1 - 0.08 * lvOf('feather');
+    P.crit = 0.05 * U('crit');
+    P.armor = 1 - 0.06 * U('bark');
   }
   const xpNeed = lv => Math.round(5 + lv * 5 + lv * lv * 0.15);
   function fmtClock(t) {
@@ -963,15 +1207,24 @@ h2 { margin: 0; font-family: var(--f-display); font-weight: 800; font-size: clam
   }
 
   // ---------- Lauf ----------
-  function startRun() {
+  function startRun(fromSave) {
     enemies = []; shots = []; spores = []; gems = []; loot = []; parts = []; texts = []; pulses = []; stars = []; flashes = [];
+    zones = [];
     run = {
       t: 0, kills: 0, amber: 0, xp: 0, lv: 1, need: xpNeed(1), pending: 0,
-      items: { spark: 1 }, ws: { spark: 0.4, ffA: 0, pulse: 1.2, stars: 1 },
-      acc: 0, nextWave: 50, boss: null, bossN: 0, rerolls: 1 + (save.up.luck || 0), revives: save.up.flame || 0,
+      items: { spark: 1 }, ws: { spark: 0.4, ffA: 0, pulse: 1.2, pulse2: 0, stars: 1 },
+      acc: 0, nextWave: 50, boss: null, bossN: 0, rerolls: 1 + U('luck'), revives: U('flame') + U('flame2'),
       won: false, dawnT: 0, deathT: 0, dawnSaid: false, choices: [], lvLock: 0,
+      dashCd: 0, beaconCd: 0, callCd: 0, target: null, starN: 0, saveT: 0,
     };
-    Object.assign(P, { x: 0, y: 0, face: 1, walk: 0, moving: false, inv: 1, dead: false });
+    if (U('starlore')) run.items.stars = 1;
+    if (U('backpack')) {
+      const pool = ['fireflies', 'pulse', 'stars'].filter(id => !run.items[id]);
+      run.items[pool[(Math.random() * pool.length) | 0]] = 1;
+    }
+    // eine neue Nacht ersetzt die gespeicherte
+    if (fromSave !== true && save.night) { save.night = null; persist(); }
+    Object.assign(P, { x: 0, y: 0, face: 1, walk: 0, moving: false, inv: 1, dead: false, dx: 1, dy: 0, dashT: 0 });
     recalc(); P.hp = P.maxHp;
     cam.x = 0; cam.y = 0;
     clearTimeout(bannerTimer); E('banner').classList.remove('show');
@@ -1030,20 +1283,73 @@ h2 { margin: 0; font-family: var(--f-display); font-weight: 800; font-size: clam
     if (keys.s || keys.arrowdown) iy += 1;
     const pad = padInput();
     if (pad) { ix = pad[0]; iy = pad[1]; }
-    if (joy.active) { ix = joy.dx; iy = joy.dy; }
+    if (joy.active && (joy.dx || joy.dy)) { ix = joy.dx; iy = joy.dy; }
     if (dbg.input) { ix = dbg.input.x; iy = dbg.input.y; }
     const m = Math.hypot(ix, iy);
     if (m > 1) { ix /= m; iy /= m; }
-    P.x += ix * P.speed * dt; P.y += iy * P.speed * dt;
+    if (m > 0.1) { const k = Math.hypot(ix, iy); P.dx = ix / k; P.dy = iy / k; }
+    if (P.dashT > 0) {
+      // Lichtsprung: schnell in Laufrichtung, mit Lichtspur
+      P.dashT -= dt;
+      P.x += P.dx * 760 * dt; P.y += P.dy * 760 * dt;
+      if (parts.length < 800) parts.push({ x: P.x, y: P.y - 2, vx: 0, vy: 0, life: 0.3, max: 0.3, r: 4, g: 'moon' });
+    } else { P.x += ix * P.speed * dt; P.y += iy * P.speed * dt; }
     P.moving = m > 0.1;
     if (Math.abs(ix) > 0.1) P.face = ix > 0 ? 1 : -1;
     if (P.moving) P.walk += dt;
     P.inv -= dt;
     P.hp = Math.min(P.maxHp, P.hp + P.regen * dt);
+    run.dashCd -= dt; run.beaconCd -= dt; run.callCd -= dt;
+    if (run.target && (run.target.t -= dt) <= 0) run.target = null;
+  }
+
+  // ---------- Fähigkeiten ----------
+  function doDash() {
+    const lv = U('dash');
+    if (state !== 'play' || !lv || run.dashCd > 0 || P.dead || run.won) return;
+    run.dashCd = lv >= 2 ? 3.5 : 5;
+    P.dashT = 0.16; P.inv = Math.max(P.inv, 0.35);
+    Snd.play('dash');
+  }
+  function doBeacon() {
+    const lv = U('beacon');
+    if (state !== 'play' || !lv || run.beaconCd > 0 || P.dead || run.won) return;
+    run.beaconCd = lv >= 2 ? 18 : 25;
+    const R = 320, dmg = (lv >= 2 ? 120 : 60) * P.dmgMul;
+    pulses.push({ x: P.x, y: P.y, R, life: 0.6, max: 0.6 });
+    flashes.push({ x: P.x, y: P.y, r: R * 1.2, life: 0.45, max: 0.45 });
+    for (const e of enemies) {
+      if (e.dead) continue;
+      const dx = e.x - P.x, dy = e.y - P.y, d = Math.hypot(dx, dy) || 1;
+      if (d < R + e.r) hit(e, dmg, dx / d, dy / d, 600);
+    }
+    for (const s of spores) if ((s.x - P.x) ** 2 + (s.y - P.y) ** 2 < R * R) s.dead = true;
+    shake(6); Snd.play('pulse'); Snd.play('moon');
+  }
+  // Sternenlenker und Sternenruf: Klick oder Tipp auf das Spielfeld
+  function starClick(sx, sy) {
+    if (state !== 'play' || !U('starguide') || P.dead || run.won) return;
+    const x = cam.x + (sx - W / 2) / zoom, y = cam.y + (sy - H / 2) / zoom;
+    run.target = { x, y, t: 3.5 };
+    const lv = U('starcall');
+    if (lv && run.callCd <= 0) {
+      run.callCd = [12, 10, 8][lv - 1];
+      const n = [3, 5, 7][lv - 1];
+      for (let i = 0; i < n; i++) addStar(x + rand(-55, 55), y + rand(-45, 45), 0.35 + i * 0.07, null);
+      Snd.play('moon');
+    } else Snd.play('click');
+  }
+  function addStar(x, y, t, e) {
+    const s = ITEMS.stars.s, l = Math.max(0, (run.items.stars || 1) - 1);
+    let dmg = s.dmg[l] * P.dmgMul, R = s.rad[l] * (1 + 0.15 * U('bigstars'));
+    const meteor = U('meteor') > 0 && ++run.starN % 4 === 0;
+    if (meteor) { dmg *= 3; R *= 1.6; }
+    stars.push({ e, x, y, t, R, dmg, meteor });
   }
 
   function hurtPlayer(d, src) {
     if (P.inv > 0 || P.dead || run.won) return;
+    d *= P.armor;
     P.hp -= d; P.inv = 0.6; shake(5); Snd.play('hurt');
     if (dbg.hurt) dbg.hurt[src] = (dbg.hurt[src] || 0) + Math.round(d);
     if (P.hp > 0) return;
@@ -1112,9 +1418,12 @@ h2 { margin: 0; font-family: var(--f-display); font-weight: 800; font-size: clam
   // ---------- Treffer, Beute, Erfahrung ----------
   function hit(e, dmg, nx, ny, kb) {
     if (e.dead) return;
+    const crit = Math.random() < P.crit;
+    if (crit) dmg *= 2;
+    if (e.d.boss) dmg *= 1 + 0.3 * U('wrath');
     e.hp -= dmg; e.fl = e.d.boss ? 0.06 : 0.1;
     if (kb && !e.d.boss) { const k = kb / e.d.mass; e.kx += nx * k; e.ky += ny * k; }
-    if (texts.length < 28) texts.push({ x: e.x + rand(-6, 6), y: e.y - e.r - 4, v: Math.round(dmg), life: 0.55 });
+    if (texts.length < (crit ? 40 : 28)) texts.push({ x: e.x + rand(-6, 6), y: e.y - e.r - 4, v: Math.round(dmg), life: crit ? 0.75 : 0.55, crit });
     Snd.play('hit');
     if (e.hp <= 0) kill(e);
   }
@@ -1131,10 +1440,10 @@ h2 { margin: 0; font-family: var(--f-display); font-weight: 800; font-size: clam
       flashes.push({ x: e.x, y: e.y, r: 320, life: 0.5, max: 0.5 });
       Snd.play('win');
     } else {
-      const r = Math.random();
-      if (r < 0.028) addLoot('amber', e.x, e.y);
-      else if (r < 0.038) addLoot('berry', e.x, e.y);
-      else if (r < 0.0398) addLoot('moon', e.x, e.y);
+      const r = Math.random(), berry = 0.007 * (1 + 0.6 * U('berries'));
+      if (r < 0.032) addLoot('amber', e.x, e.y);
+      else if (r < 0.032 + berry) addLoot('berry', e.x, e.y);
+      else if (r < 0.034 + berry) addLoot('moon', e.x, e.y);
     }
     smoke(e.x, e.y, d.boss ? 30 : 6, d.smoke);
     for (const [ex, ey] of d.eyes) parts.push({ x: e.x + ex * e.face, y: e.y + ey, vx: rand(-60, 60), vy: rand(-90, -30), life: 0.5, max: 0.5, r: 3, g: d.eye });
@@ -1185,7 +1494,7 @@ h2 { margin: 0; font-family: var(--f-display); font-weight: 800; font-size: clam
             const e = tg[i % tg.length];
             let a = Math.atan2(e.y - (P.y - 4), e.x - P.x);
             if (i >= tg.length) a += (i % 2 ? 1 : -1) * 0.2 * Math.ceil((i - tg.length + 1) / 2);
-            shots.push({ x: P.x + Math.cos(a) * 12, y: P.y - 4 + Math.sin(a) * 12, vx: Math.cos(a) * 560, vy: Math.sin(a) * 560, r: 6, dmg: s.dmg[l] * m, pierce: s.pierce[l], life: 1.1, hit: [] });
+            shots.push({ x: P.x + Math.cos(a) * 12, y: P.y - 4 + Math.sin(a) * 12, vx: Math.cos(a) * 560, vy: Math.sin(a) * 560, r: 6, dmg: s.dmg[l] * m, pierce: s.pierce[l] + U('pierce'), life: 1.1, hit: [] });
           }
           Snd.play('shoot');
         } else ws.spark = 0.1;
@@ -1193,7 +1502,7 @@ h2 { margin: 0; font-family: var(--f-display); font-weight: 800; font-size: clam
     }
     ff.length = 0;
     if (it.fireflies) {
-      const s = ITEMS.fireflies.s, l = it.fireflies - 1, n = s.n[l], R = s.rad[l];
+      const s = ITEMS.fireflies.s, l = it.fireflies - 1, n = s.n[l] + U('swarmer'), R = s.rad[l];
       ws.ffA += dt * s.sp[l];
       for (let i = 0; i < n; i++) {
         const a = ws.ffA + (i * TAU) / n, x = P.x + Math.cos(a) * R, y = P.y - 4 + Math.sin(a) * R;
@@ -1212,32 +1521,36 @@ h2 { margin: 0; font-family: var(--f-display); font-weight: 800; font-size: clam
       }
     }
     if (it.pulse) {
-      const s = ITEMS.pulse.s, l = it.pulse - 1;
-      if ((ws.pulse -= dt) <= 0) {
-        ws.pulse = s.cd[l] * P.cdMul;
-        const R = s.rad[l];
+      const s = ITEMS.pulse.s, l = it.pulse - 1, R = s.rad[l] * (1 + 0.1 * U('heat'));
+      const fire = f => {
         pulses.push({ x: P.x, y: P.y, R, life: 0.45, max: 0.45 });
         const q = query(P.x, P.y, R + 50);
         for (let j = 0; j < q.length; j++) {
           const e = q[j], dx = e.x - P.x, dy = e.y - P.y, d = Math.hypot(dx, dy) || 1;
-          if (d < R + e.r) hit(e, s.dmg[l] * m, dx / d, dy / d, 280);
+          if (d < R + e.r) hit(e, s.dmg[l] * m * f, dx / d, dy / d, 280);
         }
         for (const sp of spores) if ((sp.x - P.x) ** 2 + (sp.y - P.y) ** 2 < R * R) sp.dead = true;
         Snd.play('pulse');
-      }
+      };
+      if ((ws.pulse -= dt) <= 0) { ws.pulse = s.cd[l] * P.cdMul; fire(1); if (U('double')) ws.pulse2 = 0.3; }
+      if (ws.pulse2 > 0 && (ws.pulse2 -= dt) <= 0) fire(0.6);
     }
     if (it.stars) {
-      const s = ITEMS.stars.s, l = it.stars - 1;
+      const s = ITEMS.stars.s, l = it.stars - 1, n = s.n[l] + U('starswarm');
       if ((ws.stars -= dt) <= 0) {
-        const c = [];
-        for (const e of enemies) if (!e.dead && (e.x - P.x) ** 2 + (e.y - P.y) ** 2 < 440 * 440) c.push(e);
-        if (c.length) {
+        const tg = run.target;
+        if (tg) {
+          // Sternenlenker: die Salve schlägt dort ein, wo zuletzt geklickt wurde
           ws.stars = s.cd[l] * P.cdMul;
-          for (let i = 0; i < s.n[l] && c.length; i++) {
-            const e = c.splice((Math.random() * c.length) | 0, 1)[0];
-            stars.push({ e, x: e.x, y: e.y, t: 0.5, R: s.rad[l], dmg: s.dmg[l] * m });
-          }
-        } else ws.stars = 0.25;
+          for (let i = 0; i < n; i++) addStar(tg.x + rand(-45, 45), tg.y + rand(-35, 35), 0.5 + i * 0.06, null);
+        } else {
+          const c = [];
+          for (const e of enemies) if (!e.dead && (e.x - P.x) ** 2 + (e.y - P.y) ** 2 < 440 * 440) c.push(e);
+          if (c.length) {
+            ws.stars = s.cd[l] * P.cdMul;
+            for (let i = 0; i < n && c.length; i++) { const e = c.splice((Math.random() * c.length) | 0, 1)[0]; addStar(e.x, e.y, 0.5, e); }
+          } else ws.stars = 0.25;
+        }
       }
     }
   }
@@ -1248,7 +1561,10 @@ h2 { margin: 0; font-family: var(--f-display); font-weight: 800; font-size: clam
       if (d < s.R + e.r) hit(e, s.dmg, dx / d, dy / d, 160);
     }
     flashes.push({ x: s.x, y: s.y, r: s.R * 2.4, life: 0.3, max: 0.3 });
-    burst(s.x, s.y, 10, 'gold', 260); shake(2.5); Snd.play('star');
+    if (s.meteor) { burst(s.x, s.y, 24, 'amber', 380); shake(6); } else { burst(s.x, s.y, 10, 'gold', 260); shake(2.5); }
+    Snd.play('star');
+    const cr = U('crater');
+    if (cr) zones.push({ x: s.x, y: s.y, R: s.R * 0.9, life: 1 + cr, max: 1 + cr, tick: 0, dmg: s.dmg * 0.25 });
   }
 
   function updateShots(dt) {
@@ -1298,7 +1614,7 @@ h2 { margin: 0; font-family: var(--f-display); font-weight: 800; font-size: clam
       if (d < P.r + 6 || o.sp * dt >= d) {
         o.dead = true;
         if (o.t === 'amber') { run.amber++; Snd.play('amber'); }
-        else if (o.t === 'berry') { P.hp = Math.min(P.maxHp, P.hp + 30); Snd.play('heal'); burst(P.x, P.y, 8, 'berry', 120); }
+        else if (o.t === 'berry') { P.hp = Math.min(P.maxHp, P.hp + 30 * (1 + 0.25 * U('berries'))); Snd.play('heal'); burst(P.x, P.y, 8, 'berry', 120); }
         else { for (const g of gems) g.m = true; Snd.play('moon'); flashes.push({ x: P.x, y: P.y, r: 260, life: 0.4, max: 0.4 }); }
         continue;
       }
@@ -1321,6 +1637,14 @@ h2 { margin: 0; font-family: var(--f-display); font-weight: 800; font-size: clam
       s.t -= dt;
       if (s.e && !s.e.dead && s.t > 0.15) { s.x = s.e.x; s.y = s.e.y; }
       if (s.t <= 0) { s.dead = true; impact(s); }
+    }
+    for (const z of zones) {
+      z.life -= dt;
+      if (z.life <= 0) { z.dead = true; continue; }
+      if ((z.tick -= dt) > 0) continue;
+      z.tick = 0.5;
+      const q = query(z.x, z.y, z.R + 50);
+      for (let i = 0; i < q.length; i++) { const e = q[i]; if ((e.x - z.x) ** 2 + (e.y - z.y) ** 2 < (z.R + e.r) ** 2) hit(e, z.dmg, 0, 0, 0); }
     }
   }
 
@@ -1358,7 +1682,9 @@ h2 { margin: 0; font-family: var(--f-display); font-weight: 800; font-size: clam
     buildGrid(); separate();
     if (!P.dead && !run.won) updateWeapons(dt);
     updateShots(dt); updatePickups(dt); updateFx(dt);
-    for (const a of [enemies, shots, spores, gems, loot, parts, texts, pulses, stars, flashes]) compact(a);
+    for (const a of [enemies, shots, spores, gems, loot, parts, texts, pulses, stars, flashes, zones]) compact(a);
+    // alle 30 Sekunden still speichern, falls der Browser abstürzt
+    if (!P.dead && !run.won && (run.saveT += dt) > 30) { run.saveT = 0; saveNight(true); }
     const k = 1 - Math.exp(-dt * 7);
     cam.x += (P.x - cam.x) * k; cam.y += (P.y - cam.y) * k;
     if (run.pending > 0 && !P.dead && !run.won) openLevelUp();
@@ -1435,6 +1761,8 @@ h2 { margin: 0; font-family: var(--f-display); font-weight: 800; font-size: clam
     ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
     ctx.fillStyle = groundPat; ctx.fillRect(L, T0, R - L, B - T0);
     drawDecor(L, T0, R, B);
+    for (const z of zones) if (inView(z.x, z.y)) { ctx.globalAlpha = Math.min(1, (z.life / z.max) * 1.5) * 0.6; ctx.drawImage(shadowSpr, z.x - z.R, z.y - z.R * 0.6, z.R * 2, z.R * 1.2); }
+    ctx.globalAlpha = 1;
 
     // Funken und Beute
     for (const g of gems) if (inView(g.x, g.y)) { const s = gemSpr[gemTier(g.v)]; ctx.drawImage(s.c, g.x - 7, g.y - 7, 14, 14); }
@@ -1492,6 +1820,8 @@ h2 { margin: 0; font-family: var(--f-display); font-weight: 800; font-size: clam
     for (const p of pulses) { const q = 1 - p.life / p.max; light(p.x, p.y, p.R * (0.3 + 0.8 * q), (1 - q) * 0.8); }
     for (const f of flashes) light(f.x, f.y, f.r, f.life / f.max);
     for (const s of stars) { const q = s.t / 0.5; light(s.x + 220 * q, s.y - 620 * q, 90, 0.7); light(s.x, s.y, s.R * 1.3, 0.25); }
+    for (const z of zones) light(z.x, z.y, z.R * 1.4, 0.45 * Math.min(1, (z.life / z.max) * 1.5));
+    if (run && run.target) light(run.target.x, run.target.y, 80, 0.4);
     for (const g of gems) if (Lc < 420 && inView(g.x, g.y)) light(g.x, g.y, 20, 0.45);
 
     // Dunkelheit
@@ -1544,15 +1874,32 @@ h2 { margin: 0; font-family: var(--f-display); font-weight: 800; font-size: clam
     }
     for (let i = 0; i < menuMoths.length; i += 2) glow('eyeR', menuMoths[i] + 4, menuMoths[i + 1], 3, 0.8);
     for (const s of stars) {
-      const qq = s.t / 0.5, hx = s.x + 220 * qq, hy = s.y - 620 * qq;
+      const qq = s.t / 0.5, hx = s.x + 220 * qq, hy = s.y - 620 * qq, big = s.meteor ? 1.7 : 1;
       ctx.globalAlpha = 1;
-      ctx.strokeStyle = `rgba(255,200,120,${0.25 + 0.4 * (1 - qq)})`; ctx.lineWidth = 2; ctx.setLineDash([6, 6]);
+      ctx.strokeStyle = s.meteor ? `rgba(255,130,70,${Math.max(0, 0.3 + 0.45 * (1 - qq))})` : `rgba(255,200,120,${Math.max(0, 0.25 + 0.4 * (1 - qq))})`;
+      ctx.lineWidth = 2 * big; ctx.setLineDash([6, 6]);
       ctx.beginPath(); ctx.arc(s.x, s.y, s.R, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
-      ctx.strokeStyle = 'rgba(255,230,170,.45)'; ctx.lineWidth = 3;
-      ctx.beginPath(); ctx.moveTo(hx + 60, hy - 170); ctx.lineTo(hx, hy); ctx.stroke();
-      glow('gold', hx, hy, 26, 1); glow('white', hx, hy, 6, 1);
+      ctx.strokeStyle = s.meteor ? 'rgba(255,160,90,.6)' : 'rgba(255,230,170,.45)'; ctx.lineWidth = 3 * big;
+      ctx.beginPath(); ctx.moveTo(hx + 60 * big, hy - 170 * big); ctx.lineTo(hx, hy); ctx.stroke();
+      glow(s.meteor ? 'amber' : 'gold', hx, hy, 26 * big, 1); glow('white', hx, hy, 6 * big, 1);
     }
     for (const f of flashes) { const a = f.life / f.max; glow('gold', f.x, f.y, f.r * (1 - a * 0.3), a * 0.7); }
+    for (const z of zones) {
+      const a = Math.min(1, (z.life / z.max) * 1.5);
+      glow('amber', z.x, z.y, z.R * 1.1, 0.3 * a);
+      ctx.globalAlpha = 1; ctx.strokeStyle = `rgba(255,140,60,${0.55 * a})`; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(z.x, z.y, z.R * (0.85 + 0.05 * Math.sin(time * 8 + z.x)), 0, TAU); ctx.stroke();
+    }
+    if (run && run.target) {
+      // Zielmarke des Sternenlenkers
+      const tg = run.target, a = Math.min(1, tg.t / 0.6);
+      ctx.globalAlpha = 1; ctx.strokeStyle = `rgba(195,166,255,${0.65 * a})`; ctx.lineWidth = 2;
+      ctx.setLineDash([6, 8]); ctx.lineDashOffset = -time * 24;
+      ctx.beginPath(); ctx.arc(tg.x, tg.y, 46, 0, TAU); ctx.stroke();
+      ctx.setLineDash([]); ctx.lineDashOffset = 0;
+      for (let i = 0; i < 4; i++) { const an = time * 1.5 + (i * TAU) / 4; glow('lilac', tg.x + Math.cos(an) * 46, tg.y + Math.sin(an) * 46, 9, a); }
+      glow('lilac', tg.x, tg.y, 18, 0.7 * a);
+    }
     for (const p of pulses) {
       const qq = 1 - p.life / p.max, r = p.R * (0.25 + 0.75 * (1 - (1 - qq) * (1 - qq)));
       ctx.globalAlpha = 1;
@@ -1579,11 +1926,12 @@ h2 { margin: 0; font-family: var(--f-display); font-weight: 800; font-size: clam
 
     // Schadenszahlen in Bildschirm-Pixeln
     if (texts.length) {
-      ctx.font = '700 15px "Barlow Semi Condensed", "Arial Narrow", sans-serif';
-      ctx.textAlign = 'center'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(5,6,12,.85)'; ctx.fillStyle = '#fff1d6';
+      ctx.textAlign = 'center'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(5,6,12,.85)';
       for (const t of texts) {
         const sx = (t.x - cx) * zoom + W / 2, sy = (t.y - cy) * zoom + H / 2;
         ctx.globalAlpha = Math.min(1, t.life / 0.25);
+        ctx.font = t.crit ? '700 21px "Barlow Semi Condensed", "Arial Narrow", sans-serif' : '700 15px "Barlow Semi Condensed", "Arial Narrow", sans-serif';
+        ctx.fillStyle = t.crit ? '#ffc94d' : '#fff1d6';
         ctx.strokeText(t.v, sx, sy); ctx.fillText(t.v, sx, sy);
       }
     }
@@ -1605,7 +1953,7 @@ h2 { margin: 0; font-family: var(--f-display); font-weight: 800; font-size: clam
   function setText(id, v) { if (txt[id] !== v) { txt[id] = v; E(id).textContent = v; } }
 
   function showScreen(id) {
-    for (const s of ['menu', 'shop', 'lvl', 'pause', 'over']) E(s).hidden = s !== id;
+    for (const s of ['menu', 'shop', 'slotsScr', 'lvl', 'pause', 'over']) E(s).hidden = s !== id;
     E('hud').hidden = !(state === 'play' || state === 'levelup' || state === 'pause');
   }
   let bannerTimer = 0;
@@ -1629,6 +1977,29 @@ h2 { margin: 0; font-family: var(--f-display); font-weight: 800; font-size: clam
       E('boss').hidden = false; setText('bossName', T('bossName'));
       E('bossFill').style.width = ((Math.max(0, b.hp) / b.max) * 100).toFixed(1) + '%';
     } else E('boss').hidden = true;
+    updateAbil();
+  }
+  // Knöpfe der Fähigkeiten mit ablaufender Abklingzeit
+  function updateAbil() {
+    const show = (id, lv, cd, max) => {
+      const el = E(id);
+      el.hidden = !lv;
+      if (!lv) return;
+      const v = (cd > 0 ? Math.min(1, cd / max) : 0).toFixed(2);
+      if (el.dataset.p !== v) { el.dataset.p = v; el.style.setProperty('--p', v); el.classList.toggle('ready', v === '0.00'); }
+    };
+    const sc = U('starcall');
+    show('abDash', U('dash'), run.dashCd, U('dash') >= 2 ? 3.5 : 5);
+    show('abBeacon', U('beacon'), run.beaconCd, U('beacon') >= 2 ? 18 : 25);
+    show('abStar', U('starguide'), sc ? run.callCd : 0, sc ? [12, 10, 8][sc - 1] : 1);
+    E('abil').hidden = !(U('dash') || U('beacon') || U('starguide'));
+  }
+  let toastTimer = 0;
+  function toast(text) {
+    const t = E('toast');
+    t.textContent = text; t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 1700);
   }
   function updateInv() {
     const box = E('inv');
@@ -1650,8 +2021,8 @@ h2 { margin: 0; font-family: var(--f-display); font-weight: 800; font-size: clam
       const lv = run.items[id] || 0;
       if (lv < ITEMS[id].max) pool.push({ id, w: lv > 0 ? 1.4 : ITEMS[id].kind === 'w' ? 1.1 : 1 });
     }
-    const out = [];
-    while (out.length < 3 && pool.length) {
+    const out = [], want = 3 + U('fourth');
+    while (out.length < want && pool.length) {
       let r = Math.random() * pool.reduce((s, p) => s + p.w, 0), k = 0;
       while (k < pool.length - 1 && (r -= pool[k].w) > 0) k++;
       out.push(pool[k].id); pool.splice(k, 1);
@@ -1669,6 +2040,7 @@ h2 { margin: 0; font-family: var(--f-display); font-weight: 800; font-size: clam
   function renderCards() {
     const box = E('cards');
     box.innerHTML = '';
+    box.classList.toggle('four', run.choices.length > 3);
     setText('lvTitle', tf('lvTitle', { n: run.lv - run.pending + 1 }));
     run.choices.forEach((id, i) => {
       const b = document.createElement('button');
@@ -1729,11 +2101,11 @@ h2 { margin: 0; font-family: var(--f-display); font-weight: 800; font-size: clam
   function endRun(won) {
     state = 'over'; joy.active = false;
     Platform.gameplayStop();
-    const t = Math.min(run.t, RUN_LEN), greed = 1 + 0.15 * (save.up.greed || 0);
-    const drops = run.amber, timeB = Math.floor(t / 15), winB = won ? 40 : 0;
+    const t = Math.min(run.t, RUN_LEN), greed = 1 + 0.15 * U('greed');
+    const drops = run.amber, timeB = Math.floor(t / 10), winB = won ? 80 : 0;
     const total = Math.round((drops + timeB + winB) * greed);
     const rec = t > save.best + 0.5;
-    save.amber += total; save.runs++;
+    save.amber += total; save.runs++; save.night = null;
     if (won) save.wins++;
     if (t > save.best) save.best = t;
     persist();
@@ -1754,40 +2126,209 @@ h2 { margin: 0; font-family: var(--f-display); font-weight: 800; font-size: clam
   function toMenu() {
     run = null;
     enemies = []; shots = []; spores = []; gems = []; loot = []; parts = []; texts = []; pulses = []; stars = []; flashes = [];
-    ff.length = 0; P.dead = false;
+    zones = []; ff.length = 0; P.dead = false;
     recalc();
     state = 'menu'; showScreen('menu'); updateMenuMeta();
   }
-  function openShop(from) { shopFrom = from; state = 'shop'; renderShop(); showScreen('shop'); }
+  // ---------- Werkstatt: Sternkarte ----------
+  let selNode = null, treeDrag = null, treeMoved = false, treeScale = 0;
+  function nodeState(t) {
+    if (t.id === 'root') return 'max';
+    const lv = U(t.id);
+    if (lv >= t.max) return 'max';
+    if (lv > 0) return 'part';
+    return t.p === 'root' || U(t.p) > 0 ? 'avail' : 'locked';
+  }
+  function openShop(from) {
+    shopFrom = from; state = 'shop';
+    showScreen('shop');   // zuerst sichtbar machen, damit die Karte ihre Größe kennt
+    if (!selNode) selNode = (TREE.find(t => t.max && nodeState(t) === 'avail') || NODE.root).id;
+    renderShop();
+  }
   function closeShop() { state = shopFrom; showScreen(shopFrom); updateMenuMeta(); }
 
   function renderShop() {
-    E('shopAmber').textContent = save.amber;
-    const grid = E('shopGrid');
-    grid.innerHTML = '';
-    for (const m of META) {
-      const lv = save.up[m.id] || 0, maxed = lv >= m.max, cost = maxed ? 0 : m.cost[lv];
-      const el = document.createElement('div');
-      el.className = 'up';
-      el.innerHTML = `${icon(m.icon)}<div class="up-body"><h3>${m.name[lang]}</h3><p>${m.d[lang]}</p><span class="pips" aria-label="${lv} / ${m.max}">${'<i class="on"></i>'.repeat(lv)}${'<i></i>'.repeat(m.max - lv)}</span></div>`;
-      const b = document.createElement('button');
-      b.type = 'button'; b.className = 'btn small buy'; b.id = 'buy-' + m.id;
-      if (maxed) { b.textContent = T('maxed'); b.disabled = true; }
-      else {
-        b.innerHTML = `${cost}${icon('amber')}`;
-        b.setAttribute('aria-label', `${T('buy')}: ${m.name[lang]}, ${cost} ${T('amber')}`);
-        b.disabled = save.amber < cost;
-        b.addEventListener('click', () => {
-          if (save.amber < cost) return;
-          save.amber -= cost; save.up[m.id] = lv + 1; persist();
-          Snd.play('amber'); recalc(); renderShop(); updateMenuMeta();
-          const nb = $('buy-' + m.id);
-          if (nb && !nb.disabled) nb.focus();
-        });
-      }
-      el.appendChild(b);
-      grid.appendChild(el);
+    const wrap = E('treeWrap'), tree = E('tree');
+    const keepL = wrap.scrollLeft, keepT = wrap.scrollTop;
+    const s = clamp(Math.min(wrap.clientWidth / 1100, wrap.clientHeight / 820), 0.62, 1), ns = s < 0.8 ? 44 : 52;
+    const first = s !== treeScale;   // neue Größe: wieder auf die Laterne zentrieren
+    treeScale = s;
+    tree.style.width = 1100 * s + 'px'; tree.style.height = 820 * s + 'px';
+    let lines = '', html = '', lit = 0;
+    for (const t of TREE) {
+      if (t.id === 'root') continue;
+      lit += Math.min(U(t.id), t.max);
+      const p = NODE[t.p], st = nodeState(t);
+      lines += `<line x1="${p.x * s}" y1="${p.y * s}" x2="${t.x * s}" y2="${t.y * s}" class="${U(t.id) ? 'own' : st === 'avail' ? 'avail' : ''}" style="--c:${BR[t.br].c}"/>`;
     }
+    for (const t of TREE) {
+      const lv = U(t.id), cls = `node ${nodeState(t)}${t.act ? ' act' : ''}${t.id === 'root' ? ' root' : ''}${selNode === t.id ? ' sel' : ''}`;
+      html += `<button type="button" class="${cls}" data-id="${t.id}" style="--c:${BR[t.br].c};--ns:${t.id === 'root' ? 66 : ns}px;left:${t.x * s}px;top:${t.y * s}px" aria-label="${t.name[lang]}${t.max ? `, ${lv} / ${t.max}` : ''}">${icon(t.icon)}${t.max ? `<b>${lv}/${t.max}</b>` : ''}</button>`;
+    }
+    for (const k in BR) {
+      const b = BR[k];
+      if (b.de) html += `<span class="br-label" style="--c:${b.c};${b.right ? `right:${(1100 - b.x) * s}px` : `left:${b.x * s}px`};top:${b.y * s}px">${b[lang]}</span>`;
+    }
+    tree.innerHTML = `<svg aria-hidden="true">${lines}</svg>${html}`;
+    E('litCount').textContent = tf('lit', { a: lit, b: TOTAL_LIT });
+    E('shopAmber').textContent = save.amber;
+    if (first) { wrap.scrollLeft = 550 * s - wrap.clientWidth / 2; wrap.scrollTop = 410 * s - wrap.clientHeight / 2; }
+    else { wrap.scrollLeft = keepL; wrap.scrollTop = keepT; }
+    renderNodeInfo();
+  }
+  function renderNodeInfo() {
+    const t = NODE[selNode] || NODE.root, lv = U(t.id), st = nodeState(t), box = E('nodeInfo');
+    box.style.setProperty('--c', BR[t.br].c);
+    const tag = t.id === 'root' ? '' : `<span class="ni-tag">${T(t.act ? 'tagAbility' : 'tagTalent')} · ${BR[t.br][lang]}</span>`;
+    const pips = t.max ? `<span class="pips" aria-label="${lv} / ${t.max}">${'<i class="on"></i>'.repeat(lv)}${'<i></i>'.repeat(t.max - lv)}</span>` : '';
+    let action = '';
+    if (t.max) {
+      if (lv >= t.max) action = `<button class="btn buy" type="button" disabled>${T('maxed')}</button>`;
+      else if (st === 'locked') action = `<span class="ni-need">${tf('need', { n: NODE[t.p].name[lang] })}</span>`;
+      else {
+        const cost = t.cost[lv];
+        action = `<button class="btn primary buy" id="buyBtn" type="button"${save.amber < cost ? ' disabled' : ''} aria-label="${T('buyFor')}: ${t.name[lang]}, ${cost} ${T('amber')}">${T('buyFor')} · ${cost}${icon('amber')}</button>`;
+      }
+    }
+    box.innerHTML = `${icon(t.icon)}<div class="ni-body">${tag}<h3>${t.name[lang]}</h3><p>${t.d[lang]}</p>${pips}</div>${action}`;
+    const bb = $('buyBtn');
+    if (bb) bb.addEventListener('click', () => buyNode(t.id));
+  }
+  function buyNode(id) {
+    const t = NODE[id], lv = U(id);
+    if (lv >= t.max || nodeState(t) === 'locked' || save.amber < t.cost[lv]) return;
+    save.amber -= t.cost[lv]; save.up[id] = lv + 1; persist();
+    Snd.play('amber'); recalc(); renderShop(); updateMenuMeta();
+    const bb = $('buyBtn');
+    if (bb && !bb.disabled) bb.focus();
+  }
+
+  // ---------- Nacht speichern und fortsetzen ----------
+  const EN_KEYS = Object.keys(EN);
+  const r1 = v => Math.round(v * 10) / 10;
+  function packNight() {
+    const R = run;
+    return {
+      run: {
+        t: R.t, kills: R.kills, amber: R.amber, xp: R.xp, lv: R.lv, need: R.need, pending: R.pending, items: R.items, ws: R.ws,
+        acc: R.acc, nextWave: R.nextWave, bossN: R.bossN, rerolls: R.rerolls, revives: R.revives, dawnSaid: R.dawnSaid,
+        dashCd: R.dashCd, beaconCd: R.beaconCd, callCd: R.callCd, starN: R.starN,
+      },
+      p: [r1(P.x), r1(P.y), r1(P.hp), P.face],
+      en: enemies.filter(e => !e.dead).map(e => [EN_KEYS.indexOf(e.type), r1(e.x), r1(e.y), r1(e.hp), r1(e.max), e.st, r1(e.tm), r1(e.t2), r1(e.ax), r1(e.ay), e === R.boss ? 1 : 0]),
+      gems: gems.filter(g => !g.dead).map(g => [r1(g.x), r1(g.y), g.v]),
+      loot: loot.filter(o => !o.dead).map(o => [o.t, r1(o.x), r1(o.y)]),
+    };
+  }
+  function saveNight(quiet) {
+    if (!run || P.dead || run.won) return;
+    save.night = packNight(); persist();
+    if (!quiet) toast(T('saved'));
+  }
+  function resumeNight() {
+    const n = save.night;
+    if (!n) return;
+    startRun(true);   // frische Nacht, dann den gespeicherten Stand darüberlegen
+    Object.assign(run, n.run);
+    run.ws = Object.assign({ spark: 0.4, ffA: 0, pulse: 1.2, pulse2: 0, stars: 1 }, n.run.ws);
+    recalc();
+    [P.x, P.y, P.hp, P.face] = n.p;
+    P.hp = Math.min(P.hp, P.maxHp); P.inv = 1.5;
+    enemies = [];
+    for (const a of n.en) {
+      const type = EN_KEYS[a[0]];
+      if (!type) continue;
+      const e = spawnEnemy(type, a[1], a[2]);
+      Object.assign(e, { hp: a[3], max: a[4], st: a[5], tm: a[6], t2: a[7], ax: a[8], ay: a[9] });
+      if (a[10]) run.boss = e;
+    }
+    gems = n.gems.map(([x, y, v]) => ({ x, y, v, m: false, sp: 0 }));
+    loot = n.loot.map(([t, x, y]) => ({ t, x, y, m: false, sp: 0 }));
+    cam.x = P.x; cam.y = P.y;
+    updateInv(); updateHud();
+  }
+
+  // ---------- Spielstände ----------
+  let slotConfirm = -1, importArmed = false;
+  const slotLabel = i => (store.slots[i] && store.slots[i].name) || tf('slotN', { n: i + 1 });
+  const esc = s => String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+  const litOf = s => TREE.reduce((a, t) => a + Math.min(s.up[t.id] || 0, t.max), 0);
+  function makeBtn(label, cls, fn) {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = cls; b.textContent = label;
+    b.addEventListener('click', () => { Snd.play('click'); fn(); });
+    return b;
+  }
+  function note(text, bad) { const n = E('slotNote'); n.textContent = text; n.classList.toggle('bad', !!bad); }
+  function openSlots() {
+    state = 'slots'; slotConfirm = -1; importArmed = false;
+    E('importCode').value = ''; note('');
+    renderSlots(); showScreen('slotsScr');
+  }
+  function closeSlots() { state = 'menu'; showScreen('menu'); updateMenuMeta(); }
+  function renderSlots() {
+    const box = E('slotList');
+    box.innerHTML = '';
+    store.slots.forEach((s, i) => {
+      const el = document.createElement('div');
+      el.className = 'slot' + (i === store.cur ? ' cur' : '');
+      const row = document.createElement('div');
+      row.className = 'row';
+      if (s) {
+        el.innerHTML = `<input class="slot-name" id="slotName${i}" maxlength="20" value="${esc(slotLabel(i))}" aria-label="${T('rename')}">` +
+          `<p class="slot-stats"><span>${icon('amber')}<b>${s.amber}</b></span><span>${T('best')}: <b>${s.best > 0 ? fmtClock(s.best) : '–'}</b></span><span><b>${litOf(s)}</b> / ${TOTAL_LIT} ${T('starsShort')}</span></p>` +
+          (s.night ? `<p class="slot-night">${tf('nightSaved', { c: fmtClock(s.night.run.t) })}</p>` : '');
+        el.querySelector('input').addEventListener('change', ev => { s.name = ev.target.value.trim().slice(0, 20); persist(); updateMenuMeta(); });
+        if (i === store.cur) row.insertAdjacentHTML('beforeend', `<span class="ni-tag" style="--c: var(--amber)">${T('active')}</span>`);
+        else row.appendChild(makeBtn(T('useSlot'), 'btn small primary', () => useSlot(i)));
+        row.appendChild(makeBtn(slotConfirm === i ? T('delSure') : T('del'), 'btn small', () => delSlot(i)));
+      } else {
+        el.innerHTML = `<p class="slot-name">${tf('slotN', { n: i + 1 })}</p><p class="slot-empty">${T('emptySlot')}</p>`;
+        row.appendChild(makeBtn(T('newSlot'), 'btn small primary', () => { store.slots[i] = newSlot(); useSlot(i); }));
+      }
+      el.appendChild(row);
+      box.appendChild(el);
+    });
+    E('exportCode').value = exportCode();
+    E('importBtn').textContent = importArmed ? tf('importSure', { n: slotLabel(store.cur) }) : T('importBtn');
+  }
+  function useSlot(i) {
+    store.cur = i; save = store.slots[i]; slotConfirm = -1; selNode = null;
+    persist(); recalc(); renderSlots(); updateMenuMeta(); note(T('switched'));
+  }
+  function delSlot(i) {
+    if (slotConfirm !== i) { slotConfirm = i; renderSlots(); return; }
+    slotConfirm = -1;
+    store.slots[i] = i === store.cur ? newSlot() : null;
+    if (i === store.cur) { save = store.slots[i]; selNode = null; }
+    persist(); recalc(); renderSlots(); updateMenuMeta(); note(T('deleted'));
+  }
+  // Speicher-Code: Spielstand ohne gespeicherte Nacht als Base64-Text
+  function exportCode() {
+    const bytes = new TextEncoder().encode(JSON.stringify({ ...save, night: null, played: 0 }));
+    let bin = '';
+    for (const b of bytes) bin += String.fromCharCode(b);
+    return 'LN1-' + btoa(bin);
+  }
+  function parseCode(code) {
+    try {
+      const c = code.replace(/\s+/g, '');
+      if (!c.startsWith('LN1-')) return null;
+      const o = JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(c.slice(4)), ch => ch.charCodeAt(0))));
+      if (!o || typeof o.amber !== 'number' || typeof o.up !== 'object') return null;
+      const up = {};
+      for (const t of TREE) if (t.max && Number.isFinite(o.up[t.id])) up[t.id] = clamp(Math.floor(o.up[t.id]), 0, t.max);
+      return { ...newSlot(String(o.name || '').slice(0, 20)), amber: Math.max(0, Math.floor(o.amber)), best: clamp(+o.best || 0, 0, RUN_LEN), wins: Math.max(0, o.wins | 0), runs: Math.max(0, o.runs | 0), up };
+    } catch (e) { return null; }
+  }
+  function doImport() {
+    const s = parseCode(E('importCode').value);
+    if (!s) { importArmed = false; renderSlots(); note(T('badCode'), true); return; }
+    if (!importArmed) { importArmed = true; renderSlots(); note(tf('importWarn', { n: slotLabel(store.cur) })); return; }
+    importArmed = false;
+    store.slots[store.cur] = s; save = s; selNode = null;
+    persist(); recalc(); E('importCode').value = '';
+    renderSlots(); updateMenuMeta(); note(T('imported'));
   }
 
   function updateMenuMeta() {
@@ -1795,16 +2336,27 @@ h2 { margin: 0; font-family: var(--f-display); font-weight: 800; font-size: clam
     E('winsVal').textContent = save.wins > 0 ? tf('wins', { n: save.wins }) : '';
     E('winsVal').hidden = save.wins <= 0;
     E('amberVal').textContent = save.amber;
+    E('slotName').textContent = slotLabel(store.cur);
+    // gespeicherte Nacht: „Fortsetzen“ wird zum Hauptknopf
+    const n = save.night;
+    E('contBtn').hidden = !n;
+    if (n) E('contBtn').textContent = tf('cont', { c: fmtClock(n.run.t) });
+    E('playBtn').textContent = T(n ? 'newNight' : 'play');
+    E('playBtn').classList.toggle('primary', !n);
   }
   function updateToggles() {
-    const m = `${T('music')}: ${save.music ? T('on') : T('off')}`, s = `${T('sound')}: ${save.sfx ? T('on') : T('off')}`;
-    for (const id of ['musBtn', 'musBtn2']) { E(id).textContent = m; E(id).setAttribute('aria-pressed', String(save.music)); }
-    for (const id of ['sfxBtn', 'sfxBtn2']) { E(id).textContent = s; E(id).setAttribute('aria-pressed', String(save.sfx)); }
+    const m = `${T('music')}: ${store.music ? T('on') : T('off')}`, s = `${T('sound')}: ${store.sfx ? T('on') : T('off')}`;
+    for (const id of ['musBtn', 'musBtn2']) { E(id).textContent = m; E(id).setAttribute('aria-pressed', String(store.music)); }
+    for (const id of ['sfxBtn', 'sfxBtn2']) { E(id).textContent = s; E(id).setAttribute('aria-pressed', String(store.sfx)); }
     E('langBtn').textContent = T('langBtn');
   }
   function applyLang() {
     document.documentElement.lang = lang;
     document.querySelectorAll('[data-t]').forEach(el => { el.textContent = T(el.dataset.t); });
+    E('kStar').textContent = T(matchMedia('(hover: none)').matches ? 'kTap' : 'kClick');
+    E('abDash').setAttribute('aria-label', NODE.dash.name[lang]);
+    E('abBeacon').setAttribute('aria-label', NODE.beacon.name[lang]);
+    E('abStar').title = NODE.starguide.name[lang];
     updateToggles(); updateMenuMeta();
   }
 
@@ -1812,20 +2364,61 @@ h2 { margin: 0; font-family: var(--f-display); font-weight: 800; font-size: clam
   document.querySelectorAll('[data-ico]').forEach(el => el.insertAdjacentHTML('afterbegin', icon(el.dataset.ico)));
   const on = (id, fn) => E(id).addEventListener('click', () => { Snd.init(); Snd.play('click'); fn(); });
   on('playBtn', startRun);
+  on('contBtn', resumeNight);
   on('shopBtn', () => openShop('menu'));
   on('shopBack', closeShop);
+  on('slotsBtn', openSlots);
+  on('slotsBack', closeSlots);
+  on('importBtn', doImport);
+  E('importCode').addEventListener('input', () => { if (importArmed) { importArmed = false; renderSlots(); note(''); } });
+  E('copyBtn').addEventListener('click', () => {
+    const ta = E('exportCode');
+    const manual = () => { ta.focus(); ta.select(); note(T('copyManual')); };
+    try { navigator.clipboard.writeText(ta.value).then(() => note(T('copied')), manual); } catch (e) { manual(); }
+  });
   on('pauseBtn', pause);
   on('resumeBtn', resume);
+  on('saveQuitBtn', () => { saveNight(); Platform.gameplayStop(); toMenu(); });
   on('quitBtn', () => endRun(false));
+  // Fähigkeiten per Knopf (pointerdown reagiert auf dem Handy sofort)
+  for (const [id, fn] of [['abDash', () => doDash()], ['abBeacon', () => doBeacon()]]) {
+    E(id).addEventListener('pointerdown', e => { e.preventDefault(); fn(); });
+    E(id).addEventListener('click', fn);
+  }
+  // Sternkarte: anklicken wählt einen Stern, mit der Maus ziehen verschiebt die Karte
+  E('tree').addEventListener('click', e => {
+    const b = e.target.closest('.node');
+    if (!b || treeMoved) return;
+    selNode = b.dataset.id; Snd.play('click');
+    E('tree').querySelectorAll('.node.sel').forEach(n => n.classList.remove('sel'));
+    b.classList.add('sel');
+    renderNodeInfo();
+  });
+  E('treeWrap').addEventListener('pointerdown', e => {
+    if (e.pointerType !== 'mouse' || e.button !== 0) return;
+    const w = E('treeWrap');
+    treeDrag = { x: e.clientX, y: e.clientY, l: w.scrollLeft, t: w.scrollTop }; treeMoved = false;
+  });
+  addEventListener('pointermove', e => {
+    if (!treeDrag) return;
+    const w = E('treeWrap'), dx = e.clientX - treeDrag.x, dy = e.clientY - treeDrag.y;
+    if (!treeMoved && Math.hypot(dx, dy) > 5) { treeMoved = true; w.classList.add('dragging'); }
+    if (treeMoved) { w.scrollLeft = treeDrag.l - dx; w.scrollTop = treeDrag.t - dy; }
+  });
+  addEventListener('pointerup', () => {
+    if (!treeDrag) return;
+    treeDrag = null; E('treeWrap').classList.remove('dragging');
+    setTimeout(() => { treeMoved = false; }, 0);
+  });
   on('againBtn', () => Platform.breakAd(startRun));
   on('overShop', () => openShop('over'));
   on('overMenu', toMenu);
   on('rerollBtn', reroll);
-  const toggleMusic = () => { save.music = !save.music; persist(); Snd.applyVolumes(); updateToggles(); };
-  const toggleSfx = () => { save.sfx = !save.sfx; persist(); Snd.applyVolumes(); updateToggles(); };
+  const toggleMusic = () => { store.music = !store.music; persist(); Snd.applyVolumes(); updateToggles(); };
+  const toggleSfx = () => { store.sfx = !store.sfx; persist(); Snd.applyVolumes(); updateToggles(); };
   on('musBtn', toggleMusic); on('musBtn2', toggleMusic);
   on('sfxBtn', toggleSfx); on('sfxBtn2', toggleSfx);
-  on('langBtn', () => { lang = lang === 'de' ? 'en' : 'de'; save.lang = lang; persist(); applyLang(); });
+  on('langBtn', () => { lang = lang === 'de' ? 'en' : 'de'; store.lang = lang; persist(); applyLang(); });
 
   // Ton erst nach der ersten Berührung (Browser-Regel)
   const firstGesture = () => { Snd.init(); Music.start(); };
@@ -1837,24 +2430,37 @@ h2 { margin: 0; font-family: var(--f-display); font-weight: 800; font-size: clam
     if (state === 'play' && k.startsWith('arrow')) e.preventDefault();
     keys[k] = true;
     if (k === 'escape' || k === 'p') { if (state === 'play') pause(); else if (state === 'pause') resume(); }
+    if (state === 'play') {
+      if (k === ' ' || k === 'shift') { e.preventDefault(); doDash(); }
+      if (k === 'e') doBeacon();
+    }
     if (state === 'levelup') {
-      if (k >= '1' && k <= '3' && run.choices[+k - 1]) pick(run.choices[+k - 1]);
+      if (k >= '1' && k <= '4' && run.choices[+k - 1]) pick(run.choices[+k - 1]);
       if (k === 'r') reroll();
     }
   });
   addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
   addEventListener('blur', () => { for (const k in keys) keys[k] = false; pause(); });
+  // beim Verlassen der Seite die laufende Nacht still sichern
+  const autoSave = () => { if (run && (state === 'play' || state === 'pause' || state === 'levelup')) saveNight(true); };
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden) { pause(); if (Snd.ctx) Snd.ctx.suspend().catch(() => {}); }
+    if (document.hidden) { autoSave(); pause(); if (Snd.ctx) Snd.ctx.suspend().catch(() => {}); }
     else if (Snd.ctx) Snd.ctx.resume().catch(() => {});
   });
+  addEventListener('pagehide', autoSave);
 
+  // Maus: Klick lenkt die Sterne. Finger: ziehen = laufen, kurz tippen = Sterne lenken.
+  const taps = new Map();
   cv.addEventListener('pointerdown', e => {
     if (state !== 'play') return;
-    joy.active = true; joy.id = e.pointerId; joy.ox = e.clientX; joy.oy = e.clientY; joy.dx = joy.dy = 0;
+    if (e.pointerType === 'mouse') { if (e.button === 0) starClick(e.clientX, e.clientY); return; }
+    taps.set(e.pointerId, { x: e.clientX, y: e.clientY, t: performance.now(), moved: false });
+    if (!joy.active) { joy.active = true; joy.id = e.pointerId; joy.ox = e.clientX; joy.oy = e.clientY; joy.dx = joy.dy = 0; }
     try { cv.setPointerCapture(e.pointerId); } catch (err) { /* egal */ }
   });
   cv.addEventListener('pointermove', e => {
+    const tp = taps.get(e.pointerId);
+    if (tp && Math.hypot(e.clientX - tp.x, e.clientY - tp.y) > 14) tp.moved = true;
     if (!joy.active || e.pointerId !== joy.id) return;
     const R = 56;
     let dx = e.clientX - joy.ox, dy = e.clientY - joy.oy;
@@ -1862,11 +2468,16 @@ h2 { margin: 0; font-family: var(--f-display); font-weight: 800; font-size: clam
     if (d > R) { joy.ox += dx * (1 - R / d); joy.oy += dy * (1 - R / d); dx = e.clientX - joy.ox; dy = e.clientY - joy.oy; }
     joy.dx = d < 6 ? 0 : dx / R; joy.dy = d < 6 ? 0 : dy / R;
   });
-  const endJoy = e => { if (e.pointerId === joy.id) { joy.active = false; joy.dx = joy.dy = 0; } };
+  const endJoy = e => {
+    const tp = taps.get(e.pointerId);
+    taps.delete(e.pointerId);
+    if (tp && !tp.moved && e.type === 'pointerup' && performance.now() - tp.t < 300) starClick(tp.x, tp.y);
+    if (e.pointerId === joy.id) { joy.active = false; joy.dx = joy.dy = 0; }
+  };
   cv.addEventListener('pointerup', endJoy);
   cv.addEventListener('pointercancel', endJoy);
   cv.addEventListener('contextmenu', e => e.preventDefault());
-  addEventListener('resize', resize);
+  addEventListener('resize', () => { resize(); if (state === 'shop') renderShop(); });
 
   // ---------- Hauptschleife ----------
   let last = performance.now(), slow = 0;
@@ -1886,19 +2497,20 @@ h2 { margin: 0; font-family: var(--f-display); font-weight: 800; font-size: clam
   }
 
   function boot(data) {
-    if (!storageOk && data && data.save) {
-      save = Object.assign(defaultSave(), data.save);
-      if (save.lang) lang = save.lang;
+    if (!storageOk && data && data.store) {
+      store = data.store; fixStore(); save = store.slots[store.cur];
+      if (store.lang) lang = store.lang;
     }
     resize(); recalc(); applyLang(); showScreen('menu');
     requestAnimationFrame(t => { last = t; frame(t); });
   }
-  try { window.claude?.hot?.snapshot?.(() => ({ save })); } catch (e) { /* nur im Artifact-Viewer */ }
+  try { window.claude?.hot?.snapshot?.(() => ({ store })); } catch (e) { /* nur im Artifact-Viewer */ }
   if (window.claude?.hot?.ready) window.claude.hot.ready(boot);
   else boot(window.claude?.hot?.data ?? {});
 
   window.__ln = {
     dbg, P, get state() { return state; }, get run() { return run; }, get enemies() { return enemies; }, get gems() { return gems; }, get spores() { return spores; },
+    get store() { return store; }, get stars() { return stars; }, get zones() { return zones; }, starClick, doDash, doBeacon, saveNight,
     // Spielzeit ohne Animation vorspulen (für Tests); dbg.autoPick wählt bei Stufenaufstieg die erste Karte
     sim(sec) {
       for (let i = 0; i < sec * 60; i++) {
