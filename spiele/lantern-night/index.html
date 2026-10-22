@@ -239,6 +239,8 @@ h2 { margin: 0; font-family: var(--f-display); font-weight: 800; font-size: clam
 .pabil li.on { color: var(--ink); }
 .pabil li.on b { color: var(--c); }
 @media (max-width: 420px) { .pstat { grid-template-columns: auto minmax(0, 1fr) auto; } .pstat .btn:last-child { grid-column: 2 / -1; } }
+.call-num { width: 120px; min-height: 40px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 6px; background: rgba(4, 6, 14, .6); color: var(--ink); font: 700 1.1rem var(--f-num); user-select: text; -webkit-user-select: text; }
+.call-num:focus { outline: 2px solid #ff8a5c; outline-offset: 1px; }
 .cards3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
 @media (max-width: 700px) { .cards3 { grid-template-columns: minmax(0, 1fr); } }
 .cards2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
@@ -548,6 +550,7 @@ span.ab { cursor: default; }
       <div class="col">
         <button class="btn primary" id="resumeBtn" type="button" data-t="resume"></button>
         <div class="farm" id="farmPause" hidden></div>
+        <div class="farm" id="spawnPause" hidden></div>
         <button class="btn" id="saveQuitBtn" type="button" data-t="saveQuit"></button>
         <button class="btn small" id="musBtn2" type="button"></button>
         <button class="btn small" id="sfxBtn2" type="button"></button>
@@ -613,7 +616,7 @@ span.ab { cursor: default; }
     name, amber: 0, best: 0, wins: 0, runs: 0, up: {}, night: null, played: 0,
     shards: 0, comp: { fox: 1 }, compSel: ['fox'], world: 'wald', worldWins: {}, ap: 0, arenaBest: 0, auto: {},
     prio: ['fireflies', 'pulse', 'stars', 'spark', 'ember', 'feather', 'cloak', 'tea', 'lure', 'boots', 'wick', 'clover'],
-    boons: {}, arenaConvert: false, arenaMult: 0, titan: { dmg: 0, spd: 0, rsp: 0, hp: 0, on: true }, pet: {},
+    boons: {}, arenaConvert: false, arenaMult: 0, arenaSpawn: 0, arenaSpawnUse: null, titan: { dmg: 0, spd: 0, rsp: 0, hp: 0, on: true }, pet: {},
     bossCall: { n: 1, str: 0, hp: 0, on: true },
   });
   // Begleiter hatten früher 3 feste Stufen, jetzt vier Werte ohne Obergrenze: alte Stufen werden zu Werten
@@ -710,7 +713,7 @@ span.ab { cursor: default; }
       titan: 'Arena-Titan', titanSub: 'Dein eigener Boss für die Arena. Dreh die Regler so hoch du willst: je stärker der Titan, desto größer seine Beute. Mit der Wiederkehr kommt er öfter.',
       call: 'Bossruf', callSub: 'Sobald du in der Arena Stufe 30 erreichst (und danach alle 30 Stufen), vergehen alle Schatten und lassen ihre Beute fallen. Dann kommen deine Bosse, und bis sie besiegt sind, kommen keine neuen Schatten. Stell ein, wie viele es sind, wie hart sie zuschlagen und wie viel Leben sie haben. Stärkere Bosse bringen mehr Beute.',
       callStart: 'Bossruf! Alle Schatten vergehen – gleich kommen deine Bosse!', callDone: 'Bossruf geschafft! +{p} Arenapunkte',
-      c_n: 'Anzahl', c_nD: 'Wie viele Bosse auf einmal kommen (höchstens 20).', c_str: 'Stärke', c_strD: 'Wie hart die Bosse zuschlagen.', c_hp: 'Leben', c_hpD: 'Wie viel jeder Boss aushält.',
+      c_n: 'Anzahl', c_nD: 'Tipp ein, wie viele Bosse kommen (1 bis 500). Höchstens 30 sind gleichzeitig da, der Rest kommt nach.', callLeft: 'noch {n}', c_str: 'Stärke', c_strD: 'Wie hart die Bosse zuschlagen.', c_hp: 'Leben', c_hpD: 'Wie viel jeder Boss aushält.',
       cOne: '1 Boss', cNV: '{n} Bosse', cHpV: '{n} Leben', callLoot: 'Beute pro Bossruf:', callLootPlus: '+ normale Boss-Beute',
       callOnY: 'Bossruf an ✓', callOnN: 'Bossruf aus',
       titanWarn: 'Der Arena-Titan betritt die Arena!', titanDown: 'Titan besiegt! +{p} Arenapunkte', titanLoot: 'Beute pro Sieg:', titanLvl: 'Stufe {n}',
@@ -723,6 +726,8 @@ span.ab { cursor: default; }
       farmWhat: 'Was willst du in der Arena farmen?', farmAmber: 'Bernstein', farmTrophy: 'Pokale',
       farmAmberHint: 'Du behältst deinen Bernstein und bekommst Pokale nur für Zeit, Schatten, Bosse und Titanen.', farmTrophyHint: 'Am Ende der Nacht werden je 10 Bernstein zu 1 Pokal, der Rest bleibt Bernstein.',
       multLine: 'Arena-Multiplikator: Am Ende jeder Arena-Nacht zählt alles ×{a} – Bernstein, Mondsplitter und Pokale. Du hast {p} Pokale.',
+      spawnLine: 'Arena-Spawnrate: ×{a} so viele Schatten (gekauft bis ×{b}). Mehr Schatten bringen mehr Beute und Pokale, sind aber auch gefährlicher. Mit − und + stellst du ein, wie viel davon du nutzt.',
+      spawnUp: 'Auf ×{b} erweitern', spawnGot: 'Arena-Spawnrate jetzt ×{a}',
       multUp: 'Auf ×{b} verbessern', multGot: 'Arena-Multiplikator jetzt ×{a}', multNow: 'Arena-Multiplikator: alles ×{a}', bdMult: 'Arena',
     },
     en: {
@@ -779,7 +784,7 @@ span.ab { cursor: default; }
       titan: 'Arena Titan', titanSub: 'Your own boss for the arena. Turn the dials as high as you like: the stronger the titan, the bigger its loot. Return brings it back sooner.',
       call: 'Boss Call', callSub: 'As soon as you reach level 30 in the arena (and every 30 levels after that), every shadow fades and drops its loot. Then your bosses arrive, and no new shadows come until they are defeated. Choose how many there are, how hard they hit and how much health they have. Stronger bosses bring more loot.',
       callStart: 'Boss Call! Every shadow fades – your bosses are coming!', callDone: 'Boss Call cleared! +{p} arena points',
-      c_n: 'Count', c_nD: 'How many bosses come at once (up to 20).', c_str: 'Strength', c_strD: 'How hard the bosses hit.', c_hp: 'Health', c_hpD: 'How much each boss can take.',
+      c_n: 'Count', c_nD: 'Type how many bosses come (1 to 500). At most 30 are there at once, the rest follow.', callLeft: '{n} left', c_str: 'Strength', c_strD: 'How hard the bosses hit.', c_hp: 'Health', c_hpD: 'How much each boss can take.',
       cOne: '1 boss', cNV: '{n} bosses', cHpV: '{n} health', callLoot: 'Loot per Boss Call:', callLootPlus: '+ normal boss loot',
       callOnY: 'Boss Call on ✓', callOnN: 'Boss Call off',
       titanWarn: 'The Arena Titan enters the arena!', titanDown: 'Titan defeated! +{p} arena points', titanLoot: 'Loot per win:', titanLvl: 'Level {n}',
@@ -792,6 +797,8 @@ span.ab { cursor: default; }
       farmWhat: 'What do you want to farm in the arena?', farmAmber: 'Amber', farmTrophy: 'Trophies',
       farmAmberHint: 'You keep your amber and get trophies only for time, shadows, bosses and titans.', farmTrophyHint: 'At the end of the night every 10 amber become 1 trophy; the rest stays amber.',
       multLine: 'Arena multiplier: at the end of every arena night everything counts ×{a} – amber, moon shards and trophies. You have {p} trophies.',
+      spawnLine: 'Arena spawn rate: ×{a} as many shadows (bought up to ×{b}). More shadows bring more loot and trophies, but are more dangerous too. Use − and + to choose how much of it you use.',
+      spawnUp: 'Expand to ×{b}', spawnGot: 'Arena spawn rate now ×{a}',
       multUp: 'Upgrade to ×{b}', multGot: 'Arena multiplier now ×{a}', multNow: 'Arena multiplier: everything ×{a}', bdMult: 'arena',
     },
   };
@@ -2147,17 +2154,18 @@ span.ab { cursor: default; }
       // während des Bossrufs: keine Schatten, keine anderen Bosse, alle Zeitgeber warten
       if (run.wave) { run.nextBoss += dt; run.nextWave += dt; return; }
     }
-    run.acc += dt * curWorld.spawn * (1 + B('spawn')) * (0.8 + t * 0.03 + (t / 140) ** 2 + Math.max(0, t - 300) ** 2 / 2500);
+    const cap = run.endless ? arenaCap() : MAXE;
+    run.acc += dt * curWorld.spawn * (1 + B('spawn')) * (run.endless ? arenaSpawnMul() * (1 + 0.15 * U('arenaHorde')) : 1) * (0.8 + t * 0.03 + (t / 140) ** 2 + Math.max(0, t - 300) ** 2 / 2500);
     while (run.acc >= 1) {
       run.acc -= 1;
-      if (enemies.length < MAXE) { const [x, y] = edgePoint(); spawnEnemy(worldType(pickType(t)), x, y); }
+      if (enemies.length < cap) { const [x, y] = edgePoint(); spawnEnemy(worldType(pickType(t)), x, y); }
     }
     if (t >= run.nextWave) {
       // Schwarm der Welt: Motten, Geister, Wölfe oder Fledermäuse
       run.nextWave += 60;
       const sw = curWorld.swarm === 'any' ? SWARMS[(Math.random() * SWARMS.length) | 0] : curWorld.swarm;
-      const n = Math.round(14 + t / 15), a0 = Math.random() * TAU;
-      for (let i = 0; i < n && enemies.length < MAXE + 40; i++) { const [x, y] = edgePoint(a0 + (i / n) * TAU); spawnEnemy(sw, x, y); }
+      const n = Math.round((14 + t / 15) * (run.endless ? Math.min(3, Math.sqrt(arenaSpawnMul())) : 1)), a0 = Math.random() * TAU;
+      for (let i = 0; i < n && enemies.length < cap + 40; i++) { const [x, y] = edgePoint(a0 + (i / n) * TAU); spawnEnemy(sw, x, y); }
       banner(EN[sw].swarm[lang], 1.6);
     }
     if (run.endless && save.titan.on) titanTick(dt);
@@ -2216,7 +2224,7 @@ span.ab { cursor: default; }
   }
 
   // ---------- Bossruf: ab Stufe 30 (dann alle 30 Stufen) vergehen alle Schatten, dann kommen eigene Bosse ----------
-  const CALL_EVERY = 30, CALL_MAX = 20;
+  const CALL_EVERY = 30, CALL_MAX = 500, CALL_FIELD = 30;   // höchstens 30 Bosse gleichzeitig, der Rest kommt nach
   const callDmg = lv => 1 + 0.2 * lv;
   const callHp = lv => Math.round(1500 * (1 + 0.5 * lv) * WORLDS.find(w => w.endless).hp);
   function callReward() {
@@ -2225,8 +2233,16 @@ span.ab { cursor: default; }
     return { amber: Math.round(15 * k), ap: Math.round(4 * k) };
   }
   function bossCallTick(dt) {
-    if (run.wave) {
-      if (run.wave.delay > 0 && (run.wave.delay -= dt) <= 0) spawnWave();
+    const w = run.wave;
+    if (w) {
+      if (w.delay > 0) { if ((w.delay -= dt) <= 0) spawnWave(); return; }
+      // Nachschub: sobald weniger als 30 Bosse da sind, kommt der nächste
+      if (w.queue > 0 && (w.t -= dt) <= 0) {
+        w.t = 0.25;
+        let alive = 0;
+        for (const e of enemies) if (!e.dead && e.callBoss) alive++;
+        if (alive < CALL_FIELD) { const e = callBoss(Math.random() * TAU); w.queue--; if (!run.boss) run.boss = e; }
+      }
       return;
     }
     if (run.lv < run.callLv) return;
@@ -2247,16 +2263,17 @@ span.ab { cursor: default; }
     banner(T('callStart'), 2.4);
     run.wave = { delay: 2.5, left: 0 };
   }
+  function callBoss(a) {
+    const c = save.bossCall, [x, y] = edgePoint(a);
+    const e = spawnEnemy(BOSSES[(Math.random() * BOSSES.length) | 0], x, y);
+    e.hp = e.max = callHp(c.hp); e.callBoss = true; e.dmgMul = callDmg(c.str);
+    return e;
+  }
   function spawnWave() {
-    const c = save.bossCall, cnt = clamp(c.n, 1, CALL_MAX), hp = callHp(c.hp);
+    const cnt = clamp(save.bossCall.n, 1, CALL_MAX), now = Math.min(cnt, CALL_FIELD);
     let first = null;
-    for (let i = 0; i < cnt; i++) {
-      const [x, y] = edgePoint((i / cnt) * TAU + Math.random() * 0.3);
-      const e = spawnEnemy(BOSSES[(Math.random() * BOSSES.length) | 0], x, y);
-      e.hp = e.max = hp; e.callBoss = true; e.dmgMul = callDmg(c.str);
-      if (!first) first = e;
-    }
-    run.wave.left = cnt;
+    for (let i = 0; i < now; i++) { const e = callBoss((i / now) * TAU + Math.random() * 0.3); if (!first) first = e; }
+    Object.assign(run.wave, { left: cnt, queue: cnt - now, t: 0 });
     run.boss = first;
     Snd.play('boss'); shake(5);
   }
@@ -2548,7 +2565,7 @@ span.ab { cursor: default; }
             spores.push({ x: e.x, y: e.y - 30, vx: (dx / dist) * 170, vy: (dy / dist) * 170, r: 15, dmg: 22, life: 2.6, k: sk || 'ice', split: 8 });
             Snd.play('spore');
           }
-          if (e.t2 <= 0) { e.t2 = 10; for (let i = 0; i < 4; i++) { const a = (i / 4) * TAU; spawnEnemy(e.d.minion || 'wolf', e.x + Math.cos(a) * 70, e.y + Math.sin(a) * 70); } }
+          if (e.t2 <= 0) { e.t2 = 10; for (let i = 0; i < 4 && enemies.length < MAXE; i++) { const a = (i / 4) * TAU; spawnEnemy(e.d.minion || 'wolf', e.x + Math.cos(a) * 70, e.y + Math.sin(a) * 70); } }
           break;
         case 'shadowking':
           // verschwindet, taucht neben dir auf, feuert einen Ring dunkler Kugeln, ruft Fledermäuse
@@ -2566,7 +2583,7 @@ span.ab { cursor: default; }
               Snd.play('spore');
             }
           }
-          if (e.t2 <= 0) { e.t2 = 9; for (let i = 0; i < 6; i++) { const a = (i / 6) * TAU; spawnEnemy(e.d.minion || 'bat', e.x + Math.cos(a) * 60, e.y + Math.sin(a) * 60); } }
+          if (e.t2 <= 0) { e.t2 = 9; for (let i = 0; i < 6 && enemies.length < MAXE; i++) { const a = (i / 6) * TAU; spawnEnemy(e.d.minion || 'bat', e.x + Math.cos(a) * 60, e.y + Math.sin(a) * 60); } }
           break;
         case 'spitter':
           if (dist < 210) { mx = -mx; my = -my; sp *= 0.6; } else if (dist < 270) sp = 0;
@@ -2635,7 +2652,13 @@ span.ab { cursor: default; }
     if (e.titan) titanLoot(e);
     else if (d.boss) {
       run.bossKills++;
-      for (let k = 0; k < rolls; k++) {
+      if (e.callBoss) {
+        // Bossruf: dieselbe Beute, aber in wenigen Stücken mit Wert
+        addLoot('amber', e.x + rand(-30, 30), e.y + rand(-20, 20), rolls * (12 + (ar ? 4 * U('arenaTrophy') : 0)));
+        addLoot('shard', e.x + rand(-30, 30), e.y + rand(-20, 20), rolls * (3 + U('shardseeker') + (ar ? U('arenaTrophy') : 0)));
+        if (Math.random() < 0.25) addLoot('berry', e.x, e.y + 20);
+        if (Math.random() < 0.1) addLoot('amberheart', e.x, e.y - 24);
+      } else for (let k = 0; k < rolls; k++) {
         for (let i = 0; i < 12 + (ar ? 4 * U('arenaTrophy') : 0); i++) addLoot('amber', e.x + rand(-45, 45), e.y + rand(-35, 35));
         addLoot('berry', e.x + rand(-20, 20), e.y + 20);
         for (let i = 0; i < 3 + U('shardseeker') + (ar ? U('arenaTrophy') : 0); i++) addLoot('shard', e.x + rand(-35, 35), e.y + rand(-30, 30));
@@ -3471,7 +3494,7 @@ span.ab { cursor: default; }
     if (run.endless) setText('apTxt', String(nightEarn(false).apGain));
     const b = run.boss;
     if (b && !b.dead) {
-      E('boss').hidden = false; setText('bossName', b.d.name[lang]);
+      E('boss').hidden = false; setText('bossName', b.callBoss && run.wave ? `${b.d.name[lang]} · ${tf('callLeft', { n: run.wave.left })}` : b.d.name[lang]);
       E('bossFill').style.width = ((Math.max(0, b.hp) / b.max) * 100).toFixed(1) + '%';
     } else E('boss').hidden = true;
     setText('shardTxt', String(run.shards));
@@ -3639,8 +3662,8 @@ span.ab { cursor: default; }
     state = 'pause'; joy.active = false;
     for (const k in keys) keys[k] = false;
     updatePauseRemain(); renderAutoList();
-    E('farmPause').hidden = !run.endless;
-    if (run.endless) renderFarm(E('farmPause'), true);
+    E('farmPause').hidden = E('spawnPause').hidden = !run.endless;
+    if (run.endless) { renderFarm(E('farmPause'), true); const rs = () => renderSpawn(E('spawnPause'), rs); rs(); }
     showScreen('pause'); Platform.gameplayStop();
   }
   // Automatik-Schalter im Pausemenü, nur für gekaufte Automatiken
@@ -3714,6 +3737,32 @@ span.ab { cursor: default; }
     save.ap -= cost; save.arenaMult = lv + 1; persist();
     Snd.play('amber'); toast(tf('multGot', { a: fmtNum(arenaMult()) }));
     renderWorlds(); updateMenuMeta();
+  }
+  // Arena-Spawnrate: mit Pokalen ohne Obergrenze erweitern; genutzt wird, was eingestellt ist (höchstens das Gekaufte)
+  const spawnBought = () => save.arenaSpawn || 0;
+  const spawnUse = () => Math.min(spawnBought(), save.arenaSpawnUse == null ? spawnBought() : save.arenaSpawnUse);
+  const arenaSpawnMul = (lv = spawnUse()) => 1 + 0.25 * lv;
+  const spawnCost = lv => Math.round(15 + 8 * lv + 0.8 * lv * lv);   // wächst langsam, damit „unendlich“ auch erreichbar bleibt
+  const arenaCap = () => Math.round(MAXE * Math.min(1.6, 1 + 0.03 * spawnUse()));   // mehr Platz für Schatten, aber nicht endlos
+  function renderSpawn(box, rerender) {
+    const lv = spawnBought(), use = spawnUse(), cost = spawnCost(lv);
+    box.innerHTML = `<span>${tf('spawnLine', { a: fmtNum(arenaSpawnMul(use)), b: fmtNum(arenaSpawnMul(lv)) })}</span>`;
+    const row = document.createElement('div');
+    row.className = 'row';
+    const minus = makeBtn('−', 'btn small', () => { save.arenaSpawnUse = Math.max(0, use - 1); persist(); rerender(); });
+    minus.disabled = use <= 0;
+    const plus = makeBtn('+', 'btn small', () => { save.arenaSpawnUse = Math.min(lv, use + 1); persist(); rerender(); });
+    plus.disabled = use >= lv;
+    const buy = makeBtn(`${tf('spawnUp', { b: fmtNum(arenaSpawnMul(lv + 1)) })} · ${cost}`, 'btn small primary buy', () => {
+      if ((save.ap || 0) < cost) return;
+      save.ap -= cost; save.arenaSpawn = lv + 1; save.arenaSpawnUse = lv + 1; persist();
+      Snd.play('amber'); toast(tf('spawnGot', { a: fmtNum(arenaSpawnMul(lv + 1)) }));
+      rerender(); updateMenuMeta();
+    });
+    buy.insertAdjacentHTML('beforeend', icon('trophy'));
+    buy.disabled = (save.ap || 0) < cost;
+    row.append(minus, plus, buy);
+    box.appendChild(row);
   }
   // Beute einer Nacht; in der Arena wahlweise als Pokale (je 10 Bernstein = 1 Pokal, der Rest bleibt Bernstein)
   function nightEarn(won) {
@@ -4047,7 +4096,8 @@ span.ab { cursor: default; }
         ap: Math.max(0, o.ap | 0), arenaBest: Math.max(0, +o.arenaBest || 0),
         boons: Object.fromEntries(Object.entries(o.boons || {}).filter(([k, v]) => BOONS[k] && Number.isFinite(v)).map(([k, v]) => [k, Math.max(0, v | 0)])),
         arenaConvert: o.arenaConvert === true, arenaMult: Math.max(0, o.arenaMult | 0),
-        bossCall: Object.assign(newSlot().bossCall, Object.fromEntries(['n', 'str', 'hp'].filter(k => o.bossCall && Number.isFinite(o.bossCall[k])).map(k => [k, Math.max(k === 'n' ? 1 : 0, o.bossCall[k] | 0)])), { on: !(o.bossCall && o.bossCall.on === false) }),
+        arenaSpawn: Math.max(0, o.arenaSpawn | 0), arenaSpawnUse: Number.isFinite(o.arenaSpawnUse) ? Math.max(0, o.arenaSpawnUse | 0) : null,
+        bossCall: Object.assign(newSlot().bossCall, Object.fromEntries(['n', 'str', 'hp'].filter(k => o.bossCall && Number.isFinite(o.bossCall[k])).map(k => [k, k === 'n' ? clamp(o.bossCall[k] | 0, 1, 500) : Math.max(0, o.bossCall[k] | 0)])), { on: !(o.bossCall && o.bossCall.on === false) }),
         titan: Object.assign(newSlot().titan, Object.fromEntries(['dmg', 'spd', 'rsp', 'hp'].filter(k => o.titan && Number.isFinite(o.titan[k])).map(k => [k, Math.max(0, o.titan[k] | 0)])), { on: !(o.titan && o.titan.on === false) }),
         auto: Object.fromEntries(Object.entries(o.auto || {}).filter(([, v]) => typeof v === 'boolean' || ['off', 'smart', 'always'].includes(v))),
         ...(Array.isArray(o.prio) ? { prio: o.prio.filter(id => ITEMS[id]) } : {}),
@@ -4115,6 +4165,10 @@ span.ab { cursor: default; }
         mb.disabled = (save.ap || 0) < cost;
         mu.appendChild(mb);
         el.appendChild(mu);
+        const sp = document.createElement('div');
+        sp.className = 'farm';
+        renderSpawn(sp, renderWorlds);
+        el.appendChild(sp);
       }
       box.appendChild(el);
     });
@@ -4162,6 +4216,10 @@ span.ab { cursor: default; }
     if (k === 'str') return tf('tDmgV', { n: Math.round((callDmg(lv) - 1) * 100) });
     return tf('cHpV', { n: fmtNum(callHp(lv)) });
   }
+  function renderCallLoot() {
+    const rw = callReward(), n = clamp(save.bossCall.n, 1, CALL_MAX);
+    E('callLoot').innerHTML = `${T('callLoot')} ${fmtNum(rw.amber * n)} ${icon('amber')} · ${fmtNum(rw.ap * n)} ${icon('trophy')} <small>${T('callLootPlus')}</small>`;
+  }
   function renderCall() {
     const box = E('callList'), c = save.bossCall;
     box.innerHTML = '';
@@ -4171,10 +4229,31 @@ span.ab { cursor: default; }
       el.className = 'wcard';
       el.style.setProperty('--c', '#ff8a5c');
       const max = k === 'n' && c[k] >= CALL_MAX;
-      el.innerHTML = `<div class="comp-head"><span class="comp-ico">${icon(CALL_UI[k])}</span><div><h3>${T('c_' + k)}</h3><span class="ni-tag">${k === 'n' ? callEffect(k, c[k]) : tf('compLv', { n: c[k] })}</span></div></div>` +
-        `<p>${T('c_' + k + 'D')}</p><p class="ni-tag">${max ? callEffect(k, c[k]) : `${callEffect(k, c[k])} → ${callEffect(k, c[k] + 1)}`}</p>`;
+      el.innerHTML = `<div class="comp-head"><span class="comp-ico">${icon(CALL_UI[k])}</span><div><h3>${T('c_' + k)}</h3><span class="ni-tag" id="callTag_${k}">${k === 'n' ? callEffect(k, c[k]) : tf('compLv', { n: c[k] })}</span></div></div>` +
+        `<p>${T('c_' + k + 'D')}</p>` + (k === 'n' ? '' : `<p class="ni-tag">${callEffect(k, c[k])} → ${callEffect(k, c[k] + 1)}</p>`);
       const row = document.createElement('div');
       row.className = 'row';
+      if (k === 'n') {
+        // Anzahl frei eintippen (1 bis 500); die Anzeige darunter geht beim Tippen mit
+        const inp = document.createElement('input');
+        Object.assign(inp, { type: 'number', min: 1, max: CALL_MAX, step: 1, value: c.n, className: 'call-num', inputMode: 'numeric' });
+        inp.setAttribute('aria-label', T('c_n'));
+        const take = fix => {
+          const v = Math.floor(+inp.value);
+          if (!Number.isFinite(v) || inp.value === '') { if (fix) inp.value = c.n; return; }
+          c.n = clamp(v, 1, CALL_MAX); persist();
+          if (fix) inp.value = c.n;
+          E('callTag_n').textContent = callEffect('n', c.n);
+          renderCallLoot();
+        };
+        inp.addEventListener('input', () => take(false));
+        inp.addEventListener('change', () => take(true));
+        inp.addEventListener('keydown', ev => { if (ev.key === 'Enter') inp.blur(); });
+        row.appendChild(inp);
+        el.appendChild(row);
+        box.appendChild(el);
+        continue;
+      }
       const minus = makeBtn('−', 'btn small', () => { c[k] = Math.max(k === 'n' ? 1 : 0, c[k] - 1); persist(); renderCall(); });
       minus.disabled = c[k] <= (k === 'n' ? 1 : 0);
       const plus = makeBtn('+', 'btn small primary', () => { c[k] = k === 'n' ? Math.min(CALL_MAX, c[k] + 1) : c[k] + 1; persist(); renderCall(); });
@@ -4183,8 +4262,7 @@ span.ab { cursor: default; }
       el.appendChild(row);
       box.appendChild(el);
     }
-    const rw = callReward(), n = clamp(c.n, 1, CALL_MAX);
-    E('callLoot').innerHTML = `${T('callLoot')} ${rw.amber * n} ${icon('amber')} · ${rw.ap * n} ${icon('trophy')} <small>${T('callLootPlus')}</small>`;
+    renderCallLoot();
     E('callOn').textContent = T(c.on ? 'callOnY' : 'callOnN');
     E('callOn').classList.toggle('on', c.on);
   }
