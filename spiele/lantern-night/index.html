@@ -716,6 +716,8 @@ span.ab { cursor: default; }
       trainGot: 'Trainingsbonus: {n} {d}', trainDps: '{n} Schaden pro Sekunde', trainPause: 'Trainingslager · {n} Boni bisher',
       trainEnd: 'Training beenden', trainOver: 'Training beendet', trainSub: '{d} Schaden, {n} neue Boni', trainNone: 'Diesmal kein neuer Bonus – mach länger oder mehr Schaden.',
       wTrainOnly: 'Nur die Trainingspuppe', wTrainN: '{n} Boni bisher', wTrainNext: 'Nächster Bonus: {a} / {b}',
+      trN_spark: '+{n} Funken', trN_fireflies: '+{n} Glühwürmchen', trN_stars: '+{n} Sternschnuppen pro Salve', trRange: '+{n} % Reichweite',
+      trN1_spark: '+1 Funke', trN1_fireflies: '+1 Glühwürmchen', trN1_stars: '+1 Sternschnuppe pro Salve',
       trW: '+{n} % Schaden', trSpeed: '+{n} % Tempo', trHp: '+{n} max. Leben', trRegen: '+{n} Leben pro Sekunde', trMagnet: '+{n} % Sammelradius',
       trLight: '+{n} % Lichtradius', trXp: '+{n} % Erfahrung', trDmg: '+{n} % Schaden (alles)', trCd: '−{n} % Abklingzeit',
       call: 'Bossruf', callSub: 'Sobald du in der Arena Stufe 30 erreichst (und danach alle 30 Stufen), vergehen alle Schatten und lassen ihre Beute fallen. Dann kommen deine Bosse, und bis sie besiegt sind, kommen keine neuen Schatten. Stell ein, wie viele es sind, wie hart sie zuschlagen und wie viel Leben sie haben. Stärkere Bosse bringen mehr Beute.',
@@ -793,6 +795,8 @@ span.ab { cursor: default; }
       trainGot: 'Training bonus: {n} {d}', trainDps: '{n} damage per second', trainPause: 'Training camp · {n} bonuses so far',
       trainEnd: 'End training', trainOver: 'Training finished', trainSub: '{d} damage, {n} new bonuses', trainNone: 'No new bonus this time – train longer or deal more damage.',
       wTrainOnly: 'Only the training dummy', wTrainN: '{n} bonuses so far', wTrainNext: 'Next bonus: {a} / {b}',
+      trN_spark: '+{n} sparks', trN_fireflies: '+{n} fireflies', trN_stars: '+{n} falling stars per volley', trRange: '+{n}% range',
+      trN1_spark: '+1 spark', trN1_fireflies: '+1 firefly', trN1_stars: '+1 falling star per volley',
       trW: '+{n}% damage', trSpeed: '+{n}% speed', trHp: '+{n} max health', trRegen: '+{n} health per second', trMagnet: '+{n}% pickup range',
       trLight: '+{n}% light radius', trXp: '+{n}% experience', trDmg: '+{n}% damage (everything)', trCd: '−{n}% cooldowns',
       call: 'Boss Call', callSub: 'As soon as you reach level 30 in the arena (and every 30 levels after that), every shadow fades and drops its loot. Then your bosses arrive, and no new shadows come until they are defeated. Choose how many there are, how hard they hit and how much health they have. Stronger bosses bring more loot.',
@@ -2267,11 +2271,23 @@ span.ab { cursor: default; }
   }
 
   // ---------- Trainingslager: Schaden an der Puppe bringt dauerhafte Boni auf Gaben ----------
-  const TRAIN_IDS = Object.keys(ITEMS);
+  // Boni wie bei einem normalen Aufstieg: Schaden und Talentwerte, dazu ein Geschoss mehr (seltener) oder mehr Reichweite
+  const TRAIN_EXTRA = { spark_n: 'spark', fireflies_n: 'fireflies', stars_n: 'stars', spark_r: 'spark', fireflies_r: 'fireflies', pulse_r: 'pulse', stars_r: 'stars' };
+  const TRAIN_IDS = [...Object.keys(ITEMS), ...Object.keys(TRAIN_EXTRA)];
+  const trainWeight = id => (id.endsWith('_n') ? 0.35 : id.endsWith('_r') ? 0.6 : 1);
+  function rollTrain() {
+    let r = Math.random() * TRAIN_IDS.reduce((a, id) => a + trainWeight(id), 0);
+    for (const id of TRAIN_IDS) if ((r -= trainWeight(id)) <= 0) return id;
+    return TRAIN_IDS[0];
+  }
+  const trainName = id => ITEMS[TRAIN_EXTRA[id] || id].name[lang];
   const trainNeed = n => Math.round(2000 * 1.07 ** n);   // jeder weitere Bonus braucht 7 % mehr Schaden
   const TB = id => (save.train && save.train.b[id]) || 0;
   const trainMul = id => 1 + 0.02 * TB(id);               // Waffen: +2 % Schaden pro Bonus
+  const trainRange = id => 1 + 0.05 * TB(id + '_r');      // Waffen: +5 % Reichweite pro Bonus
   function trainText(id, b) {
+    if (id.endsWith('_n')) return tf((b === 1 ? 'trN1_' : 'trN_') + TRAIN_EXTRA[id], { n: b });
+    if (id.endsWith('_r')) return tf('trRange', { n: 5 * b });
     if (ITEMS[id].kind === 'w') return tf('trW', { n: 2 * b });
     return {
       boots: () => tf('trSpeed', { n: b }), cloak: () => tf('trHp', { n: 2 * b }), tea: () => tf('trRegen', { n: fmtNum(+(0.05 * b).toFixed(2)) }),
@@ -2286,9 +2302,9 @@ span.ab { cursor: default; }
     let got = false;
     while (tr.prog >= trainNeed(tr.n)) {
       tr.prog -= trainNeed(tr.n); tr.n++;
-      const id = TRAIN_IDS[(Math.random() * TRAIN_IDS.length) | 0];
+      const id = rollTrain();
       tr.b[id] = (tr.b[id] || 0) + 1; run.trainGot.push(id); got = true;
-      toast(tf('trainGot', { n: ITEMS[id].name[lang], d: trainText(id, 1) }));
+      toast(tf('trainGot', { n: trainName(id), d: trainText(id, 1) }));
     }
     if (got) { recalc(); Snd.play('level'); persist(); }
   }
@@ -2535,7 +2551,7 @@ span.ab { cursor: default; }
   }
   function addStar(x, y, t, e) {
     const s = ITEMS.stars.s, l = Math.max(0, (run.items.stars || 1) - 1);
-    let dmg = s.dmg[l] * P.dmgMul * P.starMul * P.wpnMul * trainMul('stars'), R = s.rad[l] * (1 + 0.15 * U('bigstars'));
+    let dmg = s.dmg[l] * P.dmgMul * P.starMul * P.wpnMul * trainMul('stars'), R = s.rad[l] * (1 + 0.15 * U('bigstars')) * trainRange('stars');
     const meteor = U('meteor') > 0 && ++run.starN % 4 === 0;
     if (meteor) { dmg *= 3; R *= 1.6; }
     stars.push({ e, x, y, t, R, dmg, meteor });
@@ -2802,7 +2818,7 @@ span.ab { cursor: default; }
     if (it.spark) {
       const s = ITEMS.spark.s, l = it.spark - 1;
       if ((ws.spark -= dt) <= 0) {
-        const n = s.n[l], tg = nearest(n, 540);
+        const n = s.n[l] + TB('spark_n'), tg = nearest(n, 540 * trainRange('spark'));
         if (tg.length) {
           ws.spark = s.cd[l] * P.cdMul;
           for (let i = 0; i < n; i++) {
@@ -2817,7 +2833,7 @@ span.ab { cursor: default; }
     }
     ff.length = 0;
     if (it.fireflies) {
-      const s = ITEMS.fireflies.s, l = it.fireflies - 1, n = s.n[l] + U('swarmer'), R = s.rad[l];
+      const s = ITEMS.fireflies.s, l = it.fireflies - 1, n = s.n[l] + U('swarmer') + TB('fireflies_n'), R = s.rad[l] * trainRange('fireflies');
       ws.ffA += dt * s.sp[l] * (1 + 0.05 * U('fFly'));
       for (let i = 0; i < n; i++) {
         const a = ws.ffA + (i * TAU) / n, x = P.x + Math.cos(a) * R, y = P.y - 4 + Math.sin(a) * R;
@@ -2836,7 +2852,7 @@ span.ab { cursor: default; }
       }
     }
     if (it.pulse) {
-      const s = ITEMS.pulse.s, l = it.pulse - 1, R = s.rad[l] * (1 + 0.1 * U('heat'));
+      const s = ITEMS.pulse.s, l = it.pulse - 1, R = s.rad[l] * (1 + 0.1 * U('heat')) * trainRange('pulse');
       const fire = f => {
         pulses.push({ x: P.x, y: P.y, R, life: 0.45, max: 0.45 });
         const q = query(P.x, P.y, R + 50);
@@ -2851,7 +2867,7 @@ span.ab { cursor: default; }
       if (ws.pulse2 > 0 && (ws.pulse2 -= dt) <= 0) fire(0.6);
     }
     if (it.stars) {
-      const s = ITEMS.stars.s, l = it.stars - 1, n = s.n[l] + U('starswarm');
+      const s = ITEMS.stars.s, l = it.stars - 1, n = s.n[l] + U('starswarm') + TB('stars_n');
       if ((ws.stars -= dt) <= 0) {
         const tg = run.target;
         if (tg) {
@@ -2860,10 +2876,16 @@ span.ab { cursor: default; }
           for (let i = 0; i < n; i++) addStar(tg.x + rand(-45, 45), tg.y + rand(-35, 35), 0.5 + i * 0.06, null);
         } else {
           const c = [];
-          for (const e of enemies) if (!e.dead && (e.x - P.x) ** 2 + (e.y - P.y) ** 2 < 440 * 440) c.push(e);
+          const sr = 440 * trainRange('stars');
+          for (const e of enemies) if (!e.dead && (e.x - P.x) ** 2 + (e.y - P.y) ** 2 < sr * sr) c.push(e);
           if (c.length) {
             ws.stars = s.cd[l] * P.cdMul;
-            for (let i = 0; i < n && c.length; i++) { const e = c.splice((Math.random() * c.length) | 0, 1)[0]; addStar(e.x, e.y, 0.5, e); }
+            // jeder Stern sucht sich einen anderen Schatten; gibt es zu wenige, fallen die übrigen leicht versetzt auf schon gewählte
+            const hitE = [];
+            for (let i = 0; i < n; i++) {
+              if (c.length) { const e = c.splice((Math.random() * c.length) | 0, 1)[0]; hitE.push(e); addStar(e.x, e.y, 0.5, e); }
+              else { const e = hitE[i % hitE.length]; addStar(e.x + rand(-30, 30), e.y + rand(-24, 24), 0.5 + 0.08 * (i - hitE.length + 1), null); }
+            }
           } else ws.stars = 0.25;
         }
       }
@@ -3889,7 +3911,7 @@ span.ab { cursor: default; }
     E('stTime').textContent = fmtLeft(run.t); E('stKills').textContent = 0; E('stLv').textContent = run.lv;
     const cnt = {};
     for (const id of run.trainGot) cnt[id] = (cnt[id] || 0) + 1;
-    const list = Object.entries(cnt).map(([id, n]) => `${ITEMS[id].name[lang]} ${trainText(id, n)}`);
+    const list = Object.entries(cnt).map(([id, n]) => `${trainName(id)} ${trainText(id, n)}`);
     E('overEarn').innerHTML = list.length ? `${icon('target')} <small>${list.join(' · ')}</small>` : `<small>${T('trainNone')}</small>`;
     for (const id of ['overShards', 'overAp', 'overUnlock', 'overRec']) E(id).hidden = true;
     showScreen('over');
@@ -4201,7 +4223,7 @@ span.ab { cursor: default; }
         arenaSpawn: Math.max(0, o.arenaSpawn | 0), arenaSpawnUse: Number.isFinite(o.arenaSpawnUse) ? Math.max(0, o.arenaSpawnUse | 0) : null,
         train: o.train && typeof o.train === 'object' ? {
           n: Math.max(0, o.train.n | 0), prog: Math.max(0, +o.train.prog || 0), total: Math.max(0, +o.train.total || 0),
-          b: Object.fromEntries(Object.entries(o.train.b || {}).filter(([k, v]) => ITEMS[k] && Number.isFinite(v)).map(([k, v]) => [k, Math.max(0, v | 0)])),
+          b: Object.fromEntries(Object.entries(o.train.b || {}).filter(([k, v]) => (ITEMS[k] || TRAIN_EXTRA[k]) && Number.isFinite(v)).map(([k, v]) => [k, Math.max(0, v | 0)])),
         } : newSlot().train,
         bossCall: Object.assign(newSlot().bossCall, Object.fromEntries(['n', 'str', 'hp'].filter(k => o.bossCall && Number.isFinite(o.bossCall[k])).map(k => [k, k === 'n' ? clamp(o.bossCall[k] | 0, 1, 500) : Math.max(0, o.bossCall[k] | 0)])), { on: !(o.bossCall && o.bossCall.on === false) }),
         titan: Object.assign(newSlot().titan, Object.fromEntries(['dmg', 'spd', 'rsp', 'hp'].filter(k => o.titan && Number.isFinite(o.titan[k])).map(k => [k, Math.max(0, o.titan[k] | 0)])), { on: !(o.titan && o.titan.on === false) }),
@@ -4235,7 +4257,7 @@ span.ab { cursor: default; }
       if (!w.training) chips.push(w.boss === 'rotate' ? T('wAllBosses') : tf('wBoss', { n: EN[w.boss].name[lang] }));
       if (w.training) {
         // bisherige Boni je Gabe
-        for (const id of TRAIN_IDS) if (TB(id)) chips.push(`${ITEMS[id].name[lang]} ${trainText(id, TB(id))}`);
+        for (const id of TRAIN_IDS) if (TB(id)) chips.push(`${trainName(id)} ${trainText(id, TB(id))}`);
       } else if (w.endless) {
         chips.push(`${T('ap')} ${icon('trophy')}`);
         if (save.arenaBest) chips.push(tf('wBestArena', { t: fmtLeft(save.arenaBest) }));
