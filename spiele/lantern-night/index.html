@@ -316,6 +316,14 @@ span.ab { cursor: default; }
 .stat svg { width: 18px; height: 18px; }
 .stat.kills svg { color: #ff7c95; }
 .stat.amb svg { color: var(--amber); }
+.stat.apv svg { color: #ff8a5c; }
+.farm { display: flex; flex-direction: column; gap: 6px; }
+.farm > span { font-size: .9rem; color: var(--ink-dim); }
+.seg { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.seg .btn { gap: 6px; }
+.seg .btn svg { width: 18px; height: 18px; }
+.seg .btn[aria-pressed="true"].amb { border-color: var(--amber); color: var(--amber); box-shadow: 0 0 0 1px var(--amber) inset; }
+.seg .btn[aria-pressed="true"].apv { border-color: #ff8a5c; color: #ff8a5c; box-shadow: 0 0 0 1px #ff8a5c inset; }
 #pauseBtn { pointer-events: auto; width: 42px; min-height: 42px; padding: 0; }
 @media (max-width: 520px) {
   .stat.kills { display: none; }
@@ -356,7 +364,8 @@ span.ab { cursor: default; }
       </div>
       <div class="hud-right">
         <span class="stat kills" data-ico="eyes"><b id="killTxt">0</b></span>
-        <span class="stat amb" data-ico="amber"><b id="amberTxt">0</b></span>
+        <span class="stat amb" data-ico="amber" id="amberStat"><b id="amberTxt">0</b></span>
+        <span class="stat apv" data-ico="trophy" id="apStat" hidden><b id="apTxt">0</b></span>
         <span class="stat shd" data-ico="shard"><b id="shardTxt">0</b></span>
         <button class="btn" id="pauseBtn" type="button" aria-label="Pause"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1" class="f"/><rect x="14" y="5" width="4" height="14" rx="1" class="f"/></svg></button>
       </div>
@@ -510,6 +519,7 @@ span.ab { cursor: default; }
       <p class="sub" id="pauseRemain"></p>
       <div class="col">
         <button class="btn primary" id="resumeBtn" type="button" data-t="resume"></button>
+        <div class="farm" id="farmPause" hidden></div>
         <button class="btn" id="saveQuitBtn" type="button" data-t="saveQuit"></button>
         <button class="btn small" id="musBtn2" type="button"></button>
         <button class="btn small" id="sfxBtn2" type="button"></button>
@@ -662,7 +672,9 @@ span.ab { cursor: default; }
       t_rsp: 'Wiederkehr', t_rspD: 'Wie schnell nach einem Sieg der nächste Titan kommt. Keine Extra-Beute, aber mehr Kämpfe.', t_hp: 'Leben', t_hpD: 'Wie viel er aushält.',
       tDmgV: '+{n} % Schaden', tSpdV: '{n}× Tempo', tRspV: 'alle {n} s', tHpV: '{n} Leben',
       convOn: 'Bernstein → Pokale: an', convOff: 'Bernstein → Pokale: aus', convHint: 'Am Ende einer Arena-Nacht werden je 10 Bernstein zu 1 Pokal (Arenapunkt).',
-      convDone: '{a} Bernstein → {p} Pokale', convStart: 'Umtausch an: Bernstein wird zu Pokalen (10 : 1)',
+      convDone: '{a} Bernstein → {p} Pokale', convStart: 'Du farmst Pokale: Bernstein wird am Ende zu Pokalen (10 : 1).', farmAmberStart: 'Du farmst Bernstein. Umstellen kannst du im Pausemenü.',
+      farmWhat: 'Was willst du in der Arena farmen?', farmAmber: 'Bernstein', farmTrophy: 'Pokale',
+      farmAmberHint: 'Du behältst deinen Bernstein und bekommst Pokale nur für Zeit, Schatten, Bosse und Titanen.', farmTrophyHint: 'Am Ende der Nacht werden je 10 Bernstein zu 1 Pokal, der Rest bleibt Bernstein.',
     },
     en: {
       eyebrow: 'One night in the woods · 10 pm to 6 am',
@@ -720,7 +732,9 @@ span.ab { cursor: default; }
       t_rsp: 'Return', t_rspD: 'How soon the next titan comes after a win. No extra loot, but more fights.', t_hp: 'Health', t_hpD: 'How much it can take.',
       tDmgV: '+{n}% damage', tSpdV: '{n}× speed', tRspV: 'every {n} s', tHpV: '{n} health',
       convOn: 'Amber → trophies: on', convOff: 'Amber → trophies: off', convHint: 'At the end of an arena night every 10 amber become 1 trophy (arena point).',
-      convDone: '{a} amber → {p} trophies', convStart: 'Exchange on: amber turns into trophies (10 : 1)',
+      convDone: '{a} amber → {p} trophies', convStart: 'You are farming trophies: amber turns into trophies at the end (10 : 1).', farmAmberStart: 'You are farming amber. You can switch in the pause menu.',
+      farmWhat: 'What do you want to farm in the arena?', farmAmber: 'Amber', farmTrophy: 'Trophies',
+      farmAmberHint: 'You keep your amber and get trophies only for time, shadows, bosses and titans.', farmTrophyHint: 'At the end of the night every 10 amber become 1 trophy; the rest stays amber.',
     },
   };
   let lang = store.lang || ((navigator.language || 'en').toLowerCase().startsWith('de') ? 'de' : 'en');
@@ -1935,7 +1949,7 @@ span.ab { cursor: default; }
     if (U('fStart')) run.items.spark = Math.min(ITEMS.spark.max, 1 + U('fStart'));
     setWorld(save.world);
     run.endless = !!curWorld.endless;
-    if (run.endless && save.arenaConvert) setTimeout(() => toast(T('convStart')), 600);
+    if (run.endless) setTimeout(() => toast(T(save.arenaConvert ? 'convStart' : 'farmAmberStart')), 600);
     run.nextBoss = Math.max(120, 180 - 30 * U('arenaRush'));
     // Arena „Aufwärmen“: gleich auf Stufe 5, die vier Gaben werden sofort gewählt
     if (run.endless && U('arenaWarm')) { run.lv = 5; run.need = xpNeed(5); run.pending = 4; }
@@ -3185,6 +3199,9 @@ span.ab { cursor: default; }
     E('remain').classList.toggle('soon', !run.endless && left <= 30);
     setText('killTxt', String(run.kills));
     setText('amberTxt', String(run.amber));
+    const farmT = run.endless && save.arenaConvert;
+    E('amberStat').hidden = farmT; E('apStat').hidden = !run.endless;
+    if (run.endless) setText('apTxt', String(nightEarn(false).apGain));
     const b = run.boss;
     if (b && !b.dead) {
       E('boss').hidden = false; setText('bossName', b.d.name[lang]);
@@ -3355,6 +3372,8 @@ span.ab { cursor: default; }
     state = 'pause'; joy.active = false;
     for (const k in keys) keys[k] = false;
     updatePauseRemain(); renderAutoList();
+    E('farmPause').hidden = !run.endless;
+    if (run.endless) renderFarm(E('farmPause'), true);
     showScreen('pause'); Platform.gameplayStop();
   }
   // Automatik-Schalter im Pausemenü, nur für gekaufte Automatiken
@@ -3420,18 +3439,40 @@ span.ab { cursor: default; }
     state = 'play'; showScreen(null); Platform.gameplayStart();
   }
 
-  function endRun(won) {
-    state = 'over'; joy.active = false;
-    Platform.gameplayStop();
+  // Beute einer Nacht; in der Arena wahlweise als Pokale (je 10 Bernstein = 1 Pokal, der Rest bleibt Bernstein)
+  function nightEarn(won) {
     const arena = run.endless, t = arena ? run.t : Math.min(run.t, RUN_LEN), greed = (1 + 0.15 * U('greed')) * curWorld.reward;
     const drops = run.amber, timeB = Math.floor(t / 10), winB = won ? 80 : 0;
     const total = Math.round((drops + timeB + winB) * greed);
-    const rec = arena ? t > (save.arenaBest || 0) + 0.5 : t > save.best + 0.5;
-    // Arena mit Umtausch: je 10 Bernstein werden 1 Pokal (Arenapunkt), der Rest bleibt Bernstein
     const conv = arena && save.arenaConvert ? Math.floor(total / 10) : 0;
-    save.amber += total - conv * 10; save.runs++; save.night = null;
     // Arenapunkte: Zeit, besiegte Schatten, Bosse und Titanen
     const apGain = arena ? Math.round((Math.floor(t / 10) + Math.floor(run.kills / 50) + 5 * run.bossKills + run.ap) * (1 + 0.25 * U('arenaChamp')) * P.apMul) + conv : 0;
+    return { arena, t, greed, drops, timeB, winB, total, conv, apGain };
+  }
+  // Auswahl „Bernstein farmen“ oder „Pokale farmen“ (Arena-Karte und Pausemenü)
+  function renderFarm(box, inRun) {
+    box.innerHTML = `<span>${T('farmWhat')}</span>`;
+    const seg = document.createElement('div');
+    seg.className = 'seg';
+    for (const [conv, key, ico, cls] of [[false, 'farmAmber', 'amber', 'amb'], [true, 'farmTrophy', 'trophy', 'apv']]) {
+      const b = makeBtn(T(key), 'btn small ' + cls, () => {
+        save.arenaConvert = conv; persist();
+        renderFarm(box, inRun);
+        if (inRun) updateHud();
+      });
+      b.insertAdjacentHTML('afterbegin', icon(ico));
+      b.setAttribute('aria-pressed', String(save.arenaConvert === conv));
+      seg.appendChild(b);
+    }
+    box.appendChild(seg);
+    box.insertAdjacentHTML('beforeend', `<span>${T(save.arenaConvert ? 'farmTrophyHint' : 'farmAmberHint')}</span>`);
+  }
+  function endRun(won) {
+    state = 'over'; joy.active = false;
+    Platform.gameplayStop();
+    const { arena, t, greed, drops, timeB, winB, total, conv, apGain } = nightEarn(won);
+    const rec = arena ? t > (save.arenaBest || 0) + 0.5 : t > save.best + 0.5;
+    save.amber += total - conv * 10; save.runs++; save.night = null;
     if (arena) { save.ap = (save.ap || 0) + apGain; if (t > (save.arenaBest || 0)) save.arenaBest = t; }
     E('overAp').hidden = !arena;
     E('overAp').innerHTML = `+${apGain} ${icon('trophy')} <small>${T('ap')}</small>`;
@@ -3771,12 +3812,14 @@ span.ab { cursor: default; }
         const tb = makeBtn(T('titan'), 'btn small', openTitan);
         tb.insertAdjacentHTML('afterbegin', icon('crown'));
         row.appendChild(tb);
-        const cv = makeBtn(T(save.arenaConvert ? 'convOn' : 'convOff'), 'btn small' + (save.arenaConvert ? ' on' : ''), () => { save.arenaConvert = !save.arenaConvert; persist(); renderWorlds(); });
-        cv.insertAdjacentHTML('afterbegin', icon('trophy'));
-        cv.title = T('convHint');
-        row.appendChild(cv);
       }
       el.appendChild(row);
+      if (w.endless && open) {
+        const fm = document.createElement('div');
+        fm.className = 'farm';
+        renderFarm(fm, false);
+        el.appendChild(fm);
+      }
       box.appendChild(el);
     });
   }
