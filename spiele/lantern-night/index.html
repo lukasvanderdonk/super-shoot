@@ -618,6 +618,7 @@ span.ab { cursor: default; }
     prio: ['fireflies', 'pulse', 'stars', 'spark', 'ember', 'feather', 'cloak', 'tea', 'lure', 'boots', 'wick', 'clover'],
     boons: {}, arenaConvert: false, arenaMult: 0, arenaSpawn: 0, arenaSpawnUse: null, titan: { dmg: 0, spd: 0, rsp: 0, hp: 0, on: true }, pet: {},
     bossCall: { n: 1, str: 0, hp: 0, on: true },
+    train: { n: 0, prog: 0, total: 0, b: {} },
   });
   // Begleiter hatten früher 3 feste Stufen, jetzt vier Werte ohne Obergrenze: alte Stufen werden zu Werten
   function migratePets(sl) {
@@ -711,6 +712,12 @@ span.ab { cursor: default; }
       wish: 'Sternenwunsch', wishes: 'Sternenwünsche', wishGot: 'Sternenwunsch erfüllt: {n}',
       blocked: 'Geblockt!', aegisSaved: 'Unbeugsam! Du bleibst mit 1 Leben stehen.',
       titan: 'Arena-Titan', titanSub: 'Dein eigener Boss für die Arena. Dreh die Regler so hoch du willst: je stärker der Titan, desto größer seine Beute. Mit der Wiederkehr kommt er öfter.',
+      trainStart: 'Trainingslager: Je mehr Schaden, desto mehr dauerhafte Boni!', trainBar: 'Trainingspuppe · Bonus {k}: {a} / {b} Schaden',
+      trainGot: 'Trainingsbonus: {n} {d}', trainDps: '{n} Schaden pro Sekunde', trainPause: 'Trainingslager · {n} Boni bisher',
+      trainEnd: 'Training beenden', trainOver: 'Training beendet', trainSub: '{d} Schaden, {n} neue Boni', trainNone: 'Diesmal kein neuer Bonus – mach länger oder mehr Schaden.',
+      wTrainOnly: 'Nur die Trainingspuppe', wTrainN: '{n} Boni bisher', wTrainNext: 'Nächster Bonus: {a} / {b}',
+      trW: '+{n} % Schaden', trSpeed: '+{n} % Tempo', trHp: '+{n} max. Leben', trRegen: '+{n} Leben pro Sekunde', trMagnet: '+{n} % Sammelradius',
+      trLight: '+{n} % Lichtradius', trXp: '+{n} % Erfahrung', trDmg: '+{n} % Schaden (alles)', trCd: '−{n} % Abklingzeit',
       call: 'Bossruf', callSub: 'Sobald du in der Arena Stufe 30 erreichst (und danach alle 30 Stufen), vergehen alle Schatten und lassen ihre Beute fallen. Dann kommen deine Bosse, und bis sie besiegt sind, kommen keine neuen Schatten. Stell ein, wie viele es sind, wie hart sie zuschlagen und wie viel Leben sie haben. Stärkere Bosse bringen mehr Beute.',
       callStart: 'Bossruf! Alle Schatten vergehen – gleich kommen deine Bosse!', callDone: 'Bossruf geschafft! +{p} Arenapunkte',
       c_n: 'Anzahl', c_nD: 'Tipp ein, wie viele Bosse kommen (1 bis 500). Höchstens 30 sind gleichzeitig da, der Rest kommt nach.', callLeft: 'noch {n}', c_str: 'Stärke', c_strD: 'Wie hart die Bosse zuschlagen.', c_hp: 'Leben', c_hpD: 'Wie viel jeder Boss aushält.',
@@ -782,6 +789,12 @@ span.ab { cursor: default; }
       wish: 'Star wish', wishes: 'Star wishes', wishGot: 'Star wish granted: {n}',
       blocked: 'Blocked!', aegisSaved: 'Unbreakable! You stay standing with 1 health.',
       titan: 'Arena Titan', titanSub: 'Your own boss for the arena. Turn the dials as high as you like: the stronger the titan, the bigger its loot. Return brings it back sooner.',
+      trainStart: 'Training camp: the more damage, the more permanent bonuses!', trainBar: 'Training dummy · bonus {k}: {a} / {b} damage',
+      trainGot: 'Training bonus: {n} {d}', trainDps: '{n} damage per second', trainPause: 'Training camp · {n} bonuses so far',
+      trainEnd: 'End training', trainOver: 'Training finished', trainSub: '{d} damage, {n} new bonuses', trainNone: 'No new bonus this time – train longer or deal more damage.',
+      wTrainOnly: 'Only the training dummy', wTrainN: '{n} bonuses so far', wTrainNext: 'Next bonus: {a} / {b}',
+      trW: '+{n}% damage', trSpeed: '+{n}% speed', trHp: '+{n} max health', trRegen: '+{n} health per second', trMagnet: '+{n}% pickup range',
+      trLight: '+{n}% light radius', trXp: '+{n}% experience', trDmg: '+{n}% damage (everything)', trCd: '−{n}% cooldowns',
       call: 'Boss Call', callSub: 'As soon as you reach level 30 in the arena (and every 30 levels after that), every shadow fades and drops its loot. Then your bosses arrive, and no new shadows come until they are defeated. Choose how many there are, how hard they hit and how much health they have. Stronger bosses bring more loot.',
       callStart: 'Boss Call! Every shadow fades – your bosses are coming!', callDone: 'Boss Call cleared! +{p} arena points',
       c_n: 'Count', c_nD: 'Type how many bosses come (1 to 500). At most 30 are there at once, the rest follow.', callLeft: '{n} left', c_str: 'Strength', c_strD: 'How hard the bosses hit.', c_hp: 'Health', c_hpD: 'How much each boss can take.',
@@ -1189,11 +1202,17 @@ span.ab { cursor: default; }
       hp: 1.25, spawn: 1.25, speed: 1.05, dmg: 1.25, reward: 1, shards: 0, weather: 'embers', dark: '6,4,3', boss: 'rotate', swarm: 'any', mix: 'all',
       g: { base: '#1c1714', blot: ['62,50,40', '10,8,6'], leaf: ['#3a3028', '#4a3c30', '#2a221c', '#54463a'], grass: ['#2a2420', '#352c26'], pebble: ['#2a2420', '#4a4038'], twig: '#3a2c22' },
       dec: { glow: ['crystal', '#ff9a3c', '#ffe0b0'], glowKey: 'amber', plant: ['reed', '#4a3a28', '#6a4a2a'], rock: ['pillar', '#5a5048', '#2a2420'], log: ['log', '#2a1e16', '#4a3626', '#3a2a1a'] } },
+    // Trainingslager: nur die Trainingspuppe; Schaden bringt dauerhafte Boni statt Beute
+    { id: 'training', icon: 'target', name: { de: 'Trainingslager', en: 'Training Camp' }, c: '#d9a066', endless: true, training: true,
+      d: { de: 'Keine Schatten, nur eine Trainingspuppe, die nie umfällt und nicht zurückschlägt. Je mehr Schaden du machst, desto öfter bekommt eine deiner Gaben einen dauerhaften Bonus.', en: 'No shadows, just a training dummy that never falls and never hits back. The more damage you deal, the more often one of your gifts gets a permanent bonus.' },
+      hp: 1, spawn: 0, speed: 1, dmg: 0, reward: 0, shards: 0, weather: null, dark: '10,8,6', boss: 'dummy', swarm: null, mix: {},
+      g: { base: '#17140f', blot: ['58,46,30', '8,7,5'], leaf: ['#3b2e24', '#47321f', '#2e2a20', '#3d2a26'], grass: ['#2a3324', '#33402a'], pebble: ['#25221d', '#38332b'], twig: '#2a231c' },
+      dec: { glow: ['mush', '#d9a066', '#ffe2b8', '#9a8a70'], glowKey: 'amber', plant: ['fern', '#2a3a24', '#33462a'], rock: ['rock', '#26221c', '#3a342b', '#3a4a2a'], log: ['log', '#2a2016', '#4a3a2a', '#3a4a2a'] } },
   ];
   // eine Welt ist offen, wenn sie die erste ist oder die vorige gewonnen wurde; die Arena über das Arena-Tor
   { let p = null; for (const w of WORLDS) if (!w.endless) { w.prev = p; p = w.id; } }
   const NIGHT_WORLDS = WORLDS.filter(w => !w.endless);
-  const worldOpen = i => { const w = WORLDS[i]; return w.endless ? U('arena') > 0 : !w.prev || (save.worldWins[w.prev] || 0) > 0; };
+  const worldOpen = i => { const w = WORLDS[i]; return w.training ? true : w.endless ? U('arena') > 0 : !w.prev || (save.worldWins[w.prev] || 0) > 0; };
   const BOSSES = ['stag', 'toadking', 'frostgiant', 'shadowking', 'firestag', 'crystgiant', 'sandking', 'voidlord'];
   const SWARMS = ['moth', 'wraith', 'wolf', 'bat', 'cinder', 'cavebat', 'scarab', 'voidwraith'];
   // Schatten je Welt: Grundtyp wird mit einer Chance durch den Schatten der Welt ersetzt
@@ -1706,6 +1725,20 @@ span.ab { cursor: default; }
     g.fillStyle = '#ff4d6d'; circ(g, 22, -28, 4);
   }
 
+  // Trainingspuppe: Pfosten, Strohsack, Zielscheibe auf der Brust
+  function drawDummy(g) {
+    g.fillStyle = '#3a2a1c'; g.fillRect(-3, 6, 6, 36); g.fillRect(-29, -7, 58, 6);
+    g.fillStyle = '#b08a52'; g.beginPath(); g.ellipse(0, 4, 17, 22, 0, 0, TAU); g.fill();
+    g.strokeStyle = '#7a5a32'; g.lineWidth = 1.5;
+    for (const y of [-8, 4, 16]) { g.beginPath(); g.moveTo(-15, y); g.quadraticCurveTo(0, y + 3, 15, y); g.stroke(); }
+    g.fillStyle = '#c9a466'; g.beginPath(); g.arc(0, -27, 10, 0, TAU); g.fill();
+    g.strokeStyle = '#7a5a32'; g.beginPath(); g.moveTo(-6, -30); g.lineTo(-2, -26); g.moveTo(-2, -30); g.lineTo(-6, -26); g.moveTo(2, -30); g.lineTo(6, -26); g.moveTo(6, -30); g.lineTo(2, -26); g.stroke();
+    g.fillStyle = '#e8e0cc'; g.beginPath(); g.arc(0, 2, 9, 0, TAU); g.fill();
+    g.fillStyle = '#d2453c'; g.beginPath(); g.arc(0, 2, 6, 0, TAU); g.fill();
+    g.fillStyle = '#e8e0cc'; g.beginPath(); g.arc(0, 2, 2.6, 0, TAU); g.fill();
+    g.strokeStyle = '#d8b878'; g.lineWidth = 1.2;
+    for (const sd of [-1, 1]) { g.beginPath(); g.moveTo(sd * 29, -4); g.lineTo(sd * 33, -8); g.moveTo(sd * 29, -4); g.lineTo(sd * 33, -1); g.stroke(); }
+  }
   const EN = {
     shade: { hp: 12, sp: 64, r: 14, dmg: 8, xp: 1, mass: 1, anim: 5, size: 40, draw: drawShade, eyes: [[2, -3], [8, -3]], eye: 'eyeR', smoke: '48,34,82' },
     moth: { hp: 6, sp: 104, r: 10, dmg: 5, xp: 1, mass: 0.6, anim: 16, size: 36, draw: drawMoth, eyes: [[7, -1.6], [7, 1.6]], eye: 'eyeR', smoke: '84,70,100', swarm: { de: 'Ein Mottenschwarm naht', en: 'A swarm of moths is coming' } },
@@ -1725,6 +1758,7 @@ span.ab { cursor: default; }
     stag: { hp: 1500, sp: 58, r: 40, dmg: 20, xp: 30, mass: 40, anim: 6, size: 112, draw: drawStag, eyes: [[41, -26]], eye: 'eyeB', smoke: '40,30,74', boss: true, name: { de: 'Schattenhirsch', en: 'Shadow Stag' } },
     toadking: { hp: 1500, sp: 50, r: 40, dmg: 22, xp: 30, mass: 40, anim: 3, size: 110, draw: drawToadKing, eyes: [[20.8, -15.6], [7.8, -18.2]], eye: 'eyeY', smoke: '60,72,40', boss: true, name: { de: 'Krötenkönig', en: 'Toad King' } },
     frostgiant: { hp: 1500, sp: 40, r: 40, dmg: 24, xp: 30, mass: 40, anim: 4, size: 120, draw: drawGiant, eyes: [[6, -36], [14, -36]], eye: 'eyeB', smoke: '150,190,220', boss: true, name: { de: 'Frostriese', en: 'Frost Giant' } },
+    dummy: { hp: 1, sp: 0, r: 26, dmg: 0, xp: 0, mass: 1e6, anim: 0, size: 92, draw: drawDummy, eyes: [], eye: 'eyeO', smoke: '150,120,80', boss: true, beh: 'dummy', name: { de: 'Trainingspuppe', en: 'Training Dummy' } },
     shadowking: { hp: 1500, sp: 60, r: 34, dmg: 26, xp: 30, mass: 40, anim: 5, size: 110, draw: drawKing, eyes: [[3, -30], [9, -30]], eye: 'eyeR', smoke: '40,10,40', boss: true, name: { de: 'Schattenkönig', en: 'Shadow King' } },
   };
   // Spielarten der neuen Welten: Form und Verhalten vom Vorbild, Farben aus der Welt
@@ -1997,16 +2031,16 @@ span.ab { cursor: default; }
   const lv2 = (id, a, b) => { const l = lvOf(id); return a * Math.min(l, 5) + b * Math.max(0, l - 5); };
   function recalc() {
     const gz = glanz;   // Glanzstufen: kleine Boni je Pfad
-    P.maxHp = 100 + 10 * U('vitality') + lv2('cloak', 25, 15) + 5 * gz('mantel');
-    P.speed = 150 * (1 + 0.05 * U('swift') + 0.04 * U('tail') + lv2('boots', 0.12, 0.05) + 0.005 * gz('wander') + 0.008 * gz('wind'));
-    P.magnet = 85 * (1 + 0.15 * U('reach') + lv2('lure', 0.35, 0.15) + 0.02 * gz('wander')) * (petAb('wisp') >= 2 ? 1.5 : 1);
-    P.regen = lv2('tea', 0.5, 0.2) + 0.3 * U('herbs');
-    P.light = 220 * (1 + lv2('wick', 0.18, 0.08) + 0.1 * U('farsight'));
-    P.xpMul = (1 + lv2('clover', 0.15, 0.06) + 0.08 * U('gXp') + 0.03 * gz('wahl')) * (1 + B('xp'));
-    P.dmgMul = (1 + 0.06 * U('power') + 0.03 * gz('glut')) * (1 + lv2('ember', 0.12, 0.05)) * (1 + B('dmg'));
+    P.maxHp = 100 + 10 * U('vitality') + lv2('cloak', 25, 15) + 5 * gz('mantel') + 2 * TB('cloak');
+    P.speed = 150 * (1 + 0.05 * U('swift') + 0.04 * U('tail') + lv2('boots', 0.12, 0.05) + 0.005 * gz('wander') + 0.008 * gz('wind') + 0.01 * TB('boots'));
+    P.magnet = 85 * (1 + 0.15 * U('reach') + lv2('lure', 0.35, 0.15) + 0.02 * gz('wander') + 0.02 * TB('lure')) * (petAb('wisp') >= 2 ? 1.5 : 1);
+    P.regen = lv2('tea', 0.5, 0.2) + 0.3 * U('herbs') + 0.05 * TB('tea');
+    P.light = 220 * (1 + lv2('wick', 0.18, 0.08) + 0.1 * U('farsight') + 0.02 * TB('wick'));
+    P.xpMul = (1 + lv2('clover', 0.15, 0.06) + 0.08 * U('gXp') + 0.03 * gz('wahl') + 0.02 * TB('clover')) * (1 + B('xp'));
+    P.dmgMul = (1 + 0.06 * U('power') + 0.03 * gz('glut')) * (1 + lv2('ember', 0.12, 0.05) + 0.01 * TB('ember')) * (1 + B('dmg'));
     P.wpnMul = 1 + 0.03 * gz('schmiede');
     P.starMul = 1 + 0.12 * U('fStar') + 0.05 * gz('sterne');
-    P.cdMul = 0.9 ** Math.min(5, lvOf('feather')) * 0.97 ** Math.max(0, lvOf('feather') - 5) * (1 - 0.04 * U('quick')) * (U('fMaster') ? 0.9 : 1);
+    P.cdMul = 0.9 ** Math.min(5, lvOf('feather')) * 0.97 ** Math.max(0, lvOf('feather') - 5) * (1 - 0.04 * U('quick')) * (U('fMaster') ? 0.9 : 1) * Math.max(0.5, 0.99 ** TB('feather'));
     P.abilCd = Math.max(0.7, 1 - 0.01 * gz('mond'));
     P.petMul = P.dmgMul * (1 + 0.2 * U('bond') + 0.04 * gz('mond'));
     P.crit = 0.05 * U('crit') + (petAb('owl') >= 4 ? 0.1 : 0);
@@ -2100,10 +2134,18 @@ span.ab { cursor: default; }
     if (U('fStart')) run.items.spark = Math.min(ITEMS.spark.max, 1 + U('fStart'));
     setWorld(save.world);
     run.endless = !!curWorld.endless;
-    if (run.endless) setTimeout(() => toast(T(save.arenaConvert ? 'convStart' : 'farmAmberStart')), 600);
+    run.arena = run.endless && !curWorld.training;
+    run.trainDmg = 0; run.trainGot = []; run.dps = 0; run.dmgSec = 0; run.dpsT = 1; run.saveTT = 3;
+    if (curWorld.training) {
+      // die Puppe steht gleich neben dir
+      const d = spawnEnemy('dummy', 170, -6);
+      d.dummy = true; run.boss = d;
+      setTimeout(() => toast(T('trainStart')), 600);
+    }
+    if (run.arena) setTimeout(() => toast(T(save.arenaConvert ? 'convStart' : 'farmAmberStart')), 600);
     run.nextBoss = Math.max(120, 180 - 30 * U('arenaRush'));
     // Arena „Aufwärmen“: gleich auf Stufe 5, die vier Gaben werden sofort gewählt
-    if (run.endless && U('arenaWarm')) { run.lv = 5; run.need = xpNeed(5); run.pending = 4; }
+    if (run.arena && U('arenaWarm')) { run.lv = 5; run.need = xpNeed(5); run.pending = 4; }
     // Begleiter mitnehmen
     const sel = save.compSel.filter(id => COMPS[id] && (save.comp[id] || 0) > 0).slice(0, compMax());
     run.pets = sel.map((id, i) => petStats({ id, x: -20 - i * 16, y: 12, vx: 0, t: 1, anim: Math.random() * 5, face: 1, a: i * Math.PI, tg: null }));
@@ -2148,6 +2190,7 @@ span.ab { cursor: default; }
     return e;
   }
   function spawnTick(dt) {
+    if (curWorld.training) { trainTick(dt); return; }   // im Trainingslager kommt nichts außer der Puppe
     const t = run.t;
     if (run.endless && save.bossCall.on) {
       bossCallTick(dt);
@@ -2221,6 +2264,39 @@ span.ab { cursor: default; }
     addLoot('berry', e.x, e.y + 26); addLoot('amberheart', e.x, e.y - 26);
     banner(tf('titanDown', { p: rw.ap * rolls }), 1.8);
     shake(10); flashes.push({ x: e.x, y: e.y, r: 360, life: 0.55, max: 0.55 }); Snd.play('win');
+  }
+
+  // ---------- Trainingslager: Schaden an der Puppe bringt dauerhafte Boni auf Gaben ----------
+  const TRAIN_IDS = Object.keys(ITEMS);
+  const trainNeed = n => Math.round(2000 * 1.07 ** n);   // jeder weitere Bonus braucht 7 % mehr Schaden
+  const TB = id => (save.train && save.train.b[id]) || 0;
+  const trainMul = id => 1 + 0.02 * TB(id);               // Waffen: +2 % Schaden pro Bonus
+  function trainText(id, b) {
+    if (ITEMS[id].kind === 'w') return tf('trW', { n: 2 * b });
+    return {
+      boots: () => tf('trSpeed', { n: b }), cloak: () => tf('trHp', { n: 2 * b }), tea: () => tf('trRegen', { n: fmtNum(+(0.05 * b).toFixed(2)) }),
+      lure: () => tf('trMagnet', { n: 2 * b }), wick: () => tf('trLight', { n: 2 * b }), clover: () => tf('trXp', { n: 2 * b }),
+      ember: () => tf('trDmg', { n: b }), feather: () => tf('trCd', { n: Math.round((1 - 0.99 ** b) * 100) }),
+    }[id]();
+  }
+  function trainHit(d) {
+    const tr = save.train;
+    run.trainDmg += d; run.dmgSec += d; tr.prog += d; tr.total += d;
+    gainXp(d / 20);   // Erfahrung kommt hier vom Schaden, es gibt ja keine Funken
+    let got = false;
+    while (tr.prog >= trainNeed(tr.n)) {
+      tr.prog -= trainNeed(tr.n); tr.n++;
+      const id = TRAIN_IDS[(Math.random() * TRAIN_IDS.length) | 0];
+      tr.b[id] = (tr.b[id] || 0) + 1; run.trainGot.push(id); got = true;
+      toast(tf('trainGot', { n: ITEMS[id].name[lang], d: trainText(id, 1) }));
+    }
+    if (got) { recalc(); Snd.play('level'); persist(); }
+  }
+  function trainTick(dt) {
+    // Schaden pro Sekunde, sanft geglättet
+    if ((run.dpsT -= dt) <= 0) { run.dpsT = 1; run.dps = run.dps * 0.5 + run.dmgSec * 0.5; run.dmgSec = 0; }
+    if ((run.saveTT -= dt) <= 0) { run.saveTT = 3; persist(); }
+    if (!run.boss || run.boss.dead) { const d = spawnEnemy('dummy', P.x + 170, P.y - 6); d.dummy = true; run.boss = d; }
   }
 
   // ---------- Bossruf: ab Stufe 30 (dann alle 30 Stufen) vergehen alle Schatten, dann kommen eigene Bosse ----------
@@ -2459,7 +2535,7 @@ span.ab { cursor: default; }
   }
   function addStar(x, y, t, e) {
     const s = ITEMS.stars.s, l = Math.max(0, (run.items.stars || 1) - 1);
-    let dmg = s.dmg[l] * P.dmgMul * P.starMul * P.wpnMul, R = s.rad[l] * (1 + 0.15 * U('bigstars'));
+    let dmg = s.dmg[l] * P.dmgMul * P.starMul * P.wpnMul * trainMul('stars'), R = s.rad[l] * (1 + 0.15 * U('bigstars'));
     const meteor = U('meteor') > 0 && ++run.starN % 4 === 0;
     if (meteor) { dmg *= 3; R *= 1.6; }
     stars.push({ e, x, y, t, R, dmg, meteor });
@@ -2616,7 +2692,7 @@ span.ab { cursor: default; }
       if (run.galeT > 0 && dist < e.r + P.r + 16) {
         // Sturmlauf schiebt Schatten beiseite, statt Schaden zu nehmen
         if (!e.d.boss) { e.kx = (-dx / dist) * 380; e.ky = (-dy / dist) * 380; }
-      } else if (!P.dead && !ghost && dist < e.r + P.r - 2) hurtPlayer((e.d.boss ? e.d.dmg : e.d.dmg * (1 + t / 600)) * curWorld.dmg * (e.dmgMul || 1), e.type, e);
+      } else if (!P.dead && !ghost && e.d.dmg > 0 && dist < e.r + P.r - 2) hurtPlayer((e.d.boss ? e.d.dmg : e.d.dmg * (1 + t / 600)) * curWorld.dmg * (e.dmgMul || 1), e.type, e);
       if (dist > far && !e.d.boss) { const p = edgePoint(); e.x = p[0]; e.y = p[1]; e.kx = e.ky = 0; }
     }
   }
@@ -2629,7 +2705,8 @@ span.ab { cursor: default; }
     if (P.moving && U('windheart')) dmg *= 1.12;
     if (e.d.boss) dmg *= 1 + 0.3 * U('wrath');
     if (U('wLast') && P.hp < P.maxHp * 0.25) dmg *= 1 + 0.3 * U('wLast');
-    e.hp -= dmg; e.fl = e.d.boss ? 0.06 : 0.1;
+    if (e.dummy) trainHit(dmg); else e.hp -= dmg;
+    e.fl = e.d.boss ? 0.06 : 0.1;
     if (kb && !e.d.boss) { const k = (kb / e.d.mass) * (curWorld.kb || 1); e.kx += nx * k; e.ky += ny * k; }   // schwere Welten: Schatten lassen sich kaum wegstoßen
     if (texts.length < (crit ? 40 : 28)) texts.push({ x: e.x + rand(-6, 6), y: e.y - e.r - 4, v: Math.round(dmg), life: crit ? 0.75 : 0.55, crit });
     Snd.play('hit');
@@ -2644,7 +2721,7 @@ span.ab { cursor: default; }
     else gems.push({ x: e.x + rand(-4, 4), y: e.y + rand(-4, 4), v: xp, m: false, sp: 0 });
     // Lichtdurst: höchstens 1 Leben pro Sekunde und Stufe, damit dichte Welten nicht unsterblich machen
     if (U('wLeech') && run.leech > 0) { const h = Math.min(run.leech, 0.3 * U('wLeech')); run.leech -= h; P.hp = Math.min(P.maxHp, P.hp + h); }
-    const ar = run.endless;   // Arena-Pfad: mehr Beute, nur in der Arena
+    const ar = run.arena;   // Arena-Pfad: mehr Beute, nur in der Arena
     // Wunsch „Doppelte Beute“ und Glücksrad: die Beute wird mehrmals ausgewürfelt
     const rolls = 1 + B('loot') + (Math.random() < 0.1 * U('gWheel') ? 1 : 0);
     const rare = 1 + 0.25 * U('gRare');
@@ -2732,7 +2809,7 @@ span.ab { cursor: default; }
             const e = tg[i % tg.length];
             let a = Math.atan2(e.y - (P.y - 4), e.x - P.x);
             if (i >= tg.length) a += (i % 2 ? 1 : -1) * 0.2 * Math.ceil((i - tg.length + 1) / 2);
-            shots.push({ x: P.x + Math.cos(a) * 12, y: P.y - 4 + Math.sin(a) * 12, vx: Math.cos(a) * 560, vy: Math.sin(a) * 560, r: 6, dmg: s.dmg[l] * m * (1 + 0.15 * U('fSpark')), pierce: s.pierce[l] + U('pierce'), life: 1.1, hit: [] });
+            shots.push({ x: P.x + Math.cos(a) * 12, y: P.y - 4 + Math.sin(a) * 12, vx: Math.cos(a) * 560, vy: Math.sin(a) * 560, r: 6, dmg: s.dmg[l] * m * (1 + 0.15 * U('fSpark')) * trainMul('spark'), pierce: s.pierce[l] + U('pierce'), life: 1.1, hit: [] });
           }
           Snd.play('shoot');
         } else ws.spark = 0.1;
@@ -2753,7 +2830,7 @@ span.ab { cursor: default; }
           if (dx * dx + dy * dy < (e.r + 8) ** 2) {
             e.oc = 0.4;
             const d = Math.hypot(e.x - P.x, e.y - P.y) || 1;
-            hit(e, s.dmg[l] * m * (1 + 0.12 * U('fFly')), (e.x - P.x) / d, (e.y - P.y) / d, 120);
+            hit(e, s.dmg[l] * m * (1 + 0.12 * U('fFly')) * trainMul('fireflies'), (e.x - P.x) / d, (e.y - P.y) / d, 120);
           }
         }
       }
@@ -2765,7 +2842,7 @@ span.ab { cursor: default; }
         const q = query(P.x, P.y, R + 50);
         for (let j = 0; j < q.length; j++) {
           const e = q[j], dx = e.x - P.x, dy = e.y - P.y, d = Math.hypot(dx, dy) || 1;
-          if (d < R + e.r) hit(e, s.dmg[l] * m * f * (1 + 0.12 * U('fPulse')), dx / d, dy / d, 280);
+          if (d < R + e.r) hit(e, s.dmg[l] * m * f * (1 + 0.12 * U('fPulse')) * trainMul('pulse'), dx / d, dy / d, 280);
         }
         for (const sp of spores) if ((sp.x - P.x) ** 2 + (sp.y - P.y) ** 2 < R * R) sp.dead = true;
         Snd.play('pulse');
@@ -3484,16 +3561,23 @@ span.ab { cursor: default; }
     // echte Restzeit bis zum Morgen (mit Spieltempo eingerechnet), in der letzten halben Minute bernsteinfarben
     const left = (RUN_LEN - run.t) / tp;
     E('remain').hidden = run.won;
-    if (run.endless) setText('remain', T(W < 520 ? 'arenaShort' : 'arenaEndless'));
+    if (curWorld.training) setText('remain', tf('trainDps', { n: fmtNum(Math.round(run.dps)) }));
+    else if (run.endless) setText('remain', T(W < 520 ? 'arenaShort' : 'arenaEndless'));
     else setText('remain', tf(W < 520 ? 'remainShort' : 'remain', { t: fmtLeft(left) }));
     E('remain').classList.toggle('soon', !run.endless && left <= 30);
     setText('killTxt', String(run.kills));
     setText('amberTxt', String(run.amber));
-    const farmT = run.endless && save.arenaConvert;
-    E('amberStat').hidden = farmT; E('apStat').hidden = !run.endless;
-    if (run.endless) setText('apTxt', String(nightEarn(false).apGain));
+    const farmT = run.arena && save.arenaConvert;
+    E('amberStat').hidden = farmT; E('apStat').hidden = !run.arena;
+    if (run.arena) setText('apTxt', String(nightEarn(false).apGain));
     const b = run.boss;
-    if (b && !b.dead) {
+    if (b && b.dummy) {
+      // Trainingspuppe: die Leiste zeigt den Weg zum nächsten Bonus
+      const tr = save.train, need = trainNeed(tr.n);
+      E('boss').hidden = false;
+      setText('bossName', tf('trainBar', { k: tr.n + 1, a: fmtNum(Math.floor(tr.prog)), b: fmtNum(need) }));
+      E('bossFill').style.width = (Math.min(1, tr.prog / need) * 100).toFixed(1) + '%';
+    } else if (b && !b.dead) {
       E('boss').hidden = false; setText('bossName', b.callBoss && run.wave ? `${b.d.name[lang]} · ${tf('callLeft', { n: run.wave.left })}` : b.d.name[lang]);
       E('bossFill').style.width = ((Math.max(0, b.hp) / b.max) * 100).toFixed(1) + '%';
     } else E('boss').hidden = true;
@@ -3662,8 +3746,9 @@ span.ab { cursor: default; }
     state = 'pause'; joy.active = false;
     for (const k in keys) keys[k] = false;
     updatePauseRemain(); renderAutoList();
-    E('farmPause').hidden = E('spawnPause').hidden = !run.endless;
-    if (run.endless) { renderFarm(E('farmPause'), true); const rs = () => renderSpawn(E('spawnPause'), rs); rs(); }
+    E('farmPause').hidden = E('spawnPause').hidden = !run.arena;
+    E('quitBtn').textContent = T(curWorld.training ? 'trainEnd' : 'giveUp');
+    if (run.arena) { renderFarm(E('farmPause'), true); const rs = () => renderSpawn(E('spawnPause'), rs); rs(); }
     showScreen('pause'); Platform.gameplayStop();
   }
   // Automatik-Schalter im Pausemenü, nur für gekaufte Automatiken
@@ -3722,7 +3807,7 @@ span.ab { cursor: default; }
     save.prio = l; persist(); renderPrio(j, d);
   }
   function updatePauseRemain() {
-    if (run) E('pauseRemain').textContent = run.endless ? T('arenaEndless') : tf('remainPause', { t: fmtLeft((RUN_LEN - run.t) / (store.tempo || 1)) });
+    if (run) E('pauseRemain').textContent = curWorld.training ? tf('trainPause', { n: save.train.n }) : run.endless ? T('arenaEndless') : tf('remainPause', { t: fmtLeft((RUN_LEN - run.t) / (store.tempo || 1)) });
   }
   function resume() {
     if (state !== 'pause') return;
@@ -3766,7 +3851,7 @@ span.ab { cursor: default; }
   }
   // Beute einer Nacht; in der Arena wahlweise als Pokale (je 10 Bernstein = 1 Pokal, der Rest bleibt Bernstein)
   function nightEarn(won) {
-    const arena = run.endless, t = arena ? run.t : Math.min(run.t, RUN_LEN), greed = (1 + 0.15 * U('greed')) * curWorld.reward;
+    const arena = run.arena, t = run.endless ? run.t : Math.min(run.t, RUN_LEN), greed = (1 + 0.15 * U('greed')) * curWorld.reward;
     const drops = run.amber, timeB = Math.floor(t / 10), winB = won ? 80 : 0;
     // Arena-Multiplikator (mit Pokalen gekauft) vervielfacht am Ende alles
     const mult = arena ? arenaMult() : 1;
@@ -3795,9 +3880,25 @@ span.ab { cursor: default; }
     box.insertAdjacentHTML('beforeend', `<span>${T(save.arenaConvert ? 'farmTrophyHint' : 'farmAmberHint')}</span>`);
     if (inRun && arenaMult() > 1) box.insertAdjacentHTML('beforeend', `<span class="mult">${tf('multNow', { a: fmtNum(arenaMult()) })}</span>`);
   }
+  // Training beendet: keine Beute, aber eine Liste der neuen Boni
+  function endTraining() {
+    save.runs++; save.night = null; persist();
+    E('overTitle').textContent = T('trainOver');
+    E('overSub').textContent = tf('trainSub', { d: fmtNum(Math.round(run.trainDmg)), n: run.trainGot.length });
+    document.querySelector('#over [data-t="survived"]').textContent = T('survivedArena');
+    E('stTime').textContent = fmtLeft(run.t); E('stKills').textContent = 0; E('stLv').textContent = run.lv;
+    const cnt = {};
+    for (const id of run.trainGot) cnt[id] = (cnt[id] || 0) + 1;
+    const list = Object.entries(cnt).map(([id, n]) => `${ITEMS[id].name[lang]} ${trainText(id, n)}`);
+    E('overEarn').innerHTML = list.length ? `${icon('target')} <small>${list.join(' · ')}</small>` : `<small>${T('trainNone')}</small>`;
+    for (const id of ['overShards', 'overAp', 'overUnlock', 'overRec']) E(id).hidden = true;
+    showScreen('over');
+    updateMenuMeta();
+  }
   function endRun(won) {
     state = 'over'; joy.active = false;
     Platform.gameplayStop();
+    if (curWorld.training) { endTraining(); return; }
     const { arena, t, greed, mult, drops, timeB, winB, total, conv, apGain } = nightEarn(won);
     const rec = arena ? t > (save.arenaBest || 0) + 0.5 : t > save.best + 0.5;
     save.amber += total - conv * 10; save.runs++; save.night = null;
@@ -4007,6 +4108,7 @@ span.ab { cursor: default; }
       const e = spawnEnemy(type, a[1], a[2]);
       Object.assign(e, { hp: a[3], max: a[4], st: a[5], tm: a[6], t2: a[7], ax: a[8], ay: a[9] });
       if (a[10]) run.boss = e;
+      if (type === 'dummy') { e.dummy = true; run.boss = e; }
       if (type === 'titan') { titanize(e); run.titanRef = e; }
     }
     gems = n.gems.map(([x, y, v]) => ({ x, y, v, m: false, sp: 0 }));
@@ -4097,6 +4199,10 @@ span.ab { cursor: default; }
         boons: Object.fromEntries(Object.entries(o.boons || {}).filter(([k, v]) => BOONS[k] && Number.isFinite(v)).map(([k, v]) => [k, Math.max(0, v | 0)])),
         arenaConvert: o.arenaConvert === true, arenaMult: Math.max(0, o.arenaMult | 0),
         arenaSpawn: Math.max(0, o.arenaSpawn | 0), arenaSpawnUse: Number.isFinite(o.arenaSpawnUse) ? Math.max(0, o.arenaSpawnUse | 0) : null,
+        train: o.train && typeof o.train === 'object' ? {
+          n: Math.max(0, o.train.n | 0), prog: Math.max(0, +o.train.prog || 0), total: Math.max(0, +o.train.total || 0),
+          b: Object.fromEntries(Object.entries(o.train.b || {}).filter(([k, v]) => ITEMS[k] && Number.isFinite(v)).map(([k, v]) => [k, Math.max(0, v | 0)])),
+        } : newSlot().train,
         bossCall: Object.assign(newSlot().bossCall, Object.fromEntries(['n', 'str', 'hp'].filter(k => o.bossCall && Number.isFinite(o.bossCall[k])).map(k => [k, k === 'n' ? clamp(o.bossCall[k] | 0, 1, 500) : Math.max(0, o.bossCall[k] | 0)])), { on: !(o.bossCall && o.bossCall.on === false) }),
         titan: Object.assign(newSlot().titan, Object.fromEntries(['dmg', 'spd', 'rsp', 'hp'].filter(k => o.titan && Number.isFinite(o.titan[k])).map(k => [k, Math.max(0, o.titan[k] | 0)])), { on: !(o.titan && o.titan.on === false) }),
         auto: Object.fromEntries(Object.entries(o.auto || {}).filter(([, v]) => typeof v === 'boolean' || ['off', 'smart', 'always'].includes(v))),
@@ -4118,15 +4224,19 @@ span.ab { cursor: default; }
       el.className = 'wcard' + (cur ? ' cur' : '') + (open ? '' : ' locked');
       el.style.setProperty('--c', w.c);
       const chips = [];
-      if (w.endless) chips.push(T('wEndless'));
+      if (w.endless && !w.training) chips.push(T('wEndless'));
+      if (w.training) chips.push(T('wTrainOnly'), tf('wTrainN', { n: save.train.n }), tf('wTrainNext', { a: fmtNum(Math.floor(save.train.prog)), b: fmtNum(trainNeed(save.train.n)) }));
       if (w.hp > 1) chips.push(tf('wHp', { n: Math.round((w.hp - 1) * 100) }));
       if (w.dmg > 1) chips.push(tf('wDmg', { n: Math.round((w.dmg - 1) * 100) }));
       if (w.spawn > 1) chips.push(tf('wSpawn', { n: Math.round((w.spawn - 1) * 100) }));
       if (w.speed > 1) chips.push(tf('wSpeed', { n: Math.round((w.speed - 1) * 100) }));
       if (w.kb) chips.push(tf('wKb', { n: Math.round((1 - w.kb) * 100) }));
       if (w.grow) chips.push(tf('wGrow', { n: fmtNum(w.grow) }));
-      chips.push(w.boss === 'rotate' ? T('wAllBosses') : tf('wBoss', { n: EN[w.boss].name[lang] }));
-      if (w.endless) {
+      if (!w.training) chips.push(w.boss === 'rotate' ? T('wAllBosses') : tf('wBoss', { n: EN[w.boss].name[lang] }));
+      if (w.training) {
+        // bisherige Boni je Gabe
+        for (const id of TRAIN_IDS) if (TB(id)) chips.push(`${ITEMS[id].name[lang]} ${trainText(id, TB(id))}`);
+      } else if (w.endless) {
         chips.push(`${T('ap')} ${icon('trophy')}`);
         if (save.arenaBest) chips.push(tf('wBestArena', { t: fmtLeft(save.arenaBest) }));
       } else {
@@ -4142,7 +4252,7 @@ span.ab { cursor: default; }
       if (!open) row.innerHTML = `<span class="ni-need">${w.endless ? T('arenaLocked') : tf('wLocked', { n: WORLDS.find(x => x.id === w.prev).name[lang] })}</span>`;
       else if (cur) row.innerHTML = `<span class="ni-tag">${T('chosen')}</span>`;
       else row.appendChild(makeBtn(T('choose'), 'btn small primary', () => { save.world = w.id; persist(); setWorld(w.id); renderWorlds(); updateMenuMeta(); }));
-      if (w.endless && open) {
+      if (w.endless && !w.training && open) {
         // Arena: Titan einstellen und Bernstein in Pokale tauschen
         const tb = makeBtn(T('titan'), 'btn small', openTitan);
         tb.insertAdjacentHTML('afterbegin', icon('crown'));
@@ -4152,7 +4262,7 @@ span.ab { cursor: default; }
         row.appendChild(cb);
       }
       el.appendChild(row);
-      if (w.endless && open) {
+      if (w.endless && !w.training && open) {
         const fm = document.createElement('div');
         fm.className = 'farm';
         renderFarm(fm, false);
