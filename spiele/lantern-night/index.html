@@ -631,6 +631,7 @@ span.ab { cursor: default; }
       auto: 'Automatik', tagAuto: 'Automatik',
       prioTitle: 'Gabenliste', prioSub: 'Die obersten {n} Gaben werden bei der automatischen Wahl bevorzugt. Mit den Pfeilen änderst du die Reihenfolge.',
       prioCut: 'ab hier nicht in der Liste', prioEdit: 'Gabenliste bearbeiten', moveUp: '{n} nach oben', moveDown: '{n} nach unten', autoPicked: 'Gabe gewählt: {n}',
+      amberHeart: 'Bernsteinherz: aller Bernstein kommt zu dir!', moonStone: 'Mondstein: alle Funken kommen zu dir!',
     },
     en: {
       eyebrow: 'One night in the woods · 10 pm to 6 am',
@@ -676,6 +677,7 @@ span.ab { cursor: default; }
       auto: 'Auto', tagAuto: 'Automation',
       prioTitle: 'Gift list', prioSub: 'The top {n} gifts are preferred by the automatic pick. Use the arrows to change the order.',
       prioCut: 'not in the list from here', prioEdit: 'Edit gift list', moveUp: 'Move {n} up', moveDown: 'Move {n} down', autoPicked: 'Gift picked: {n}',
+      amberHeart: 'Amber Heart: all amber flies to you!', moonStone: 'Moonstone: all sparks fly to you!',
     },
   };
   let lang = store.lang || ((navigator.language || 'en').toLowerCase().startsWith('de') ? 'de' : 'en');
@@ -1508,6 +1510,17 @@ span.ab { cursor: default; }
       g.fillStyle = '#d8ecff'; g.beginPath(); g.arc(0, 0, 7.5, 0, TAU); g.fill();
       g.fillStyle = '#6f93c4'; g.beginPath(); g.arc(3.4, -2.2, 6.2, 0, TAU); g.fill();
     }, 3, false),
+    // Bernsteinherz: zieht allen Bernstein und alle Mondsplitter zu dir
+    amberheart: makeSprite(26, g => {
+      g.fillStyle = '#b8641c'; g.beginPath();
+      for (let i = 0; i < 6; i++) { const a = (i / 6) * TAU - Math.PI / 2; g.lineTo(Math.cos(a) * 10, Math.sin(a) * 10); }
+      g.closePath(); g.fill();
+      g.fillStyle = '#ffb84d'; g.beginPath();
+      for (let i = 0; i < 6; i++) { const a = (i / 6) * TAU - Math.PI / 2; g.lineTo(Math.cos(a) * 8, Math.sin(a) * 8); }
+      g.closePath(); g.fill();
+      g.fillStyle = '#fff1c8'; g.beginPath();
+      g.moveTo(0, 4.5); g.bezierCurveTo(-6, 0, -4.5, -5, 0, -2.2); g.bezierCurveTo(4.5, -5, 6, 0, 0, 4.5); g.fill();
+    }, 3, false),
     shard: makeSprite(22, g => {
       g.fillStyle = '#c9dcff'; g.beginPath(); g.moveTo(0, -9); g.lineTo(5, -1); g.lineTo(0, 9); g.lineTo(-5, -1); g.closePath(); g.fill();
       g.fillStyle = '#ffffff'; g.beginPath(); g.moveTo(0, -9); g.lineTo(2, -1); g.lineTo(-1.5, -1); g.closePath(); g.fill();
@@ -2127,6 +2140,7 @@ span.ab { cursor: default; }
       for (let i = 0; i < 12 + (ar ? 4 * U('arenaTrophy') : 0); i++) addLoot('amber', e.x + rand(-45, 45), e.y + rand(-35, 35));
       addLoot('berry', e.x, e.y + 20);
       for (let i = 0; i < 3 + U('shardseeker') + (ar ? U('arenaTrophy') : 0); i++) addLoot('shard', e.x + rand(-35, 35), e.y + rand(-30, 30));
+      addLoot('amberheart', e.x, e.y - 24);
       if (run.boss === e) run.boss = null;
       shake(9);
       flashes.push({ x: e.x, y: e.y, r: 320, life: 0.5, max: 0.5 });
@@ -2140,6 +2154,7 @@ span.ab { cursor: default; }
       else if (r < amberC + berry) addLoot('berry', e.x, e.y);
       else if (r < amberC + berry + 0.002) addLoot('moon', e.x, e.y);
       else if (r < amberC + berry + 0.002 + shardC) addLoot('shard', e.x, e.y);
+      else if (r < amberC + berry + 0.0038 + shardC) addLoot('amberheart', e.x, e.y);
     }
     smoke(e.x, e.y, d.boss ? 30 : 6, d.smoke);
     for (const [ex, ey] of d.eyes) parts.push({ x: e.x + ex * e.face, y: e.y + ey, vx: rand(-60, 60), vy: rand(-90, -30), life: 0.5, max: 0.5, r: 3, g: d.eye });
@@ -2320,8 +2335,14 @@ span.ab { cursor: default; }
         o.dead = true;
         if (o.t === 'amber') { run.amber++; Snd.play('amber'); }
         else if (o.t === 'shard') { run.shards++; Snd.play('moon'); burst(P.x, P.y, 6, 'silver', 110); }
+        else if (o.t === 'amberheart') {
+          // wie der Mondstein für Funken, nur für Bernstein und Mondsplitter
+          for (const l of loot) if (l.t === 'amber' || l.t === 'shard') l.m = true;
+          Snd.play('amber'); Snd.play('moon'); toast(T('amberHeart'));
+          flashes.push({ x: P.x, y: P.y, r: 280, life: 0.45, max: 0.45 });
+        }
         else if (o.t === 'berry') { P.hp = Math.min(P.maxHp, P.hp + 30 * (1 + 0.25 * U('berries'))); Snd.play('heal'); burst(P.x, P.y, 8, 'berry', 120); }
-        else { for (const g of gems) g.m = true; Snd.play('moon'); flashes.push({ x: P.x, y: P.y, r: 260, life: 0.4, max: 0.4 }); }
+        else { for (const g of gems) g.m = true; Snd.play('moon'); toast(T('moonStone')); flashes.push({ x: P.x, y: P.y, r: 260, life: 0.4, max: 0.4 }); }
         continue;
       }
       o.x += (dx / d) * o.sp * dt; o.y += (dy / d) * o.sp * dt;
@@ -2720,7 +2741,8 @@ span.ab { cursor: default; }
     glow('warm', P.x, P.y, P.light * 0.9 * fade, 0.08);
     for (let i = 0; i < mushPts.length; i += 2) glow(curWorld.dec.glowKey, mushPts[i], mushPts[i + 1], 30, 0.32 + 0.1 * Math.sin(time * 2 + mushPts[i]));
     for (const g of gems) if (inView(g.x, g.y)) glow(GEM_GLOW[gemTier(g.v)], g.x, g.y, 12, 0.6);
-    for (const o of loot) if (inView(o.x, o.y)) glow(o.t === 'amber' ? 'amber' : o.t === 'berry' ? 'berry' : o.t === 'shard' ? 'silver' : 'moon', o.x, o.y, o.t === 'moon' ? 26 : o.t === 'shard' ? 22 : 16, 0.6);
+    const LOOT_G = { amber: ['amber', 16], berry: ['berry', 16], shard: ['silver', 22], moon: ['moon', 26], amberheart: ['amber', 30] };
+    for (const o of loot) if (inView(o.x, o.y)) { const [gk, gr] = LOOT_G[o.t] || LOOT_G.moon; glow(gk, o.x, o.y, gr, 0.6); }
     for (const b of shots) {
       if (!inView(b.x, b.y)) continue;
       const gk = b.k === 'feather' ? 'silver' : b.k === 'spike' ? 'gold' : 'warm';
