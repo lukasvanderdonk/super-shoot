@@ -169,6 +169,9 @@ h2 { margin: 0; font-family: var(--f-display); font-weight: 800; font-size: clam
 .pips { display: flex; gap: 4px; margin-top: 3px; }
 .pips i { width: 14px; height: 4px; border-radius: 2px; background: rgba(239, 230, 207, .18); }
 .pips i.on { background: var(--c, var(--amber)); }
+.pips i.gl { background: rgba(255, 241, 168, .16); }
+.pips i.gl.on { background: #fff1a8; box-shadow: 0 0 6px rgba(255, 241, 168, .8); }
+.ni-glanz { margin: 0; font-size: .9rem; color: #fff1a8; }
 .buy { flex: none; min-width: 120px; font-family: var(--f-num); font-variant-numeric: tabular-nums; }
 .buy svg { color: #1d1405; }
 .shop-foot { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
@@ -190,7 +193,7 @@ h2 { margin: 0; font-family: var(--f-display); font-weight: 800; font-size: clam
 .pr:not(.in) .pname { font-weight: 500; color: var(--ink-dim); }
 .btn.mv { min-width: 38px; min-height: 34px; padding: 4px 8px; }
 .pr-cut { padding-top: 6px; margin-top: 2px; border-top: 1px dashed rgba(239, 230, 207, .25); text-align: center; font: 700 .74rem var(--f-num); letter-spacing: .1em; text-transform: uppercase; color: var(--ink-dim); }
-.ni-act { display: flex; flex-direction: column; gap: 8px; }
+.ni-act { display: flex; flex-direction: column; gap: 8px; max-width: 300px; }
 .card.autosel { border-color: var(--moon); box-shadow: 0 0 0 2px var(--moon), 0 0 30px rgba(159, 208, 255, .3); }
 .card.autosel::after { content: 'AUTO'; position: absolute; top: 10px; right: 42px; font: 700 .72rem/1.4 var(--f-num); letter-spacing: .1em; color: var(--moon); }
 
@@ -222,6 +225,8 @@ h2 { margin: 0; font-family: var(--f-display); font-weight: 800; font-size: clam
 .menu-meta .apv, .purse.ap, .earn.ap, .chips .apc svg { color: #ff8a5c; }
 
 /* Welten und Begleiter */
+.titan-loot { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 12px 0 0; color: #ff8a5c; font-weight: 600; }
+.titan-loot svg { width: 18px; height: 18px; }
 .cards2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .cards4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
 @media (max-width: 900px) { .cards4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
@@ -475,6 +480,19 @@ span.ab { cursor: default; }
     </div>
   </section>
 
+  <section id="titanScr" class="screen dim" hidden>
+    <div class="panel">
+      <div class="shop-head">
+        <h2 data-t="titan"></h2>
+        <div class="shop-meta"><span class="lit" id="titanLv"></span></div>
+      </div>
+      <p class="sub" data-t="titanSub"></p>
+      <div class="cards4" id="titanList"></div>
+      <p class="titan-loot" id="titanLoot"></p>
+      <div class="row"><button class="btn" id="titanOn" type="button"></button><button class="btn" id="titanBack" type="button" data-t="back"></button></div>
+    </div>
+  </section>
+
   <section id="lvl" class="screen dim" hidden>
     <div class="lv-wrap">
       <div class="lv-head">
@@ -557,6 +575,7 @@ span.ab { cursor: default; }
     name, amber: 0, best: 0, wins: 0, runs: 0, up: {}, night: null, played: 0,
     shards: 0, comp: { fox: 1 }, compSel: ['fox'], world: 'wald', worldWins: {}, ap: 0, arenaBest: 0, auto: {},
     prio: ['fireflies', 'pulse', 'stars', 'spark', 'ember', 'feather', 'cloak', 'tea', 'lure', 'boots', 'wick', 'clover'],
+    boons: {}, arenaConvert: false, titan: { dmg: 0, spd: 0, rsp: 0, hp: 0, on: true },
   });
   let store = { v: 2, cur: 0, slots: [null, null, null], music: true, sfx: true, lang: null, tempo: 1 };
   let storageOk = false;
@@ -633,6 +652,17 @@ span.ab { cursor: default; }
       prioCut: 'ab hier nicht in der Liste', prioEdit: 'Gabenliste bearbeiten', moveUp: '{n} nach oben', moveDown: '{n} nach unten', autoPicked: 'Gabe gewählt: {n}',
       amberHeart: 'Bernsteinherz: aller Bernstein kommt zu dir!', moonStone: 'Mondstein: alle Funken kommen zu dir!',
       modeOff: 'aus', modeSmart: 'clever', modeAlways: 'immer', badgeAlways: 'IMMER',
+      glanzLine: 'Glanzstufen {a}–{b}: je {d}', wishLeft: 'Noch {n} Stufen, dann kannst du Sternenwünsche kaufen: zufällige Upgrades wie doppelte Spawnrate, doppelte Beute oder doppelte Bosse.',
+      wish: 'Sternenwunsch', wishes: 'Sternenwünsche', wishGot: 'Sternenwunsch erfüllt: {n}',
+      blocked: 'Geblockt!', aegisSaved: 'Unbeugsam! Du bleibst mit 1 Leben stehen.',
+      titan: 'Arena-Titan', titanSub: 'Dein eigener Boss für die Arena. Dreh die Regler so hoch du willst: je stärker der Titan, desto größer seine Beute. Mit der Wiederkehr kommt er öfter.',
+      titanWarn: 'Der Arena-Titan betritt die Arena!', titanDown: 'Titan besiegt! +{p} Arenapunkte', titanLoot: 'Beute pro Sieg:', titanLvl: 'Stufe {n}',
+      titanOnY: 'Titan kommt in die Arena ✓', titanOnN: 'Titan bleibt weg',
+      t_dmg: 'Schaden', t_dmgD: 'Wie hart der Titan zuschlägt.', t_spd: 'Tempo', t_spdD: 'Wie schnell er läuft, stürmt und angreift.',
+      t_rsp: 'Wiederkehr', t_rspD: 'Wie schnell nach einem Sieg der nächste Titan kommt. Keine Extra-Beute, aber mehr Kämpfe.', t_hp: 'Leben', t_hpD: 'Wie viel er aushält.',
+      tDmgV: '+{n} % Schaden', tSpdV: '{n}× Tempo', tRspV: 'alle {n} s', tHpV: '{n} Leben',
+      convOn: 'Bernstein → Pokale: an', convOff: 'Bernstein → Pokale: aus', convHint: 'Am Ende einer Arena-Nacht werden je 10 Bernstein zu 1 Pokal (Arenapunkt).',
+      convDone: '{a} Bernstein → {p} Pokale', convStart: 'Umtausch an: Bernstein wird zu Pokalen (10 : 1)',
     },
     en: {
       eyebrow: 'One night in the woods · 10 pm to 6 am',
@@ -680,6 +710,17 @@ span.ab { cursor: default; }
       prioCut: 'not in the list from here', prioEdit: 'Edit gift list', moveUp: 'Move {n} up', moveDown: 'Move {n} down', autoPicked: 'Gift picked: {n}',
       amberHeart: 'Amber Heart: all amber flies to you!', moonStone: 'Moonstone: all sparks fly to you!',
       modeOff: 'off', modeSmart: 'smart', modeAlways: 'always', badgeAlways: 'ALWAYS',
+      glanzLine: 'Glow levels {a}–{b}: {d} each', wishLeft: '{n} levels to go, then you can buy star wishes: random upgrades like double spawn rate, double loot or double bosses.',
+      wish: 'Star wish', wishes: 'Star wishes', wishGot: 'Star wish granted: {n}',
+      blocked: 'Blocked!', aegisSaved: 'Unbreakable! You stay standing with 1 health.',
+      titan: 'Arena Titan', titanSub: 'Your own boss for the arena. Turn the dials as high as you like: the stronger the titan, the bigger its loot. Return brings it back sooner.',
+      titanWarn: 'The Arena Titan enters the arena!', titanDown: 'Titan defeated! +{p} arena points', titanLoot: 'Loot per win:', titanLvl: 'Level {n}',
+      titanOnY: 'Titan joins the arena ✓', titanOnN: 'Titan stays away',
+      t_dmg: 'Damage', t_dmgD: 'How hard the titan hits.', t_spd: 'Speed', t_spdD: 'How fast it walks, charges and attacks.',
+      t_rsp: 'Return', t_rspD: 'How soon the next titan comes after a win. No extra loot, but more fights.', t_hp: 'Health', t_hpD: 'How much it can take.',
+      tDmgV: '+{n}% damage', tSpdV: '{n}× speed', tRspV: 'every {n} s', tHpV: '{n} health',
+      convOn: 'Amber → trophies: on', convOff: 'Amber → trophies: off', convHint: 'At the end of an arena night every 10 amber become 1 trophy (arena point).',
+      convDone: '{a} amber → {p} trophies', convStart: 'Exchange on: amber turns into trophies (10 : 1)',
     },
   };
   let lang = store.lang || ((navigator.language || 'en').toLowerCase().startsWith('de') ? 'de' : 'en');
@@ -739,6 +780,10 @@ span.ab { cursor: default; }
     trophy: '<path class="f" d="M7 2.5h10V8a5 5 0 0 1-10 0z"/><path class="s" d="M7 4.5H4a3.2 3.2 0 0 0 3.5 4.3M17 4.5h3a3.2 3.2 0 0 1-3.5 4.3M12 13v4.5M8 21.5h8M9.5 17.5h5"/>',
     crown: '<path class="f" d="M3 7.5l4.6 4.3L12 4.5l4.4 7.3L21 7.5l-2 11.5H5z"/>',
     tree: '<path class="f" d="M12 2l6 8h-3l4.5 6.5H14V22h-4v-5.5H4.5L9 10H6z"/>',
+    volcano: '<path class="f" d="M1.5 21.5l7-11.5h7l7 11.5z"/><path class="s" d="M10.5 7c-1.2-2-.3-3.6 1.8-4.5M14.5 6.5c1-1.6 2.6-2.1 4.2-1.6"/>',
+    gem: '<path class="f" d="M7 3h10l4.5 6L12 21.5 2.5 9z"/><path class="s" d="M2.5 9h19" opacity=".5"/>',
+    dune: '<circle class="f" cx="16.5" cy="6.5" r="3.5"/><path class="f" d="M1.5 20c3-5 7-6.5 11-3.5 3-2.5 6.5-2 10 1v3h-21z"/>',
+    void: '<circle class="s" cx="12" cy="12" r="9"/><circle class="s" cx="12" cy="12" r="5.2" opacity=".6"/><circle class="f" cx="12" cy="12" r="2"/>',
     reed: '<path class="s" d="M6 21.5V9.5M12 21.5V5M18 21.5V10M2 21.5h20"/><path class="f" d="M10.5 4.5h3v7h-3zM4.5 9h3v5.5h-3zM16.5 9.5h3v5h-3z"/>',
     snow: '<path class="s" d="M12 2v20M3.3 7l17.4 10M20.7 7L3.3 17M9 3.5l3 2.2 3-2.2M9 20.5l3-2.2 3 2.2"/>',
     ruin: '<path class="f" d="M4 21.5V8l2-2 2 2v13.5zM16 21.5V11l2-1.5 2 1.5v10.5z"/><path class="s" d="M2 21.5h20M10.5 21.5v-3.5h3v3.5"/>',
@@ -810,10 +855,10 @@ span.ab { cursor: default; }
   const mk = (id, br, p, x, y, icon, cost, de, en, dde, den, act = false) => ({ id, br, p, x, y, icon, cost, max: cost.length, name: { de, en }, d: { de: dde, en: den }, act });
   const ap = n => Object.assign(n, { cur: 'ap' });   // kostet Arenapunkte statt Bernstein
   const au = (n, k) => Object.assign(n, { auto: k });   // schaltet die Automatik für eine Fähigkeit frei
-  const MAP_W = 1420, MAP_H = 840;
+  const MAP_W = 2120, MAP_H = 840;
   const TREE = [
     { id: 'root', br: 'root', x: 550, y: 410, icon: 'wick', cost: [], max: 0, name: { de: 'Deine Laterne', en: 'Your Lantern' },
-      d: { de: 'Von hier wachsen vier Pfade. Entzünde Sterne mit Bernstein, um stärker in die Nacht zu gehen.', en: 'Four paths grow from here. Light stars with amber to face the night stronger.' } },
+      d: { de: 'Von hier wachsen alle Pfade. Entzünde Sterne mit Bernstein, um stärker in die Nacht zu gehen.', en: 'Every path grows from here. Light stars with amber to face the night stronger.' } },
     // Glut: Angriff
     mk('power', 'glut', 'root', 450, 310, 'spark', [15, 30, 50, 75, 110], 'Strahlkraft', 'Radiance', '+6 % Schaden pro Stufe.', '+6% damage per level.'),
     mk('crit', 'glut', 'power', 370, 215, 'crit', [30, 50, 80, 120], 'Kritisches Licht', 'Critical Light', 'Pro Stufe 5 % Chance auf doppelten Schaden.', 'Each level adds a 5% chance to deal double damage.'),
@@ -912,9 +957,65 @@ span.ab { cursor: default; }
       'Automatik: Der Sturmlauf startet von selbst, wenn du umzingelt bist oder wenig Leben hast. Stufe 2: auf Wunsch immer, sobald die Abklingzeit vorbei ist.',
       'Automation: Gale Run starts on its own when you are surrounded or your health is low. Level 2: optionally always, as soon as the cooldown is over.', true), 'gale'),
   ];
+  // Die alte Karte rückt 700 nach rechts; links entstehen Schmiede, Glück und Wächter an einer Weggabelung
+  const DX = 700;
+  for (const t of TREE) t.x += DX;
+  for (const k in BR) if (BR[k].x !== undefined) BR[k].x += DX;
+  Object.assign(BR, {
+    schmiede: { c: '#d9a066', de: 'Schmiede', en: 'Forge', x: 40, y: 40 },
+    glueck: { c: '#f5e663', de: 'Glück', en: 'Fortune', x: 40, y: 330 },
+    waechter: { c: '#6fb7ff', de: 'Wächter', en: 'Guardian', x: 40, y: 800 },
+  });
+  TREE.push(
+    mk('crossroads', 'glueck', 'root', 650, 410, 'cards', [50], 'Weggabelung', 'Crossroads', 'Öffnet drei neue Pfade: Schmiede, Glück und Wächter.', 'Opens three new paths: Forge, Fortune and Guardian.'),
+    // Schmiede: Waffen
+    mk('fSpark', 'schmiede', 'crossroads', 560, 310, 'spark', [40, 70, 110, 160, 220], 'Funkenschmied', 'Spark Smith', 'Lichtfunke: +15 % Schaden pro Stufe.', 'Spark Bolt: +15% damage per level.'),
+    mk('fFly', 'schmiede', 'fSpark', 470, 230, 'fireflies', [50, 85, 130, 180, 240], 'Glühwürmchenzucht', 'Firefly Keeper', 'Glühwürmchen: +12 % Schaden und +5 % Tempo pro Stufe.', 'Fireflies: +12% damage and +5% speed per level.'),
+    mk('fPulse', 'schmiede', 'fFly', 380, 150, 'pulse', [60, 95, 140, 190, 250], 'Pulsverstärker', 'Pulse Amplifier', 'Laternenpuls: +12 % Schaden pro Stufe.', 'Lantern Pulse: +12% damage per level.'),
+    mk('fMaster', 'schmiede', 'fPulse', 290, 80, 'crown', [400], 'Meisterschmied', 'Master Smith', 'Alle Waffen laden 10 % schneller nach.', 'All weapons reload 10% faster.'),
+    mk('fStar', 'schmiede', 'fSpark', 560, 190, 'stars', [50, 85, 130, 180, 240], 'Sternenschmied', 'Star Smith', 'Sternschnuppen: +12 % Schaden pro Stufe.', 'Falling Stars: +12% damage per level.'),
+    mk('fStart', 'schmiede', 'fStar', 470, 105, 'bag', [120, 200, 300], 'Startausrüstung', 'Starting Kit', 'Der Lichtfunke beginnt jede Nacht eine Stufe höher, pro Stufe.', 'Spark Bolt starts every night one level higher, per level.'),
+    // Glück: Beute und Erfahrung
+    mk('gXp', 'glueck', 'crossroads', 540, 410, 'clover', [30, 55, 85, 120, 160], 'Funkenglück', 'Spark Luck', '+8 % Erfahrung pro Stufe.', '+8% experience per level.'),
+    mk('gAmber', 'glueck', 'gXp', 430, 410, 'amber', [40, 70, 110, 150, 200], 'Bernsteinglück', 'Amber Luck', 'Bernstein fällt pro Stufe 15 % öfter.', 'Amber drops 15% more often per level.'),
+    mk('gRare', 'glueck', 'gAmber', 320, 410, 'moon', [60, 110, 170], 'Seltene Funde', 'Rare Finds', 'Mondsteine, Bernsteinherzen und Waldbeeren fallen pro Stufe 25 % öfter.', 'Moonstones, amber hearts and berries drop 25% more often per level.'),
+    mk('gWheel', 'glueck', 'gRare', 210, 410, 'dice', [300, 500], 'Glücksrad', 'Wheel of Fortune', 'Pro Stufe 10 % Chance, dass ein besiegter Schatten doppelte Beute fallen lässt.', 'Each level adds a 10% chance that a defeated shadow drops double loot.'),
+    mk('gGold', 'glueck', 'gAmber', 430, 320, 'bigstar', [50, 90, 140, 190, 250], 'Goldene Funken', 'Golden Sparks', 'Pro Stufe 4 % Chance, dass ein Funke fünffach zählt.', 'Each level adds a 4% chance that a spark counts five times.'),
+    mk('gShard', 'glueck', 'gRare', 320, 500, 'shard', [60, 110, 170], 'Splitterglück', 'Shard Luck', 'Mondsplitter fallen pro Stufe 15 % öfter.', 'Moon shards drop 15% more often per level.'),
+    // Wächter: Schutz
+    mk('wShield', 'waechter', 'crossroads', 560, 510, 'shield', [80, 140, 220], 'Lichtschild', 'Light Shield', 'Blockt alle 20 s einen Treffer komplett, auf Stufe 2 alle 15 s, auf Stufe 3 alle 10 s.', 'Fully blocks one hit every 20 s, every 15 s at level 2, every 10 s at level 3.'),
+    mk('wThorn', 'waechter', 'wShield', 470, 590, 'crit', [40, 70, 110, 150, 200], 'Dornen', 'Thorns', 'Schatten, die dich treffen, nehmen pro Stufe 25 Schaden zurück.', 'Shadows that hit you take 25 damage back per level.'),
+    mk('wGrace', 'waechter', 'wThorn', 380, 670, 'hourglass', [60, 110, 170], 'Atempause', 'Breather', 'Nach einem Treffer bist du pro Stufe 0,2 s länger unverwundbar.', 'After a hit you stay invulnerable 0.2 s longer per level.'),
+    mk('wAegis', 'waechter', 'wGrace', 290, 740, 'shield', [350], 'Unbeugsam', 'Unbreakable', 'Der erste tödliche Treffer jeder Nacht lässt dich mit 1 Leben stehen.', 'The first fatal hit of each night leaves you standing with 1 health.'),
+    mk('wLeech', 'waechter', 'wShield', 560, 630, 'heart', [50, 85, 130, 180, 240], 'Lichtdurst', 'Light Thirst', 'Jeder besiegte Schatten heilt dich um 0,3 Leben pro Stufe, höchstens 1 Leben pro Sekunde und Stufe.', 'Every defeated shadow heals you 0.3 health per level, at most 1 health per second per level.'),
+    mk('wLast', 'waechter', 'wLeech', 470, 715, 'wick', [100, 180], 'Letztes Licht', 'Last Light', 'Unter 25 % Leben machst du pro Stufe 30 % mehr Schaden.', 'Below 25% health you deal 30% more damage per level.'),
+  );
+  // Glanzstufen: jeder Stern bekommt 5 weitere Stufen; sie stärken das Thema seines Pfads
+  const GLANZ = {
+    glut: ['+3 % Schaden', '+3% damage'], mantel: ['+5 max. Leben', '+5 max health'], wander: ['+0,5 % Tempo und +2 % Sammelradius', '+0.5% speed and +2% pickup range'],
+    sterne: ['+5 % Sternschaden', '+5% star damage'], mond: ['+4 % Begleiterschaden, −1 % Abklingzeit', '+4% companion damage, −1% cooldowns'],
+    wind: ['+0,8 % Tempo', '+0.8% move speed'], arena: ['+4 % Arenapunkte', '+4% arena points'], wahl: ['+3 % Erfahrung', '+3% experience'],
+    schmiede: ['+3 % Waffenschaden', '+3% weapon damage'], glueck: ['+3 % Bernstein-Chance', '+3% amber chance'], waechter: ['−1 % erlittener Schaden', '−1% damage taken'],
+  };
+  const round5 = v => Math.max(5, Math.round(v / 5) * 5);
+  for (const t of TREE) {
+    if (!t.max) continue;
+    t.base = t.max;
+    const last = t.cost[t.base - 1];
+    for (let k = 1; k <= 5; k++) t.cost.push(round5(last * (1 + 0.35 * k)));
+    t.max = t.base + 5;
+  }
   const NODE = Object.fromEntries(TREE.map(t => [t.id, t]));
   const TOTAL_LIT = TREE.reduce((a, t) => a + t.max, 0);
-  const U = id => save.up[id] || 0;
+  // U = wirksame Stufe (höchstens die Grundstufen), UL = gekaufte Stufe mit Glanzstufen
+  const UL = id => save.up[id] || 0;
+  const U = id => { const t = NODE[id], v = save.up[id] || 0; return t && t.base ? Math.min(v, t.base) : v; };
+  // Glanzstufen eines Pfads zusammengezählt
+  function glanz(br) {
+    let g = 0;
+    for (const t of TREE) if (t.br === br && t.base) g += Math.max(0, (save.up[t.id] || 0) - t.base);
+    return g;
+  }
 
   // ---------- Welten ----------
   // g = Farben des Bodens, dec = Deko (Leuchtding, Pflanze, Stein, Stamm), dark = Farbe der Nacht
@@ -942,6 +1043,30 @@ span.ab { cursor: default; }
       mix: { moth: ['bat', 0.7], shade: ['bat', 0.25], crow: ['knight', 0.6], rootling: ['knight', 0.6], spitter: ['knight', 0.3] },
       g: { base: '#120c16', blot: ['60,22,52', '6,3,10'], leaf: ['#3a2230', '#2c1a28', '#47263a', '#25161f'], grass: ['#2a1a2c', '#3a2238'], pebble: ['#1e1622', '#2f2434'], twig: '#2a1c26' },
       dec: { glow: ['crystal', '#ff4d6d', '#ffd0d8'], glowKey: 'red', plant: ['fern', '#2a1830', '#3a2040'], rock: ['pillar', '#2e2836', '#17121c'], log: ['log', '#1e1418', '#3a2a30', '#4a2238'] } },
+    { id: 'vulkan', icon: 'volcano', name: { de: 'Glutvulkan', en: 'Ember Volcano' }, c: '#ff7a2a',
+      d: { de: 'Glühende Lava zwischen schwarzem Gestein, Asche rieselt vom Himmel. Hier brennen sogar die Schatten.', en: 'Glowing lava between black rock, ash drifting from the sky. Even the shadows burn here.' },
+      hp: 5, spawn: 2.1, speed: 1.15, dmg: 2.8, reward: 4, shards: 30, weather: 'embers', wglow: 'amber', dark: '10,4,2', boss: 'firestag', swarm: 'cinder',
+      mix: { shade: ['ember', 0.6], moth: ['cinder', 0.6], crow: ['lavatoad', 0.6], rootling: ['lavatoad', 0.5], spitter: ['lavaspit', 0.8] },
+      g: { base: '#1a0e0b', blot: ['90,30,12', '10,4,3'], leaf: ['#3a1c14', '#2a1410', '#4a2014', '#30180f'], grass: ['#2a1612', '#3a1e14'], pebble: ['#241816', '#3a2622'], twig: '#2a1a14' },
+      dec: { glow: ['crystal', '#ff7a2a', '#ffd9a0'], glowKey: 'amber', plant: ['fern', '#2a1410', '#3a1a12'], rock: ['rock', '#22160f', '#3a2a22', '#6a2a10'], log: ['log', '#1a100c', '#3a2418', '#7a2a10'] } },
+    { id: 'kristall', icon: 'gem', name: { de: 'Kristallhöhle', en: 'Crystal Cave' }, c: '#c9a0ff',
+      d: { de: 'Tief unter der Erde leuchten violette Kristalle. Aus jedem Spalt kriechen Schatten.', en: 'Deep underground, violet crystals glow. Shadows crawl out of every crack.' },
+      hp: 7, spawn: 2.4, speed: 1.15, dmg: 3.4, reward: 5, shards: 40, weather: 'embers', wglow: 'lilac', dark: '6,4,14', boss: 'crystgiant', swarm: 'cavebat',
+      mix: { shade: ['gloomling', 0.6], moth: ['cavebat', 0.6], crow: ['crystknight', 0.5], rootling: ['crystgolem', 0.7], spitter: ['crystgolem', 0.4] },
+      g: { base: '#0f0c1c', blot: ['60,40,110', '6,4,14'], leaf: ['#2a2440', '#3a2e58', '#221c36', '#463a6a'], grass: ['#1e1a34', '#2a2448'], pebble: ['#1c1a2e', '#2e2a48'], twig: '#2a2440' },
+      dec: { glow: ['crystal', '#b98aff', '#f0e0ff'], glowKey: 'lilac', plant: ['fern', '#241c3c', '#30264e'], rock: ['pillar', '#2e2a48', '#16142a'], log: ['log', '#1c1828', '#342c48', '#5a46a0'] } },
+    { id: 'wueste', icon: 'dune', name: { de: 'Sternenwüste', en: 'Star Desert' }, c: '#ffd98a',
+      d: { de: 'Unter einem Himmel voller Sterne fegt der Wind Sand über die Dünen. Hier jagen Schakale im Rudel.', en: 'Under a sky full of stars the wind sweeps sand across the dunes. Jackals hunt in packs here.' },
+      hp: 9, spawn: 2.6, speed: 1.2, dmg: 4, reward: 6, shards: 50, weather: 'sand', dark: '8,6,10', boss: 'sandking', swarm: 'scarab',
+      mix: { shade: ['jackal', 0.5], moth: ['scarab', 0.6], crow: ['sandcrow', 0.8], rootling: ['jackal', 0.4], spitter: ['sandspit', 0.8] },
+      g: { base: '#2a2014', blot: ['120,92,48', '20,14,8'], leaf: ['#4a3a22', '#5a4628', '#3a2e1c', '#6a5430'], grass: ['#3a2e1c', '#4a3c24'], pebble: ['#3a2e20', '#5a4a34'], twig: '#4a3a26' },
+      dec: { glow: ['crystal', '#ffd98a', '#fff4d0'], glowKey: 'gold', plant: ['reed', '#5a4a2a', '#7a5a2a'], rock: ['rock', '#3a2e22', '#6a5a44', '#8a6a3a'], log: ['log', '#2a2016', '#5a4630', '#7a6040'] } },
+    { id: 'leere', icon: 'void', name: { de: 'Die Leere', en: 'The Void' }, c: '#8fe8ff',
+      d: { de: 'Das Ende der Welt: kaum Boden, kaum Licht, nur Schatten. Die härteste Wache von allen.', en: 'The end of the world: hardly any ground, hardly any light, only shadows. The hardest watch of all.' },
+      hp: 12, spawn: 2.9, speed: 1.2, dmg: 4.8, reward: 8, shards: 70, weather: 'embers', wglow: 'moon', dark: '2,2,6', boss: 'voidlord', swarm: 'voidwraith',
+      mix: { shade: ['voidshade', 0.6], moth: ['voidwraith', 0.7], crow: ['voidknight', 0.6], rootling: ['voidgolem', 0.6], spitter: ['voidknight', 0.3] },
+      g: { base: '#06060c', blot: ['30,40,70', '2,2,6'], leaf: ['#121624', '#1a2032', '#0e1018', '#222a40'], grass: ['#10141e', '#161c2a'], pebble: ['#10121c', '#1e2232'], twig: '#141826' },
+      dec: { glow: ['crystal', '#8fe8ff', '#e8fcff'], glowKey: 'moon', plant: ['fern', '#121828', '#1a2238'], rock: ['pillar', '#1e2232', '#0a0c14'], log: ['log', '#0e1018', '#222838', '#3a5a7a'] } },
     // Arena: endlose Nacht mit Schatten und Bossen aus allen Welten, öffnet sich über das Arena-Tor im Baum
     { id: 'arena', icon: 'arena', name: { de: 'Arena', en: 'Arena' }, c: '#ff8a5c', endless: true,
       d: { de: 'Eine Nacht, die nie endet. Schatten und Bosse aus allen Welten, alle paar Minuten ein neuer Boss. Bringt Arenapunkte.', en: 'A night that never ends. Shadows and bosses from every world, a new boss every few minutes. Earns arena points.' },
@@ -950,13 +1075,15 @@ span.ab { cursor: default; }
       dec: { glow: ['crystal', '#ff9a3c', '#ffe0b0'], glowKey: 'amber', plant: ['reed', '#4a3a28', '#6a4a2a'], rock: ['pillar', '#5a5048', '#2a2420'], log: ['log', '#2a1e16', '#4a3626', '#3a2a1a'] } },
   ];
   // eine Welt ist offen, wenn sie die erste ist oder die vorige gewonnen wurde; die Arena über das Arena-Tor
-  const worldOpen = i => (WORLDS[i].endless ? U('arena') > 0 : i === 0 || (save.worldWins[WORLDS[i - 1].id] || 0) > 0);
-  const BOSSES = ['stag', 'toadking', 'frostgiant', 'shadowking'];
-  const SWARMS = ['moth', 'wraith', 'wolf', 'bat'];
+  { let p = null; for (const w of WORLDS) if (!w.endless) { w.prev = p; p = w.id; } }
+  const NIGHT_WORLDS = WORLDS.filter(w => !w.endless);
+  const worldOpen = i => { const w = WORLDS[i]; return w.endless ? U('arena') > 0 : !w.prev || (save.worldWins[w.prev] || 0) > 0; };
+  const BOSSES = ['stag', 'toadking', 'frostgiant', 'shadowking', 'firestag', 'crystgiant', 'sandking', 'voidlord'];
+  const SWARMS = ['moth', 'wraith', 'wolf', 'bat', 'cinder', 'cavebat', 'scarab', 'voidwraith'];
   // Schatten je Welt: Grundtyp wird mit einer Chance durch den Schatten der Welt ersetzt
   function worldType(type) {
     let mix = curWorld.mix;
-    if (mix === 'all') mix = WORLDS[(Math.random() * 4) | 0].mix;
+    if (mix === 'all') mix = NIGHT_WORLDS[(Math.random() * NIGHT_WORLDS.length) | 0].mix;
     const m = mix[type];
     return m && Math.random() < m[1] ? m[0] : type;
   }
@@ -1437,7 +1564,56 @@ span.ab { cursor: default; }
     frostgiant: { hp: 1500, sp: 40, r: 40, dmg: 24, xp: 30, mass: 40, anim: 4, size: 120, draw: drawGiant, eyes: [[6, -36], [14, -36]], eye: 'eyeB', smoke: '150,190,220', boss: true, name: { de: 'Frostriese', en: 'Frost Giant' } },
     shadowking: { hp: 1500, sp: 60, r: 34, dmg: 26, xp: 30, mass: 40, anim: 5, size: 110, draw: drawKing, eyes: [[3, -30], [9, -30]], eye: 'eyeR', smoke: '40,10,40', boss: true, name: { de: 'Schattenkönig', en: 'Shadow King' } },
   };
-  for (const k in EN) { const d = EN[k]; d.spr = [0, 1].map(f => makeSprite(d.size, g => d.draw(g, f))); }
+  // Spielarten der neuen Welten: Form und Verhalten vom Vorbild, Farben aus der Welt
+  const EYE_RGB = { eyeR: [255, 70, 110], eyeO: [255, 150, 60], eyeV: [215, 120, 255], eyeB: [170, 220, 255], eyeY: [255, 220, 80], eyeG: [170, 255, 140] };
+  const VULKAN = ['#3c0e06', '#ff8a3a', 'eyeO'], KRISTALL = ['#160a34', '#c9a0ff', 'eyeV'], WUESTE = ['#3a280c', '#ffd98a', 'eyeY'], LEERE = ['#05040e', '#8fe8ff', 'eyeB'];
+  const VARIANTS = {
+    ember: ['shade', VULKAN, { hp: 16, sp: 70, dmg: 9, smoke: '120,50,20' }],
+    cinder: ['moth', VULKAN, { hp: 8, sp: 112, smoke: '120,60,20', swarm: { de: 'Ein Funkenschwarm naht', en: 'A swarm of cinders is coming' } }],
+    lavatoad: ['toad', VULKAN, { hp: 36, dmg: 12, xp: 3, smoke: '110,40,14' }],
+    lavaspit: ['spitter', VULKAN, { hp: 34, sk: 'fire', smoke: '110,40,14' }],
+    firestag: ['stag', VULKAN, { sk: 'fire', smoke: '120,40,14', name: { de: 'Feuerhirsch', en: 'Fire Stag' } }],
+    gloomling: ['shade', KRISTALL, { hp: 18, sp: 66, smoke: '70,40,120' }],
+    cavebat: ['bat', KRISTALL, { hp: 14, sp: 124, smoke: '60,40,100', swarm: { de: 'Ein Höhlenschwarm naht', en: 'A cave swarm is coming' } }],
+    crystknight: ['knight', KRISTALL, { hp: 120, smoke: '80,50,140' }],
+    crystgolem: ['golem', KRISTALL, { hp: 150, sk: 'crystal', smoke: '120,90,200' }],
+    crystgiant: ['frostgiant', KRISTALL, { sk: 'crystal', minion: 'cavebat', smoke: '120,90,200', name: { de: 'Kristallriese', en: 'Crystal Giant' } }],
+    jackal: ['wolf', WUESTE, { hp: 26, sp: 128, smoke: '140,110,60', swarm: { de: 'Ein Schakalrudel naht', en: 'A jackal pack is coming' } }],
+    sandcrow: ['crow', WUESTE, { hp: 26, smoke: '120,96,56' }],
+    scarab: ['moth', WUESTE, { hp: 9, sp: 108, smoke: '120,96,56', swarm: { de: 'Ein Skarabäenschwarm naht', en: 'A scarab swarm is coming' } }],
+    sandspit: ['spitter', WUESTE, { hp: 34, sk: 'sand', smoke: '140,110,60' }],
+    sandking: ['toadking', WUESTE, { sk: 'sand', smoke: '140,110,60', name: { de: 'Sandkönig', en: 'Sand King' } }],
+    voidshade: ['shade', LEERE, { hp: 20, sp: 72, smoke: '20,40,60' }],
+    voidwraith: ['wraith', LEERE, { hp: 12, sp: 100, smoke: '30,60,90', swarm: { de: 'Ein Leerenschwarm naht', en: 'A void swarm is coming' } }],
+    voidknight: ['knight', LEERE, { hp: 130, smoke: '20,40,60' }],
+    voidgolem: ['golem', LEERE, { hp: 170, sk: 'void', smoke: '20,40,60' }],
+    voidlord: ['shadowking', LEERE, { sk: 'void', minion: 'voidwraith', smoke: '20,40,60', name: { de: 'Leerenfürst', en: 'Void Lord' } }],
+    // der Arena-Titan: ein großer, goldener Hirsch, den man selbst stärker macht
+    titan: ['stag', ['#3a1c08', '#ffc070', 'eyeO'], { hp: 2500, r: 50, size: 140, mass: 60, dmg: 24, xp: 60, eyes: [[51, -32]], smoke: '140,90,40',
+      draw: (g, f) => { g.scale(1.25, 1.25); drawStag(g, f); }, name: { de: 'Arena-Titan', en: 'Arena Titan' } }],
+  };
+  for (const k in VARIANTS) {
+    const [base, [dk, lt, eye], o] = VARIANTS[k], b = EN[base];
+    EN[k] = Object.assign({}, b, { beh: b.beh || base, tint: [dk, lt], eye }, o);
+  }
+  const hexRgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+  function tintSprite(sp, d) {
+    const c = sp.c, g = c.getContext('2d'), im = g.getImageData(0, 0, c.width, c.height), a = im.data;
+    const dk = hexRgb(d.tint[0]), lt = hexRgb(d.tint[1]), ey = EYE_RGB[d.eye] || EYE_RGB.eyeR;
+    for (let i = 0; i < a.length; i += 4) {
+      if (!a[i + 3]) continue;
+      const R0 = a[i], G0 = a[i + 1], B0 = a[i + 2], mx = Math.max(R0, G0, B0), mn = Math.min(R0, G0, B0);
+      if (mx > 170 && mx - mn > 90) { a[i] = ey[0]; a[i + 1] = ey[1]; a[i + 2] = ey[2]; continue; }   // Augen leuchten in der Farbe der Welt
+      const q = Math.min(1, ((0.3 * R0 + 0.59 * G0 + 0.11 * B0) / 255) * 2.4);
+      a[i] = dk[0] + (lt[0] - dk[0]) * q; a[i + 1] = dk[1] + (lt[1] - dk[1]) * q; a[i + 2] = dk[2] + (lt[2] - dk[2]) * q;
+    }
+    g.putImageData(im, 0, 0);
+    return sp;
+  }
+  for (const k in EN) {
+    const d = EN[k];
+    d.spr = [0, 1].map(f => { const sp = makeSprite(d.size, g => d.draw(g, f)); return d.tint ? tintSprite(sp, d) : sp; });
+  }
 
   // ---------- Begleiter-Figuren ----------
   function drawFox(g, f) {
@@ -1655,17 +1831,23 @@ span.ab { cursor: default; }
 
   const lvOf = id => (run ? run.items[id] || 0 : 0);
   function recalc() {
-    P.maxHp = 100 + 10 * U('vitality') + 20 * lvOf('cloak');
-    P.speed = 150 * (1 + 0.05 * U('swift') + 0.04 * U('tail') + 0.1 * lvOf('boots'));
-    P.magnet = 85 * (1 + 0.15 * U('reach') + 0.3 * lvOf('lure'));
+    const gz = glanz;   // Glanzstufen: kleine Boni je Pfad
+    P.maxHp = 100 + 10 * U('vitality') + 20 * lvOf('cloak') + 5 * gz('mantel');
+    P.speed = 150 * (1 + 0.05 * U('swift') + 0.04 * U('tail') + 0.1 * lvOf('boots') + 0.005 * gz('wander') + 0.008 * gz('wind'));
+    P.magnet = 85 * (1 + 0.15 * U('reach') + 0.3 * lvOf('lure') + 0.02 * gz('wander'));
     P.regen = 0.4 * lvOf('tea') + 0.3 * U('herbs');
     P.light = 220 * (1 + 0.15 * lvOf('wick') + 0.1 * U('farsight'));
-    P.xpMul = 1 + 0.12 * lvOf('clover');
-    P.dmgMul = (1 + 0.06 * U('power')) * (1 + 0.1 * lvOf('ember'));
-    P.cdMul = (1 - 0.08 * lvOf('feather')) * (1 - 0.04 * U('quick'));
-    P.petMul = P.dmgMul * (1 + 0.2 * U('bond'));
+    P.xpMul = (1 + 0.12 * lvOf('clover') + 0.08 * U('gXp') + 0.03 * gz('wahl')) * (1 + B('xp'));
+    P.dmgMul = (1 + 0.06 * U('power') + 0.03 * gz('glut')) * (1 + 0.1 * lvOf('ember')) * (1 + B('dmg'));
+    P.wpnMul = 1 + 0.03 * gz('schmiede');
+    P.starMul = 1 + 0.12 * U('fStar') + 0.05 * gz('sterne');
+    P.cdMul = (1 - 0.08 * lvOf('feather')) * (1 - 0.04 * U('quick')) * (U('fMaster') ? 0.9 : 1);
+    P.abilCd = Math.max(0.7, 1 - 0.01 * gz('mond'));
+    P.petMul = P.dmgMul * (1 + 0.2 * U('bond') + 0.04 * gz('mond'));
     P.crit = 0.05 * U('crit');
-    P.armor = 1 - 0.06 * U('bark');
+    P.armor = (1 - 0.06 * U('bark')) * Math.max(0.6, 1 - 0.01 * gz('waechter'));
+    P.amberMul = 1 + 0.15 * U('gAmber') + 0.03 * gz('glueck');
+    P.apMul = 1 + 0.04 * gz('arena');
   }
   const xpNeed = lv => Math.round(5 + lv * 5 + lv * lv * 0.15);
   function fmtClock(t) {
@@ -1748,9 +1930,12 @@ span.ab { cursor: default; }
       won: false, dawnT: 0, deathT: 0, dawnSaid: false, choices: [], lvLock: 0,
       dashCd: 0, beaconCd: 0, callCd: 0, target: null, starN: 0, saveT: 0,
       slowCd: 0, slowT: 0, galeCd: 0, galeT: 0, trailT: 0, shards: 0, pets: [], bossKills: 0,
+      shieldT: 0, aegis: false, titanT: 60, titanN: 0, titanKills: 0, ap: 0,
     };
+    if (U('fStart')) run.items.spark = Math.min(ITEMS.spark.max, 1 + U('fStart'));
     setWorld(save.world);
     run.endless = !!curWorld.endless;
+    if (run.endless && save.arenaConvert) setTimeout(() => toast(T('convStart')), 600);
     run.nextBoss = Math.max(120, 180 - 30 * U('arenaRush'));
     // Arena „Aufwärmen“: gleich auf Stufe 5, die vier Gaben werden sofort gewählt
     if (run.endless && U('arenaWarm')) { run.lv = 5; run.need = xpNeed(5); run.pending = 4; }
@@ -1794,7 +1979,7 @@ span.ab { cursor: default; }
   }
   function spawnTick(dt) {
     const t = run.t;
-    run.acc += dt * curWorld.spawn * (0.8 + t * 0.03 + (t / 140) ** 2 + Math.max(0, t - 300) ** 2 / 2500);
+    run.acc += dt * curWorld.spawn * (1 + B('spawn')) * (0.8 + t * 0.03 + (t / 140) ** 2 + Math.max(0, t - 300) ** 2 / 2500);
     while (run.acc >= 1) {
       run.acc -= 1;
       if (enemies.length < MAXE) { const [x, y] = edgePoint(); spawnEnemy(worldType(pickType(t)), x, y); }
@@ -1807,6 +1992,7 @@ span.ab { cursor: default; }
       for (let i = 0; i < n && enemies.length < MAXE + 40; i++) { const [x, y] = edgePoint(a0 + (i / n) * TAU); spawnEnemy(sw, x, y); }
       banner(EN[sw].swarm[lang], 1.6);
     }
+    if (run.endless && save.titan.on) titanTick(dt);
     const bossDue = run.endless ? t >= run.nextBoss : (run.bossN === 0 && t >= 180) || (run.bossN === 1 && t >= 360);
     if (bossDue) spawnBoss();
     if (!run.endless && !run.dawnSaid && t >= 400) { run.dawnSaid = true; banner(T('dawnSoon')); }
@@ -1815,12 +2001,50 @@ span.ab { cursor: default; }
   function spawnBoss() {
     run.bossN++;
     const type = curWorld.boss === 'rotate' ? BOSSES[(run.bossN - 1) % BOSSES.length] : curWorld.boss;
-    const [x, y] = edgePoint(), e = spawnEnemy(type, x, y);
     const base = run.endless ? 1500 * (1 + 0.7 * (run.bossN - 1)) : run.bossN === 1 ? 1500 : 4200;
-    e.hp = e.max = base * curWorld.hp;
+    let e = null;
+    for (let i = 0; i <= B('boss'); i++) {
+      const [x, y] = edgePoint();
+      const b = spawnEnemy(type, x, y);
+      b.hp = b.max = base * curWorld.hp;
+      if (!e) e = b;
+    }
     run.boss = e;
     if (run.endless) run.nextBoss += Math.max(120, 180 - 30 * U('arenaRush'));
     banner(tf('bossWarnN', { n: e.d.name[lang] })); Snd.play('boss'); shake(4);
+  }
+
+  // ---------- Arena-Titan: eigener Boss mit Reglern, Beute wächst mit ----------
+  const TITAN_KEYS = ['dmg', 'spd', 'rsp', 'hp'];
+  const titanDmg = lv => 1 + 0.2 * lv;
+  const titanSpd = lv => 1 + 3 * (1 - 0.96 ** lv);   // nähert sich 4-fachem Tempo
+  const titanResp = lv => 10 + 140 * 0.9 ** lv;        // Sekunden bis zur Wiederkehr
+  const titanHp = lv => Math.round(2500 * (1 + 0.35 * lv) * (WORLDS.find(w => w.endless).hp));
+  function titanReward() {
+    const t = save.titan, n = t.dmg + t.spd + t.hp;   // Wiederkehr bringt mehr Kämpfe statt mehr Beute
+    return { amber: Math.round(20 * (1 + 0.25 * n)), shards: 2 + Math.floor(n / 3), ap: 5 + 2 * n };
+  }
+  function titanize(e) { const t = save.titan; e.titan = true; e.dmgMul = titanDmg(t.dmg); e.spMul = titanSpd(t.spd); }
+  function titanTick(dt) {
+    if (run.titanRef && !run.titanRef.dead) return;
+    if ((run.titanT -= dt) > 0) return;
+    run.titanT = titanResp(save.titan.rsp);
+    const [x, y] = edgePoint(), e = spawnEnemy('titan', x, y);
+    titanize(e);
+    e.hp = e.max = titanHp(save.titan.hp);
+    run.titanN++; run.titanRef = e;
+    if (!run.boss) run.boss = e;
+    banner(T('titanWarn')); Snd.play('boss'); shake(5);
+  }
+  function titanLoot(e) {
+    const rw = titanReward(), rolls = 1 + B('loot');
+    run.titanKills++; run.ap += rw.ap * rolls;
+    const amber = rw.amber * rolls, shards = rw.shards * rolls, n = Math.min(12, amber), ns = Math.min(8, shards);
+    for (let i = 0; i < n; i++) addLoot('amber', e.x + rand(-55, 55), e.y + rand(-40, 40), Math.floor(amber / n) + (i < amber % n ? 1 : 0));
+    for (let i = 0; i < ns; i++) addLoot('shard', e.x + rand(-40, 40), e.y + rand(-34, 34), Math.floor(shards / ns) + (i < shards % ns ? 1 : 0));
+    addLoot('berry', e.x, e.y + 26); addLoot('amberheart', e.x, e.y - 26);
+    banner(tf('titanDown', { p: rw.ap * rolls }), 1.8);
+    shake(10); flashes.push({ x: e.x, y: e.y, r: 360, life: 0.55, max: 0.55 }); Snd.play('win');
   }
 
   function updatePlayer(dt) {
@@ -1855,7 +2079,8 @@ span.ab { cursor: default; }
         zones.push({ x: P.x, y: P.y, R: 42, life: 1.2, max: 1.2, tick: 0, dmg: 14 * P.dmgMul, k: 'wind' });
       }
     }
-    run.slowT -= dt; run.slowCd -= dt; run.galeCd -= dt;
+    run.slowT -= dt; run.slowCd -= dt; run.galeCd -= dt; run.shieldT -= dt;
+    run.leech = Math.min(U('wLeech'), (run.leech || 0) + U('wLeech') * dt);
     P.moving = m > 0.1;
     if (Math.abs(ix) > 0.1) P.face = ix > 0 ? 1 : -1;
     if (P.moving) P.walk += dt;
@@ -1867,7 +2092,7 @@ span.ab { cursor: default; }
 
   // ---------- Fähigkeiten ----------
   // Abklingzeiten; Vollmond macht alle 20 % kürzer
-  const cdOf = base => base * (U('fullmoon') ? 0.8 : 1);
+  const cdOf = base => base * (U('fullmoon') ? 0.8 : 1) * (P.abilCd || 1);
   const CD = {
     dash: () => cdOf((U('dash') >= 2 ? 3.5 : 5) - (U('featherweight') ? 1 : 0)),
     beacon: () => cdOf(U('beacon') >= 2 ? 18 : 25),
@@ -1991,18 +2216,32 @@ span.ab { cursor: default; }
   }
   function addStar(x, y, t, e) {
     const s = ITEMS.stars.s, l = Math.max(0, (run.items.stars || 1) - 1);
-    let dmg = s.dmg[l] * P.dmgMul, R = s.rad[l] * (1 + 0.15 * U('bigstars'));
+    let dmg = s.dmg[l] * P.dmgMul * P.starMul * P.wpnMul, R = s.rad[l] * (1 + 0.15 * U('bigstars'));
     const meteor = U('meteor') > 0 && ++run.starN % 4 === 0;
     if (meteor) { dmg *= 3; R *= 1.6; }
     stars.push({ e, x, y, t, R, dmg, meteor });
   }
 
-  function hurtPlayer(d, src) {
+  function hurtPlayer(d, src, e) {
     if (P.inv > 0 || P.dead || run.won) return;
+    // Lichtschild fängt einen Treffer ganz ab
+    if (U('wShield') && run.shieldT <= 0) {
+      run.shieldT = [20, 15, 10][U('wShield') - 1]; P.inv = 0.4;
+      pulses.push({ x: P.x, y: P.y, R: 70, life: 0.3, max: 0.3 });
+      texts.push({ x: P.x, y: P.y - 30, v: T('blocked'), life: 0.8, crit: false });
+      Snd.play('pulse');
+      return;
+    }
     d *= P.armor;
-    P.hp -= d; P.inv = 0.6; shake(5); Snd.play('hurt');
+    P.hp -= d; P.inv = 0.6 + 0.2 * U('wGrace'); shake(5); Snd.play('hurt');
     if (dbg.hurt) dbg.hurt[src] = (dbg.hurt[src] || 0) + Math.round(d);
+    if (e && !e.dead && U('wThorn')) { const dx = e.x - P.x, dy = e.y - P.y, dd = Math.hypot(dx, dy) || 1; hit(e, 25 * U('wThorn') * P.dmgMul, dx / dd, dy / dd, 80); }
     if (P.hp > 0) return;
+    if (U('wAegis') && !run.aegis) {
+      run.aegis = true; P.hp = 1; P.inv = 1.5;
+      banner(T('aegisSaved')); Snd.play('level');
+      return;
+    }
     if (run.revives > 0) {
       run.revives--; P.hp = Math.round(P.maxHp * 0.6); P.inv = 2.5;
       banner(T('revive')); Snd.play('level');
@@ -2018,23 +2257,25 @@ span.ab { cursor: default; }
   }
 
   function updateEnemies(rdt) {
-    const dt = rdt * (run.slowT > 0 ? 0.5 : 1);   // Mondruhe: alle Schatten halb so schnell
+    const dt0 = rdt * (run.slowT > 0 ? 0.5 : 1);   // Mondruhe: alle Schatten halb so schnell
     const t = run.t, far = Math.max(W, H) / 2 / zoom + 420;
     for (const e of enemies) {
       if (e.dead) continue;
+      const dt = e.spMul ? dt0 * e.spMul : dt0;   // der Arena-Titan lebt im eigenen Tempo
       const dx = P.x - e.x, dy = P.y - e.y, dist = Math.hypot(dx, dy) || 1;
       let mx = dx / dist, my = dy / dist, sp = e.d.sp * curWorld.speed * (dist < P.light * 0.9 ? 0.8 : 1);
-      switch (e.type) {
+      const bh = e.d.beh || e.type, sk = e.d.sk, dm = e.dmgMul || 1;
+      switch (bh) {
         case 'moth': case 'wraith': case 'bat': {
           // flattern im Zickzack: Geister ruhig, Fledermäuse wild
-          const fq = e.type === 'bat' ? 9 : e.type === 'wraith' ? 3 : 5, am = e.type === 'bat' ? 1.1 : e.type === 'wraith' ? 0.6 : 0.9;
+          const fq = bh === 'bat' ? 9 : bh === 'wraith' ? 3 : 5, am = bh === 'bat' ? 1.1 : bh === 'wraith' ? 0.6 : 0.9;
           const a = Math.sin(t * fq + e.ph) * am, c = Math.cos(a), s = Math.sin(a);
           const nx = mx * c - my * s; my = mx * s + my * c; mx = nx;
           break;
         }
         case 'crow': case 'knight': {
           // kurz stillhalten, dann zustoßen (der Ritter langsamer, aber härter)
-          const kn = e.type === 'knight';
+          const kn = bh === 'knight';
           if (e.st === 0) { e.tm -= dt; if (dist < (kn ? 260 : 300) && e.tm <= 0) { e.st = 1; e.tm = kn ? 0.6 : 0.45; e.ax = mx; e.ay = my; } }
           else if (e.st === 1) { sp = 0; e.tm -= dt; if (e.tm <= 0) { e.st = 2; e.tm = kn ? 0.45 : 0.5; Snd.play('dash'); } }
           else { sp = kn ? 330 : 360; mx = e.ax; my = e.ay; e.tm -= dt; if (e.tm <= 0) { e.st = 0; e.tm = kn ? rand(2.5, 4) : rand(1.8, 3); } }
@@ -2051,7 +2292,7 @@ span.ab { cursor: default; }
           e.tm -= dt;
           if (e.tm <= 0 && dist < 380) {
             e.tm = rand(2.6, 3.4);
-            spores.push({ x: e.x, y: e.y - 10, vx: (dx / dist) * 190, vy: (dy / dist) * 190, r: 8, dmg: 12, life: 4, k: 'ice' });
+            spores.push({ x: e.x, y: e.y - 10, vx: (dx / dist) * 190, vy: (dy / dist) * 190, r: 8, dmg: 12, life: 4, k: sk || 'ice' });
             Snd.play('spore');
           }
           break;
@@ -2067,8 +2308,8 @@ span.ab { cursor: default; }
             if (e.tm <= 0) {
               e.st = 0; e.tm = rand(2.4, 3.4); e.hop = 0; shake(7);
               flashes.push({ x: e.x, y: e.y, r: 200, life: 0.35, max: 0.35 });
-              if (!P.dead && Math.hypot(P.x - e.x, P.y - e.y) < 120) hurtPlayer(e.d.dmg * curWorld.dmg, 'boss');
-              for (let i = 0; i < 16; i++) { const a = (i / 16) * TAU; spores.push({ x: e.x, y: e.y, vx: Math.cos(a) * 150, vy: Math.sin(a) * 150, r: 7, dmg: 9, life: 4, k: 'moss' }); }
+              if (!P.dead && Math.hypot(P.x - e.x, P.y - e.y) < 120) hurtPlayer(e.d.dmg * curWorld.dmg * dm, 'boss', e);
+              for (let i = 0; i < 16; i++) { const a = (i / 16) * TAU; spores.push({ x: e.x, y: e.y, vx: Math.cos(a) * 150, vy: Math.sin(a) * 150, r: 7, dmg: 9 * dm, life: 4, k: sk || 'moss' }); }
               Snd.play('star');
             }
           }
@@ -2078,10 +2319,10 @@ span.ab { cursor: default; }
           e.tm -= dt; e.t2 -= dt;
           if (e.tm <= 0 && dist < 560) {
             e.tm = rand(2.8, 3.6);
-            spores.push({ x: e.x, y: e.y - 30, vx: (dx / dist) * 170, vy: (dy / dist) * 170, r: 15, dmg: 22, life: 2.6, k: 'ice', split: 8 });
+            spores.push({ x: e.x, y: e.y - 30, vx: (dx / dist) * 170, vy: (dy / dist) * 170, r: 15, dmg: 22, life: 2.6, k: sk || 'ice', split: 8 });
             Snd.play('spore');
           }
-          if (e.t2 <= 0) { e.t2 = 10; for (let i = 0; i < 4; i++) { const a = (i / 4) * TAU; spawnEnemy('wolf', e.x + Math.cos(a) * 70, e.y + Math.sin(a) * 70); } }
+          if (e.t2 <= 0) { e.t2 = 10; for (let i = 0; i < 4; i++) { const a = (i / 4) * TAU; spawnEnemy(e.d.minion || 'wolf', e.x + Math.cos(a) * 70, e.y + Math.sin(a) * 70); } }
           break;
         case 'shadowking':
           // verschwindet, taucht neben dir auf, feuert einen Ring dunkler Kugeln, ruft Fledermäuse
@@ -2095,18 +2336,18 @@ span.ab { cursor: default; }
             sp = 0; e.fade = 1 - Math.max(0, e.tm) / 0.5;
             if (e.tm <= 0) {
               e.st = 0; e.tm = rand(4, 5.5); e.fade = 1;
-              for (let i = 0; i < 18; i++) { const a = (i / 18) * TAU; spores.push({ x: e.x, y: e.y - 10, vx: Math.cos(a) * 150, vy: Math.sin(a) * 150, r: 7, dmg: 10, life: 4, k: 'dark' }); }
+              for (let i = 0; i < 18; i++) { const a = (i / 18) * TAU; spores.push({ x: e.x, y: e.y - 10, vx: Math.cos(a) * 150, vy: Math.sin(a) * 150, r: 7, dmg: 10, life: 4, k: sk || 'dark' }); }
               Snd.play('spore');
             }
           }
-          if (e.t2 <= 0) { e.t2 = 9; for (let i = 0; i < 6; i++) { const a = (i / 6) * TAU; spawnEnemy('bat', e.x + Math.cos(a) * 60, e.y + Math.sin(a) * 60); } }
+          if (e.t2 <= 0) { e.t2 = 9; for (let i = 0; i < 6; i++) { const a = (i / 6) * TAU; spawnEnemy(e.d.minion || 'bat', e.x + Math.cos(a) * 60, e.y + Math.sin(a) * 60); } }
           break;
         case 'spitter':
           if (dist < 210) { mx = -mx; my = -my; sp *= 0.6; } else if (dist < 270) sp = 0;
           e.tm -= dt;
           if (e.tm <= 0 && dist < 420) {
             e.tm = rand(2.2, 3);
-            spores.push({ x: e.x, y: e.y - 4, vx: (dx / dist) * 160, vy: (dy / dist) * 160, r: 6, dmg: 9 * (1 + t / 400), life: 5 });
+            spores.push({ x: e.x, y: e.y - 4, vx: (dx / dist) * 160, vy: (dy / dist) * 160, r: 6, dmg: 9 * (1 + t / 400), life: 5, k: sk });
             Snd.play('spore');
           }
           break;
@@ -2118,7 +2359,7 @@ span.ab { cursor: default; }
           e.t2 -= dt;
           if (e.t2 <= 0 && e.st === 0) {
             e.t2 = 6.5;
-            for (let i = 0; i < 14; i++) { const a = (i / 14) * TAU; spores.push({ x: e.x, y: e.y, vx: Math.cos(a) * 140, vy: Math.sin(a) * 140, r: 7, dmg: 9, life: 5 }); }
+            for (let i = 0; i < 14; i++) { const a = (i / 14) * TAU; spores.push({ x: e.x, y: e.y, vx: Math.cos(a) * 140, vy: Math.sin(a) * 140, r: 7, dmg: 9 * dm, life: 5, k: sk }); }
             Snd.play('spore');
           }
           break;
@@ -2132,7 +2373,7 @@ span.ab { cursor: default; }
       if (run.galeT > 0 && dist < e.r + P.r + 16) {
         // Sturmlauf schiebt Schatten beiseite, statt Schaden zu nehmen
         if (!e.d.boss) { e.kx = (-dx / dist) * 380; e.ky = (-dy / dist) * 380; }
-      } else if (!P.dead && !ghost && dist < e.r + P.r - 2) hurtPlayer((e.d.boss ? e.d.dmg : e.d.dmg * (1 + t / 600)) * curWorld.dmg, e.type);
+      } else if (!P.dead && !ghost && dist < e.r + P.r - 2) hurtPlayer((e.d.boss ? e.d.dmg : e.d.dmg * (1 + t / 600)) * curWorld.dmg * (e.dmgMul || 1), e.type, e);
       if (dist > far && !e.d.boss) { const p = edgePoint(); e.x = p[0]; e.y = p[1]; e.kx = e.ky = 0; }
     }
   }
@@ -2144,40 +2385,54 @@ span.ab { cursor: default; }
     if (crit) dmg *= 2;
     if (P.moving && U('windheart')) dmg *= 1.12;
     if (e.d.boss) dmg *= 1 + 0.3 * U('wrath');
+    if (U('wLast') && P.hp < P.maxHp * 0.25) dmg *= 1 + 0.3 * U('wLast');
     e.hp -= dmg; e.fl = e.d.boss ? 0.06 : 0.1;
     if (kb && !e.d.boss) { const k = kb / e.d.mass; e.kx += nx * k; e.ky += ny * k; }
     if (texts.length < (crit ? 40 : 28)) texts.push({ x: e.x + rand(-6, 6), y: e.y - e.r - 4, v: Math.round(dmg), life: crit ? 0.75 : 0.55, crit });
     Snd.play('hit');
     if (e.hp <= 0) kill(e);
   }
-  function addLoot(t, x, y) { loot.push({ t, x, y, m: false, sp: 0 }); }
+  function addLoot(t, x, y, v) { loot.push({ t, x, y, m: false, sp: 0, v: v || 0 }); }
   function kill(e) {
     e.dead = true; run.kills++;
     const d = e.d;
-    if (gems.length >= 450) gems[(Math.random() * gems.length) | 0].v += d.xp;
-    else gems.push({ x: e.x + rand(-4, 4), y: e.y + rand(-4, 4), v: d.xp, m: false, sp: 0 });
+    const xp = Math.random() < 0.04 * U('gGold') ? d.xp * 5 : d.xp;   // goldene Funken
+    if (gems.length >= 450) gems[(Math.random() * gems.length) | 0].v += xp;
+    else gems.push({ x: e.x + rand(-4, 4), y: e.y + rand(-4, 4), v: xp, m: false, sp: 0 });
+    // Lichtdurst: höchstens 1 Leben pro Sekunde und Stufe, damit dichte Welten nicht unsterblich machen
+    if (U('wLeech') && run.leech > 0) { const h = Math.min(run.leech, 0.3 * U('wLeech')); run.leech -= h; P.hp = Math.min(P.maxHp, P.hp + h); }
     const ar = run.endless;   // Arena-Pfad: mehr Beute, nur in der Arena
-    if (d.boss) {
+    // Wunsch „Doppelte Beute“ und Glücksrad: die Beute wird mehrmals ausgewürfelt
+    const rolls = 1 + B('loot') + (Math.random() < 0.1 * U('gWheel') ? 1 : 0);
+    const rare = 1 + 0.25 * U('gRare');
+    if (e.titan) titanLoot(e);
+    else if (d.boss) {
       run.bossKills++;
-      for (let i = 0; i < 12 + (ar ? 4 * U('arenaTrophy') : 0); i++) addLoot('amber', e.x + rand(-45, 45), e.y + rand(-35, 35));
-      addLoot('berry', e.x, e.y + 20);
-      for (let i = 0; i < 3 + U('shardseeker') + (ar ? U('arenaTrophy') : 0); i++) addLoot('shard', e.x + rand(-35, 35), e.y + rand(-30, 30));
-      addLoot('amberheart', e.x, e.y - 24);
-      if (run.boss === e) run.boss = null;
+      for (let k = 0; k < rolls; k++) {
+        for (let i = 0; i < 12 + (ar ? 4 * U('arenaTrophy') : 0); i++) addLoot('amber', e.x + rand(-45, 45), e.y + rand(-35, 35));
+        addLoot('berry', e.x + rand(-20, 20), e.y + 20);
+        for (let i = 0; i < 3 + U('shardseeker') + (ar ? U('arenaTrophy') : 0); i++) addLoot('shard', e.x + rand(-35, 35), e.y + rand(-30, 30));
+        addLoot('amberheart', e.x + rand(-20, 20), e.y - 24);
+      }
       shake(9);
       flashes.push({ x: e.x, y: e.y, r: 320, life: 0.5, max: 0.5 });
       Snd.play('win');
     } else {
-      const r = Math.random();
-      const amberC = 0.032 * (ar ? 1 + 0.25 * U('arenaLoot') : 1);
-      const berry = 0.007 * (1 + 0.6 * U('berries')) * (ar ? 1 + 0.5 * U('arenaHeal') : 1);
-      const shardC = 0.0015 * (1 + U('mooncatch')) * (ar ? 1 + 0.5 * U('arenaShard') : 1);
-      if (r < amberC) addLoot('amber', e.x, e.y);
-      else if (r < amberC + berry) addLoot('berry', e.x, e.y);
-      else if (r < amberC + berry + 0.002) addLoot('moon', e.x, e.y);
-      else if (r < amberC + berry + 0.002 + shardC) addLoot('shard', e.x, e.y);
-      else if (r < amberC + berry + 0.0038 + shardC) addLoot('amberheart', e.x, e.y);
+      const amberC = 0.032 * P.amberMul * (ar ? 1 + 0.25 * U('arenaLoot') : 1);
+      // Beeren pro Minute bleiben gleich, auch wenn eine Welt viel mehr Schatten schickt
+      const berry = 0.007 * rare * (1 + 0.6 * U('berries')) * (ar ? 1 + 0.5 * U('arenaHeal') : 1) / Math.max(1, curWorld.spawn);
+      const shardC = 0.0015 * (1 + U('mooncatch')) * (1 + 0.15 * U('gShard')) * (ar ? 1 + 0.5 * U('arenaShard') : 1);
+      const moonC = 0.002 * rare, heartC = 0.0018 * rare;
+      for (let k = 0; k < rolls; k++) {
+        const r = Math.random(), x = e.x + (k ? rand(-14, 14) : 0), y = e.y + (k ? rand(-10, 10) : 0);
+        if (r < amberC) addLoot('amber', x, y);
+        else if (r < amberC + berry) addLoot('berry', x, y);
+        else if (r < amberC + berry + moonC) addLoot('moon', x, y);
+        else if (r < amberC + berry + moonC + shardC) addLoot('shard', x, y);
+        else if (r < amberC + berry + moonC + shardC + heartC) addLoot('amberheart', x, y);
+      }
     }
+    if (run.boss === e) run.boss = enemies.find(o => !o.dead && o.d.boss) || null;
     smoke(e.x, e.y, d.boss ? 30 : 6, d.smoke);
     for (const [ex, ey] of d.eyes) parts.push({ x: e.x + ex * e.face, y: e.y + ey, vx: rand(-60, 60), vy: rand(-90, -30), life: 0.5, max: 0.5, r: 3, g: d.eye });
     Snd.play('pop');
@@ -2216,7 +2471,7 @@ span.ab { cursor: default; }
     return NB.map(x => x[1]);
   }
   function updateWeapons(dt) {
-    const it = run.items, ws = run.ws, m = P.dmgMul;
+    const it = run.items, ws = run.ws, m = P.dmgMul * P.wpnMul;
     if (it.spark) {
       const s = ITEMS.spark.s, l = it.spark - 1;
       if ((ws.spark -= dt) <= 0) {
@@ -2227,7 +2482,7 @@ span.ab { cursor: default; }
             const e = tg[i % tg.length];
             let a = Math.atan2(e.y - (P.y - 4), e.x - P.x);
             if (i >= tg.length) a += (i % 2 ? 1 : -1) * 0.2 * Math.ceil((i - tg.length + 1) / 2);
-            shots.push({ x: P.x + Math.cos(a) * 12, y: P.y - 4 + Math.sin(a) * 12, vx: Math.cos(a) * 560, vy: Math.sin(a) * 560, r: 6, dmg: s.dmg[l] * m, pierce: s.pierce[l] + U('pierce'), life: 1.1, hit: [] });
+            shots.push({ x: P.x + Math.cos(a) * 12, y: P.y - 4 + Math.sin(a) * 12, vx: Math.cos(a) * 560, vy: Math.sin(a) * 560, r: 6, dmg: s.dmg[l] * m * (1 + 0.15 * U('fSpark')), pierce: s.pierce[l] + U('pierce'), life: 1.1, hit: [] });
           }
           Snd.play('shoot');
         } else ws.spark = 0.1;
@@ -2236,7 +2491,7 @@ span.ab { cursor: default; }
     ff.length = 0;
     if (it.fireflies) {
       const s = ITEMS.fireflies.s, l = it.fireflies - 1, n = s.n[l] + U('swarmer'), R = s.rad[l];
-      ws.ffA += dt * s.sp[l];
+      ws.ffA += dt * s.sp[l] * (1 + 0.05 * U('fFly'));
       for (let i = 0; i < n; i++) {
         const a = ws.ffA + (i * TAU) / n, x = P.x + Math.cos(a) * R, y = P.y - 4 + Math.sin(a) * R;
         ff.push(x, y);
@@ -2248,7 +2503,7 @@ span.ab { cursor: default; }
           if (dx * dx + dy * dy < (e.r + 8) ** 2) {
             e.oc = 0.4;
             const d = Math.hypot(e.x - P.x, e.y - P.y) || 1;
-            hit(e, s.dmg[l] * m, (e.x - P.x) / d, (e.y - P.y) / d, 120);
+            hit(e, s.dmg[l] * m * (1 + 0.12 * U('fFly')), (e.x - P.x) / d, (e.y - P.y) / d, 120);
           }
         }
       }
@@ -2260,7 +2515,7 @@ span.ab { cursor: default; }
         const q = query(P.x, P.y, R + 50);
         for (let j = 0; j < q.length; j++) {
           const e = q[j], dx = e.x - P.x, dy = e.y - P.y, d = Math.hypot(dx, dy) || 1;
-          if (d < R + e.r) hit(e, s.dmg[l] * m * f, dx / d, dy / d, 280);
+          if (d < R + e.r) hit(e, s.dmg[l] * m * f * (1 + 0.12 * U('fPulse')), dx / d, dy / d, 280);
         }
         for (const sp of spores) if ((sp.x - P.x) ** 2 + (sp.y - P.y) ** 2 < R * R) sp.dead = true;
         Snd.play('pulse');
@@ -2355,8 +2610,8 @@ span.ab { cursor: default; }
       o.sp = Math.min(o.sp + 1400 * dt, 900);
       if (d < P.r + 6 || o.sp * dt >= d) {
         o.dead = true;
-        if (o.t === 'amber') { run.amber++; Snd.play('amber'); }
-        else if (o.t === 'shard') { run.shards++; Snd.play('moon'); burst(P.x, P.y, 6, 'silver', 110); }
+        if (o.t === 'amber') { run.amber += o.v || 1; Snd.play('amber'); }
+        else if (o.t === 'shard') { run.shards += o.v || 1; Snd.play('moon'); burst(P.x, P.y, 6, 'silver', 110); }
         else if (o.t === 'amberheart') {
           // wie der Mondstein für Funken, nur für Bernstein und Mondsplitter
           for (const l of loot) if (l.t === 'amber' || l.t === 'shard') l.m = true;
@@ -2626,7 +2881,14 @@ span.ab { cursor: default; }
       for (let i = 0; i < 50; i++) {
         const f = WX[i], x = wrap1(f.x - ox + Math.sin(time * 0.7 + f.p) * 0.02) * W, y = wrap1(f.y - oy - time * 0.035 * f.s) * H, r = 6 * f.s;
         ctx.globalAlpha = 0.6 * (0.5 + 0.5 * Math.sin(time * 3 + f.p));
-        ctx.drawImage(GL.red, x - r, y - r, r * 2, r * 2);
+        ctx.drawImage(GL[curWorld.wglow || 'red'], x - r, y - r, r * 2, r * 2);
+      }
+    } else if (kind === 'sand') {
+      ctx.globalCompositeOperation = 'source-over'; ctx.strokeStyle = '#e8c890'; ctx.lineWidth = 1.3;
+      for (const f of WX) {
+        const x = wrap1(f.x - ox + time * 0.12 * f.s) * W, y = wrap1(f.y - oy + Math.sin(time * 0.9 + f.p) * 0.012) * H;
+        ctx.globalAlpha = 0.16 + 0.22 * (f.s / 1.4);
+        ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - 16 * f.s, y + 1.5); ctx.stroke();
       }
     } else if (kind === 'fog') {
       ctx.globalCompositeOperation = 'source-over';
@@ -2678,9 +2940,10 @@ span.ab { cursor: default; }
       if (!pDrawn && e.y > P.y) { drawPlayer(time); pDrawn = true; }
       if (!inView(e.x, e.y)) continue;
       // Kröten zeigen Sitzen oder Springen, sonst wechseln die Bilder mit der Animation
-      const fr = e.type === 'toad' ? (e.st ? 1 : 0) : e.type === 'toadking' ? (e.st === 2 ? 1 : 0) : (e.anim | 0) & 1;
+      const bh = e.d.beh || e.type;
+      const fr = bh === 'toad' ? (e.st ? 1 : 0) : bh === 'toadking' ? (e.st === 2 ? 1 : 0) : (e.anim | 0) & 1;
       const s = e.d.spr[fr];
-      const bob = (e.type === 'shade' ? Math.sin(e.anim) * 2 : 0) - (e.hop || 0);
+      const bob = (bh === 'shade' ? Math.sin(e.anim) * 2 : 0) - (e.hop || 0);
       const fa = e.fade === undefined ? 1 : Math.max(0.05, e.fade);
       ctx.setTransform(k * e.face, 0, 0, k, tx + e.x * k, ty + (e.y + bob) * k);
       ctx.globalAlpha = fa;
@@ -2716,7 +2979,7 @@ span.ab { cursor: default; }
       }
       ctx.setTransform(k, 0, 0, k, tx, ty);
     }
-    const SPORE_C = { ice: '#bfeeff', dark: '#140308', moss: '#33401a' };
+    const SPORE_C = { ice: '#bfeeff', dark: '#140308', moss: '#33401a', fire: '#ff7a2a', crystal: '#d8b8ff', sand: '#e8c27a', void: '#0a1a24' };
     for (const s of spores) if (inView(s.x, s.y)) { ctx.fillStyle = SPORE_C[s.k] || '#2a1238'; ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, TAU); ctx.fill(); }
 
     // Lichtquellen sammeln
@@ -2780,28 +3043,29 @@ span.ab { cursor: default; }
       }
     }
     for (let i = 0; i < ff.length; i += 2) { glow('fire', ff[i], ff[i + 1], 18, 0.8); glow('white', ff[i], ff[i + 1], 4, 0.9); }
-    const SPORE_G = { ice: 'ice', dark: 'red', moss: 'moss' };
+    const SPORE_G = { ice: 'ice', dark: 'red', moss: 'moss', fire: 'amber', crystal: 'lilac', sand: 'gold', void: 'moon' };
     for (const s of spores) if (inView(s.x, s.y)) { glow(SPORE_G[s.k] || 'lilac', s.x, s.y, s.r * 2.3, 0.8); glow('white', s.x, s.y, s.r * 0.45, 0.5); }
     for (const e of enemies) {
       if (!inView(e.x, e.y)) continue;
-      const bob = (e.type === 'shade' ? Math.sin(e.anim) * 2 : 0) - (e.hop || 0);
+      const bh = e.d.beh || e.type;
+      const bob = (bh === 'shade' ? Math.sin(e.anim) * 2 : 0) - (e.hop || 0);
       const fa = e.fade === undefined ? 1 : Math.max(0, e.fade);
-      const r = (e.type === 'crow' || e.type === 'knight') && e.st === 1 ? 10 : e.d.boss ? 8 : 5;
+      const r = (bh === 'crow' || bh === 'knight') && e.st === 1 ? 10 : e.d.boss ? 8 : 5;
       for (const [ex, ey] of e.d.eyes) glow(e.d.eye, e.x + ex * e.face, e.y + ey + bob, r, 0.95 * fa);
-      if (e.type === 'toadking' && e.st >= 1) {
+      if (bh === 'toadking' && e.st >= 1) {
         // Landeplatz des Krötenkönigs
         const q = e.st === 1 ? 1 - e.tm / 0.9 : 1;
         ctx.globalAlpha = 1; ctx.strokeStyle = `rgba(255,220,90,${0.25 + 0.45 * q})`; ctx.lineWidth = 3; ctx.setLineDash([10, 8]);
         ctx.beginPath(); ctx.arc(e.ax, e.ay, 120, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
         glow('eyeY', e.ax, e.ay, 120, 0.12 + 0.12 * q);
       }
-      if (e.type === 'shadowking' && e.st >= 1) {
+      if (bh === 'shadowking' && e.st >= 1) {
         // hier taucht der Schattenkönig gleich auf
         ctx.globalAlpha = 1; ctx.strokeStyle = 'rgba(255,70,100,.5)'; ctx.lineWidth = 2;
         ctx.beginPath(); ctx.arc(e.ax, e.ay, 40, 0, TAU); ctx.stroke();
         glow('red', e.ax, e.ay, 50, 0.3);
       }
-      if (e.type === 'stag' && e.st === 1) {
+      if (bh === 'stag' && e.st === 1) {
         ctx.globalAlpha = 1;
         ctx.strokeStyle = 'rgba(170,220,255,.12)'; ctx.lineWidth = e.r * 1.6; ctx.lineCap = 'round';
         ctx.beginPath(); ctx.moveTo(e.x, e.y); ctx.lineTo(e.x + e.ax * 390, e.y + e.ay * 390); ctx.stroke();
@@ -2894,7 +3158,7 @@ span.ab { cursor: default; }
   function setText(id, v) { if (txt[id] !== v) { txt[id] = v; E(id).textContent = v; } }
 
   function showScreen(id) {
-    for (const s of ['menu', 'shop', 'slotsScr', 'worldScr', 'compScr', 'prioScr', 'lvl', 'pause', 'over']) E(s).hidden = s !== id;
+    for (const s of ['menu', 'shop', 'slotsScr', 'worldScr', 'titanScr', 'compScr', 'prioScr', 'lvl', 'pause', 'over']) E(s).hidden = s !== id;
     E('hud').hidden = !(state === 'play' || state === 'levelup' || state === 'pause');
   }
   let bannerTimer = 0;
@@ -3163,9 +3427,11 @@ span.ab { cursor: default; }
     const drops = run.amber, timeB = Math.floor(t / 10), winB = won ? 80 : 0;
     const total = Math.round((drops + timeB + winB) * greed);
     const rec = arena ? t > (save.arenaBest || 0) + 0.5 : t > save.best + 0.5;
-    save.amber += total; save.runs++; save.night = null;
-    // Arenapunkte: Zeit, besiegte Schatten und Bosse
-    const apGain = arena ? Math.round((Math.floor(t / 10) + Math.floor(run.kills / 50) + 5 * run.bossKills) * (1 + 0.25 * U('arenaChamp'))) : 0;
+    // Arena mit Umtausch: je 10 Bernstein werden 1 Pokal (Arenapunkt), der Rest bleibt Bernstein
+    const conv = arena && save.arenaConvert ? Math.floor(total / 10) : 0;
+    save.amber += total - conv * 10; save.runs++; save.night = null;
+    // Arenapunkte: Zeit, besiegte Schatten, Bosse und Titanen
+    const apGain = arena ? Math.round((Math.floor(t / 10) + Math.floor(run.kills / 50) + 5 * run.bossKills + run.ap) * (1 + 0.25 * U('arenaChamp')) * P.apMul) + conv : 0;
     if (arena) { save.ap = (save.ap || 0) + apGain; if (t > (save.arenaBest || 0)) save.arenaBest = t; }
     E('overAp').hidden = !arena;
     E('overAp').innerHTML = `+${apGain} ${icon('trophy')} <small>${T('ap')}</small>`;
@@ -3191,7 +3457,7 @@ span.ab { cursor: default; }
     const parts_ = [`${drops} ${T('bdDrops')}`, `${timeB} ${T('bdTime')}`];
     if (won) parts_.push(`${winB} ${T('bdWin')}`);
     if (greed !== 1) parts_.push(`× ${fmtNum(+greed.toFixed(2))}`);
-    E('overEarn').innerHTML = `+${total} ${icon('amber')} <small>${parts_.join(' · ')}</small>`;
+    E('overEarn').innerHTML = `+${total - conv * 10} ${icon('amber')} <small>${parts_.join(' · ')}${conv ? ` · ${tf('convDone', { a: conv * 10, p: conv })}` : ''}</small>`;
     E('overRec').hidden = !rec;
     showScreen('over');
     updateMenuMeta();
@@ -3208,7 +3474,7 @@ span.ab { cursor: default; }
   let selNode = null, treeDrag = null, treeMoved = false, treeScale = 0;
   function nodeState(t) {
     if (t.id === 'root') return 'max';
-    const lv = U(t.id);
+    const lv = UL(t.id);
     if (lv >= t.max) return 'max';
     if (lv > 0) return 'part';
     return t.p === 'root' || U(t.p) > 0 ? 'avail' : 'locked';
@@ -3231,12 +3497,12 @@ span.ab { cursor: default; }
     let lines = '', html = '', lit = 0;
     for (const t of TREE) {
       if (t.id === 'root') continue;
-      lit += Math.min(U(t.id), t.max);
+      lit += Math.min(UL(t.id), t.max);
       const p = NODE[t.p], st = nodeState(t);
-      lines += `<line x1="${p.x * s}" y1="${p.y * s}" x2="${t.x * s}" y2="${t.y * s}" class="${U(t.id) ? 'own' : st === 'avail' ? 'avail' : ''}" style="--c:${BR[t.br].c}"/>`;
+      lines += `<line x1="${p.x * s}" y1="${p.y * s}" x2="${t.x * s}" y2="${t.y * s}" class="${UL(t.id) ? 'own' : st === 'avail' ? 'avail' : ''}" style="--c:${BR[t.br].c}"/>`;
     }
     for (const t of TREE) {
-      const lv = U(t.id), cls = `node ${nodeState(t)}${t.act ? ' act' : ''}${t.id === 'root' ? ' root' : ''}${selNode === t.id ? ' sel' : ''}`;
+      const lv = UL(t.id), cls = `node ${nodeState(t)}${t.act ? ' act' : ''}${t.id === 'root' ? ' root' : ''}${selNode === t.id ? ' sel' : ''}`;
       html += `<button type="button" class="${cls}" data-id="${t.id}" style="--c:${BR[t.br].c};--ns:${t.id === 'root' ? 66 : ns}px;left:${t.x * s}px;top:${t.y * s}px" aria-label="${t.name[lang]}${t.max ? `, ${lv} / ${t.max}` : ''}">${icon(t.icon)}${t.max ? `<b>${lv}/${t.max}</b>` : ''}</button>`;
     }
     for (const k in BR) {
@@ -3248,15 +3514,17 @@ span.ab { cursor: default; }
     E('shopAmber').textContent = save.amber;
     E('shopAp').textContent = save.ap || 0;
     E('shopApWrap').hidden = !(save.ap || U('arena'));
-    if (first) { wrap.scrollLeft = 550 * s - wrap.clientWidth / 2; wrap.scrollTop = 410 * s - wrap.clientHeight / 2; }
+    if (first) { wrap.scrollLeft = NODE.root.x * s - wrap.clientWidth / 2; wrap.scrollTop = 410 * s - wrap.clientHeight / 2; }
     else { wrap.scrollLeft = keepL; wrap.scrollTop = keepT; }
     renderNodeInfo();
   }
   function renderNodeInfo() {
-    const t = NODE[selNode] || NODE.root, lv = U(t.id), st = nodeState(t), box = E('nodeInfo');
+    const t = NODE[selNode] || NODE.root, lv = UL(t.id), st = nodeState(t), box = E('nodeInfo');
     box.style.setProperty('--c', BR[t.br].c);
     const tag = t.id === 'root' ? '' : `<span class="ni-tag">${T(t.auto ? 'tagAuto' : t.act ? 'tagAbility' : 'tagTalent')} · ${BR[t.br][lang]}</span>`;
-    const pips = t.max ? `<span class="pips" aria-label="${lv} / ${t.max}">${'<i class="on"></i>'.repeat(lv)}${'<i></i>'.repeat(t.max - lv)}</span>` : '';
+    // Grundstufen in der Pfadfarbe, Glanzstufen golden
+    const pips = t.max ? `<span class="pips" aria-label="${lv} / ${t.max}">${Array.from({ length: t.max }, (_, i) => `<i class="${i < lv ? 'on' : ''}${i >= t.base ? ' gl' : ''}"></i>`).join('')}</span>` : '';
+    const gl = t.base && GLANZ[t.br] ? `<p class="ni-glanz">${tf('glanzLine', { a: t.base + 1, b: t.max, d: GLANZ[t.br][lang === 'de' ? 0 : 1] })}</p>` : '';
     let action = '';
     if (t.max) {
       if (lv >= t.max && t.auto) action = '';
@@ -3275,7 +3543,17 @@ span.ab { cursor: default; }
       }
     }
     if (t.id === 'prio' && lv > 0) action += `<button class="btn small" id="prioEditBtn" type="button">${T('prioEdit')}</button>`;
-    box.innerHTML = `${icon(t.icon)}<div class="ni-body">${tag}<h3>${t.name[lang]}</h3><p>${t.d[lang]}</p>${pips}</div>${action ? `<div class="ni-act">${action}</div>` : ''}`;
+    let extra = '';
+    if (t.id === 'root') {
+      // Sternenwünsche: erst wenn wirklich alle Stufen gekauft sind
+      const left = TREE.reduce((a, n) => a + Math.max(0, n.max - UL(n.id)), 0);
+      extra = boonSummary();
+      if (left > 0) action = `<span class="ni-need">${tf('wishLeft', { n: left })}</span>`;
+      else { const cost = wishCost(); action = `<button class="btn primary buy" id="wishBtn" type="button"${save.amber < cost ? ' disabled' : ''}>${T('wish')} · ${cost}${icon('amber')}</button>`; }
+    }
+    box.innerHTML = `${icon(t.icon)}<div class="ni-body">${tag}<h3>${t.name[lang]}</h3><p>${t.d[lang]}</p>${gl}${extra}${pips}</div>${action ? `<div class="ni-act">${action}</div>` : ''}`;
+    const wb = $('wishBtn');
+    if (wb) wb.addEventListener('click', makeWish);
     const bb = $('buyBtn');
     if (bb) bb.addEventListener('click', () => buyNode(t.id));
     const pe = $('prioEditBtn');
@@ -3287,12 +3565,35 @@ span.ab { cursor: default; }
     });
   }
   function buyNode(id) {
-    const t = NODE[id], lv = U(id), key = t.cur === 'ap' ? 'ap' : 'amber';
+    const t = NODE[id], lv = UL(id), key = t.cur === 'ap' ? 'ap' : 'amber';
     if (lv >= t.max || nodeState(t) === 'locked' || (save[key] || 0) < t.cost[lv]) return;
     save[key] -= t.cost[lv]; save.up[id] = lv + 1; persist();
     Snd.play('amber'); recalc(); renderShop(); updateMenuMeta();
     const bb = $('buyBtn');
     if (bb && !bb.disabled) bb.focus();
+  }
+
+  // ---------- Sternenwünsche: Zufalls-Upgrades, wenn die ganze Karte gekauft ist ----------
+  const BOONS = {
+    spawn: { de: 'Doppelte Spawnrate', en: 'Double spawn rate' },
+    loot: { de: 'Doppelte Beute', en: 'Double loot' },
+    boss: { de: 'Doppelte Bosse', en: 'Double bosses' },
+    xp: { de: 'Doppelte Funken', en: 'Double sparks' },
+    dmg: { de: 'Doppelte Stärke', en: 'Double strength' },
+  };
+  const B = id => (save.boons && save.boons[id]) || 0;
+  const wishCost = () => 1000 * (1 + 0.5 * Object.values(save.boons || {}).reduce((a, v) => a + v, 0));
+  function boonSummary() {
+    const have = Object.keys(BOONS).filter(id => B(id));
+    return have.length ? `<p class="ni-glanz">${T('wishes')}: ${have.map(id => `${BOONS[id][lang]} ×${B(id)}`).join(', ')}</p>` : '';
+  }
+  function makeWish() {
+    const cost = wishCost();
+    if (save.amber < cost) return;
+    const ids = Object.keys(BOONS), id = ids[(Math.random() * ids.length) | 0];
+    save.amber -= cost; save.boons = save.boons || {}; save.boons[id] = B(id) + 1; persist();
+    Snd.play('moon'); toast(tf('wishGot', { n: BOONS[id][lang] }));
+    recalc(); renderShop(); updateMenuMeta();
   }
 
   // ---------- Nacht speichern und fortsetzen ----------
@@ -3305,13 +3606,13 @@ span.ab { cursor: default; }
         t: R.t, kills: R.kills, amber: R.amber, xp: R.xp, lv: R.lv, need: R.need, pending: R.pending, items: R.items, ws: R.ws,
         acc: R.acc, nextWave: R.nextWave, bossN: R.bossN, rerolls: R.rerolls, revives: R.revives, dawnSaid: R.dawnSaid,
         dashCd: R.dashCd, beaconCd: R.beaconCd, callCd: R.callCd, starN: R.starN, slowCd: R.slowCd, galeCd: R.galeCd, shards: R.shards,
-        bossKills: R.bossKills, nextBoss: R.nextBoss,
+        bossKills: R.bossKills, nextBoss: R.nextBoss, shieldT: R.shieldT, aegis: R.aegis, titanT: R.titanT, titanN: R.titanN, titanKills: R.titanKills, ap: R.ap,
       },
       world: curWorld.id,
       p: [r1(P.x), r1(P.y), r1(P.hp), P.face],
       en: enemies.filter(e => !e.dead).map(e => [EN_KEYS.indexOf(e.type), r1(e.x), r1(e.y), r1(e.hp), r1(e.max), e.st, r1(e.tm), r1(e.t2), r1(e.ax), r1(e.ay), e === R.boss ? 1 : 0]),
       gems: gems.filter(g => !g.dead).map(g => [r1(g.x), r1(g.y), g.v]),
-      loot: loot.filter(o => !o.dead).map(o => [o.t, r1(o.x), r1(o.y)]),
+      loot: loot.filter(o => !o.dead).map(o => [o.t, r1(o.x), r1(o.y), o.v || 0]),
     };
   }
   function saveNight(quiet) {
@@ -3336,9 +3637,10 @@ span.ab { cursor: default; }
       const e = spawnEnemy(type, a[1], a[2]);
       Object.assign(e, { hp: a[3], max: a[4], st: a[5], tm: a[6], t2: a[7], ax: a[8], ay: a[9] });
       if (a[10]) run.boss = e;
+      if (type === 'titan') { titanize(e); run.titanRef = e; }
     }
     gems = n.gems.map(([x, y, v]) => ({ x, y, v, m: false, sp: 0 }));
-    loot = n.loot.map(([t, x, y]) => ({ t, x, y, m: false, sp: 0 }));
+    loot = n.loot.map(([t, x, y, v]) => ({ t, x, y, m: false, sp: 0, v: v || 0 }));
     for (const p of run.pets) { p.x = P.x - 20; p.y = P.y + 12; }
     cam.x = P.x; cam.y = P.y;
     updateInv(); updateHud();
@@ -3422,6 +3724,9 @@ span.ab { cursor: default; }
         ...newSlot(String(o.name || '').slice(0, 20)), amber: Math.max(0, Math.floor(o.amber)), best: clamp(+o.best || 0, 0, RUN_LEN),
         wins: Math.max(0, o.wins | 0), runs: Math.max(0, o.runs | 0), up, shards: Math.max(0, o.shards | 0), comp, compSel, worldWins,
         ap: Math.max(0, o.ap | 0), arenaBest: Math.max(0, +o.arenaBest || 0),
+        boons: Object.fromEntries(Object.entries(o.boons || {}).filter(([k, v]) => BOONS[k] && Number.isFinite(v)).map(([k, v]) => [k, Math.max(0, v | 0)])),
+        arenaConvert: o.arenaConvert === true,
+        titan: Object.assign(newSlot().titan, Object.fromEntries(['dmg', 'spd', 'rsp', 'hp'].filter(k => o.titan && Number.isFinite(o.titan[k])).map(k => [k, Math.max(0, o.titan[k] | 0)])), { on: !(o.titan && o.titan.on === false) }),
         auto: Object.fromEntries(Object.entries(o.auto || {}).filter(([, v]) => typeof v === 'boolean' || ['off', 'smart', 'always'].includes(v))),
         ...(Array.isArray(o.prio) ? { prio: o.prio.filter(id => ITEMS[id]) } : {}),
         world: WORLDS.some(w => w.id === o.world) ? o.world : 'wald',
@@ -3458,12 +3763,56 @@ span.ab { cursor: default; }
         `<h3>${w.name[lang]}</h3><p>${w.d[lang]}</p><div class="chips">${chips.map(c => `<span>${c}</span>`).join('')}</div>`;
       const row = document.createElement('div');
       row.className = 'row';
-      if (!open) row.innerHTML = `<span class="ni-need">${w.endless ? T('arenaLocked') : tf('wLocked', { n: WORLDS[i - 1].name[lang] })}</span>`;
+      if (!open) row.innerHTML = `<span class="ni-need">${w.endless ? T('arenaLocked') : tf('wLocked', { n: WORLDS.find(x => x.id === w.prev).name[lang] })}</span>`;
       else if (cur) row.innerHTML = `<span class="ni-tag">${T('chosen')}</span>`;
       else row.appendChild(makeBtn(T('choose'), 'btn small primary', () => { save.world = w.id; persist(); setWorld(w.id); renderWorlds(); updateMenuMeta(); }));
+      if (w.endless && open) {
+        // Arena: Titan einstellen und Bernstein in Pokale tauschen
+        const tb = makeBtn(T('titan'), 'btn small', openTitan);
+        tb.insertAdjacentHTML('afterbegin', icon('crown'));
+        row.appendChild(tb);
+        const cv = makeBtn(T(save.arenaConvert ? 'convOn' : 'convOff'), 'btn small' + (save.arenaConvert ? ' on' : ''), () => { save.arenaConvert = !save.arenaConvert; persist(); renderWorlds(); });
+        cv.insertAdjacentHTML('afterbegin', icon('trophy'));
+        cv.title = T('convHint');
+        row.appendChild(cv);
+      }
       el.appendChild(row);
       box.appendChild(el);
     });
+  }
+
+  // ---------- Arena-Titan einstellen ----------
+  const TITAN_UI = { dmg: 'crit', spd: 'wind', rsp: 'hourglass', hp: 'heart' };
+  function openTitan() { state = 'titan'; renderTitan(); showScreen('titanScr'); }
+  function titanEffect(k, lv) {
+    if (k === 'dmg') return tf('tDmgV', { n: Math.round((titanDmg(lv) - 1) * 100) });
+    if (k === 'spd') return tf('tSpdV', { n: fmtNum(+titanSpd(lv).toFixed(2)) });
+    if (k === 'rsp') return tf('tRspV', { n: Math.round(titanResp(lv)) });
+    return tf('tHpV', { n: fmtNum(titanHp(lv)) });
+  }
+  function renderTitan() {
+    const box = E('titanList'), t = save.titan;
+    box.innerHTML = '';
+    E('titanLv').textContent = tf('titanLvl', { n: TITAN_KEYS.reduce((a, k) => a + t[k], 0) });
+    for (const k of TITAN_KEYS) {
+      const el = document.createElement('div');
+      el.className = 'wcard';
+      el.style.setProperty('--c', '#ff8a5c');
+      el.innerHTML = `<div class="comp-head"><span class="comp-ico">${icon(TITAN_UI[k])}</span><div><h3>${T('t_' + k)}</h3><span class="ni-tag">${tf('compLv', { n: t[k] })}</span></div></div>` +
+        `<p>${T('t_' + k + 'D')}</p><p class="ni-tag">${titanEffect(k, t[k])} → ${titanEffect(k, t[k] + 1)}</p>`;
+      const row = document.createElement('div');
+      row.className = 'row';
+      const minus = makeBtn('−', 'btn small', () => { t[k] = Math.max(0, t[k] - 1); persist(); renderTitan(); });
+      minus.disabled = !t[k];
+      row.appendChild(minus);
+      row.appendChild(makeBtn('+', 'btn small primary', () => { t[k]++; persist(); renderTitan(); }));
+      el.appendChild(row);
+      box.appendChild(el);
+    }
+    const rw = titanReward();
+    E('titanLoot').innerHTML = `${T('titanLoot')} ${rw.amber} ${icon('amber')} · ${rw.shards} ${icon('shard')} · ${rw.ap} ${icon('trophy')}`;
+    E('titanOn').textContent = T(t.on ? 'titanOnY' : 'titanOnN');
+    E('titanOn').classList.toggle('on', t.on);
   }
 
   // ---------- Begleiter-Auswahl ----------
@@ -3578,6 +3927,8 @@ span.ab { cursor: default; }
   on('slotsBack', closeSlots);
   on('worldsBtn', openWorlds);
   on('worldBack', backToMenu);
+  on('titanBack', openWorlds);
+  on('titanOn', () => { save.titan.on = !save.titan.on; persist(); renderTitan(); });
   on('compBtn', openComps);
   on('compBack', backToMenu);
   on('prioBack', closePrio);
@@ -3743,7 +4094,7 @@ span.ab { cursor: default; }
 
   window.__ln = {
     dbg, P, get state() { return state; }, get run() { return run; }, get enemies() { return enemies; }, get gems() { return gems; }, get spores() { return spores; },
-    get store() { return store; }, get stars() { return stars; }, get zones() { return zones; }, starClick, doDash, doBeacon, saveNight,
+    get store() { return store; }, get stars() { return stars; }, get zones() { return zones; }, get loot() { return loot; }, TREE, WORLDS, starClick, doDash, doBeacon, saveNight,
     // Spielzeit ohne Animation vorspulen (für Tests); dbg.autoPick wählt bei Stufenaufstieg die erste Karte
     sim(sec) {
       for (let i = 0; i < sec * 60; i++) {
