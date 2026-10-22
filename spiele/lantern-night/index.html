@@ -319,6 +319,7 @@ span.ab { cursor: default; }
 .stat.apv svg { color: #ff8a5c; }
 .farm { display: flex; flex-direction: column; gap: 6px; }
 .farm > span { font-size: .9rem; color: var(--ink-dim); }
+.farm > span.mult { color: #ff8a5c; font-weight: 600; }
 .seg { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 .seg .btn { gap: 6px; }
 .seg .btn svg { width: 18px; height: 18px; }
@@ -585,7 +586,7 @@ span.ab { cursor: default; }
     name, amber: 0, best: 0, wins: 0, runs: 0, up: {}, night: null, played: 0,
     shards: 0, comp: { fox: 1 }, compSel: ['fox'], world: 'wald', worldWins: {}, ap: 0, arenaBest: 0, auto: {},
     prio: ['fireflies', 'pulse', 'stars', 'spark', 'ember', 'feather', 'cloak', 'tea', 'lure', 'boots', 'wick', 'clover'],
-    boons: {}, arenaConvert: false, titan: { dmg: 0, spd: 0, rsp: 0, hp: 0, on: true },
+    boons: {}, arenaConvert: false, arenaMult: 0, titan: { dmg: 0, spd: 0, rsp: 0, hp: 0, on: true },
   });
   let store = { v: 2, cur: 0, slots: [null, null, null], music: true, sfx: true, lang: null, tempo: 1 };
   let storageOk = false;
@@ -675,6 +676,8 @@ span.ab { cursor: default; }
       convDone: '{a} Bernstein → {p} Pokale', convStart: 'Du farmst Pokale: Bernstein wird am Ende zu Pokalen (10 : 1).', farmAmberStart: 'Du farmst Bernstein. Umstellen kannst du im Pausemenü.',
       farmWhat: 'Was willst du in der Arena farmen?', farmAmber: 'Bernstein', farmTrophy: 'Pokale',
       farmAmberHint: 'Du behältst deinen Bernstein und bekommst Pokale nur für Zeit, Schatten, Bosse und Titanen.', farmTrophyHint: 'Am Ende der Nacht werden je 10 Bernstein zu 1 Pokal, der Rest bleibt Bernstein.',
+      multLine: 'Arena-Multiplikator: Am Ende jeder Arena-Nacht zählt alles ×{a} – Bernstein, Mondsplitter und Pokale. Du hast {p} Pokale.',
+      multUp: 'Auf ×{b} verbessern', multGot: 'Arena-Multiplikator jetzt ×{a}', multNow: 'Arena-Multiplikator: alles ×{a}', bdMult: 'Arena',
     },
     en: {
       eyebrow: 'One night in the woods · 10 pm to 6 am',
@@ -735,6 +738,8 @@ span.ab { cursor: default; }
       convDone: '{a} amber → {p} trophies', convStart: 'You are farming trophies: amber turns into trophies at the end (10 : 1).', farmAmberStart: 'You are farming amber. You can switch in the pause menu.',
       farmWhat: 'What do you want to farm in the arena?', farmAmber: 'Amber', farmTrophy: 'Trophies',
       farmAmberHint: 'You keep your amber and get trophies only for time, shadows, bosses and titans.', farmTrophyHint: 'At the end of the night every 10 amber become 1 trophy; the rest stays amber.',
+      multLine: 'Arena multiplier: at the end of every arena night everything counts ×{a} – amber, moon shards and trophies. You have {p} trophies.',
+      multUp: 'Upgrade to ×{b}', multGot: 'Arena multiplier now ×{a}', multNow: 'Arena multiplier: everything ×{a}', bdMult: 'arena',
     },
   };
   let lang = store.lang || ((navigator.language || 'en').toLowerCase().startsWith('de') ? 'de' : 'en');
@@ -1944,7 +1949,7 @@ span.ab { cursor: default; }
       won: false, dawnT: 0, deathT: 0, dawnSaid: false, choices: [], lvLock: 0,
       dashCd: 0, beaconCd: 0, callCd: 0, target: null, starN: 0, saveT: 0,
       slowCd: 0, slowT: 0, galeCd: 0, galeT: 0, trailT: 0, shards: 0, pets: [], bossKills: 0,
-      shieldT: 0, aegis: false, titanT: 60, titanN: 0, titanKills: 0, ap: 0,
+      shieldT: 0, aegis: false, titanT: 20, titanN: 0, titanKills: 0, ap: 0,
     };
     if (U('fStart')) run.items.spark = Math.min(ITEMS.spark.max, 1 + U('fStart'));
     setWorld(save.world);
@@ -3439,15 +3444,26 @@ span.ab { cursor: default; }
     state = 'play'; showScreen(null); Platform.gameplayStart();
   }
 
+  const arenaMult = (lv = save.arenaMult || 0) => 1 + 0.25 * lv;
+  const multCost = lv => Math.round(20 * 1.4 ** lv);
+  function buyMult() {
+    const lv = save.arenaMult || 0, cost = multCost(lv);
+    if ((save.ap || 0) < cost) return;
+    save.ap -= cost; save.arenaMult = lv + 1; persist();
+    Snd.play('amber'); toast(tf('multGot', { a: fmtNum(arenaMult()) }));
+    renderWorlds(); updateMenuMeta();
+  }
   // Beute einer Nacht; in der Arena wahlweise als Pokale (je 10 Bernstein = 1 Pokal, der Rest bleibt Bernstein)
   function nightEarn(won) {
     const arena = run.endless, t = arena ? run.t : Math.min(run.t, RUN_LEN), greed = (1 + 0.15 * U('greed')) * curWorld.reward;
     const drops = run.amber, timeB = Math.floor(t / 10), winB = won ? 80 : 0;
-    const total = Math.round((drops + timeB + winB) * greed);
+    // Arena-Multiplikator (mit Pokalen gekauft) vervielfacht am Ende alles
+    const mult = arena ? arenaMult() : 1;
+    const total = Math.round((drops + timeB + winB) * greed * mult);
     const conv = arena && save.arenaConvert ? Math.floor(total / 10) : 0;
     // Arenapunkte: Zeit, besiegte Schatten, Bosse und Titanen
-    const apGain = arena ? Math.round((Math.floor(t / 10) + Math.floor(run.kills / 50) + 5 * run.bossKills + run.ap) * (1 + 0.25 * U('arenaChamp')) * P.apMul) + conv : 0;
-    return { arena, t, greed, drops, timeB, winB, total, conv, apGain };
+    const apGain = arena ? Math.round((Math.floor(t / 10) + Math.floor(run.kills / 50) + 5 * run.bossKills + run.ap) * (1 + 0.25 * U('arenaChamp')) * P.apMul * mult) + conv : 0;
+    return { arena, t, greed, mult, drops, timeB, winB, total, conv, apGain };
   }
   // Auswahl „Bernstein farmen“ oder „Pokale farmen“ (Arena-Karte und Pausemenü)
   function renderFarm(box, inRun) {
@@ -3466,11 +3482,12 @@ span.ab { cursor: default; }
     }
     box.appendChild(seg);
     box.insertAdjacentHTML('beforeend', `<span>${T(save.arenaConvert ? 'farmTrophyHint' : 'farmAmberHint')}</span>`);
+    if (inRun && arenaMult() > 1) box.insertAdjacentHTML('beforeend', `<span class="mult">${tf('multNow', { a: fmtNum(arenaMult()) })}</span>`);
   }
   function endRun(won) {
     state = 'over'; joy.active = false;
     Platform.gameplayStop();
-    const { arena, t, greed, drops, timeB, winB, total, conv, apGain } = nightEarn(won);
+    const { arena, t, greed, mult, drops, timeB, winB, total, conv, apGain } = nightEarn(won);
     const rec = arena ? t > (save.arenaBest || 0) + 0.5 : t > save.best + 0.5;
     save.amber += total - conv * 10; save.runs++; save.night = null;
     if (arena) { save.ap = (save.ap || 0) + apGain; if (t > (save.arenaBest || 0)) save.arenaBest = t; }
@@ -3478,7 +3495,7 @@ span.ab { cursor: default; }
     E('overAp').innerHTML = `+${apGain} ${icon('trophy')} <small>${T('ap')}</small>`;
     // Mondsplitter: eingesammelte plus Siegbonus der Welt
     const wasOpen = WORLDS.map((w, i) => worldOpen(i));
-    const shards = run.shards + (won ? curWorld.shards + U('shardseeker') : 0);
+    const shards = Math.round((run.shards + (won ? curWorld.shards + U('shardseeker') : 0)) * mult);
     save.shards += shards;
     if (won) { save.wins++; save.worldWins[curWorld.id] = (save.worldWins[curWorld.id] || 0) + 1; }
     const opened = WORLDS.find((w, i) => !wasOpen[i] && worldOpen(i));
@@ -3498,6 +3515,7 @@ span.ab { cursor: default; }
     const parts_ = [`${drops} ${T('bdDrops')}`, `${timeB} ${T('bdTime')}`];
     if (won) parts_.push(`${winB} ${T('bdWin')}`);
     if (greed !== 1) parts_.push(`× ${fmtNum(+greed.toFixed(2))}`);
+    if (mult !== 1) parts_.push(`× ${fmtNum(mult)} ${T('bdMult')}`);
     E('overEarn').innerHTML = `+${total - conv * 10} ${icon('amber')} <small>${parts_.join(' · ')}${conv ? ` · ${tf('convDone', { a: conv * 10, p: conv })}` : ''}</small>`;
     E('overRec').hidden = !rec;
     showScreen('over');
@@ -3766,7 +3784,7 @@ span.ab { cursor: default; }
         wins: Math.max(0, o.wins | 0), runs: Math.max(0, o.runs | 0), up, shards: Math.max(0, o.shards | 0), comp, compSel, worldWins,
         ap: Math.max(0, o.ap | 0), arenaBest: Math.max(0, +o.arenaBest || 0),
         boons: Object.fromEntries(Object.entries(o.boons || {}).filter(([k, v]) => BOONS[k] && Number.isFinite(v)).map(([k, v]) => [k, Math.max(0, v | 0)])),
-        arenaConvert: o.arenaConvert === true,
+        arenaConvert: o.arenaConvert === true, arenaMult: Math.max(0, o.arenaMult | 0),
         titan: Object.assign(newSlot().titan, Object.fromEntries(['dmg', 'spd', 'rsp', 'hp'].filter(k => o.titan && Number.isFinite(o.titan[k])).map(k => [k, Math.max(0, o.titan[k] | 0)])), { on: !(o.titan && o.titan.on === false) }),
         auto: Object.fromEntries(Object.entries(o.auto || {}).filter(([, v]) => typeof v === 'boolean' || ['off', 'smart', 'always'].includes(v))),
         ...(Array.isArray(o.prio) ? { prio: o.prio.filter(id => ITEMS[id]) } : {}),
@@ -3819,6 +3837,14 @@ span.ab { cursor: default; }
         fm.className = 'farm';
         renderFarm(fm, false);
         el.appendChild(fm);
+        const mu = document.createElement('div'), lv = save.arenaMult || 0, cost = multCost(lv);
+        mu.className = 'farm';
+        mu.innerHTML = `<span>${tf('multLine', { a: fmtNum(arenaMult()), p: save.ap || 0 })}</span>`;
+        const mb = makeBtn(`${tf('multUp', { b: fmtNum(arenaMult(lv + 1)) })} · ${cost}`, 'btn small primary buy', buyMult);
+        mb.insertAdjacentHTML('beforeend', icon('trophy'));
+        mb.disabled = (save.ap || 0) < cost;
+        mu.appendChild(mb);
+        el.appendChild(mu);
       }
       box.appendChild(el);
     });
