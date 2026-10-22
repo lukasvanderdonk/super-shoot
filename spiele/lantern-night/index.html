@@ -239,6 +239,8 @@ h2 { margin: 0; font-family: var(--f-display); font-weight: 800; font-size: clam
 .pabil li.on { color: var(--ink); }
 .pabil li.on b { color: var(--c); }
 @media (max-width: 420px) { .pstat { grid-template-columns: auto minmax(0, 1fr) auto; } .pstat .btn:last-child { grid-column: 2 / -1; } }
+.cards3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 700px) { .cards3 { grid-template-columns: minmax(0, 1fr); } }
 .cards2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .cards4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
 @media (max-width: 900px) { .cards4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
@@ -502,6 +504,19 @@ span.ab { cursor: default; }
     </div>
   </section>
 
+  <section id="callScr" class="screen dim" hidden>
+    <div class="panel">
+      <div class="shop-head">
+        <h2 data-t="call"></h2>
+        <div class="shop-meta"><span class="lit" id="callLv"></span></div>
+      </div>
+      <p class="sub" data-t="callSub"></p>
+      <div class="cards3" id="callList"></div>
+      <p class="titan-loot" id="callLoot"></p>
+      <div class="row"><button class="btn" id="callOn" type="button"></button><button class="btn" id="callBack" type="button" data-t="back"></button></div>
+    </div>
+  </section>
+
   <section id="titanScr" class="screen dim" hidden>
     <div class="panel">
       <div class="shop-head">
@@ -599,6 +614,7 @@ span.ab { cursor: default; }
     shards: 0, comp: { fox: 1 }, compSel: ['fox'], world: 'wald', worldWins: {}, ap: 0, arenaBest: 0, auto: {},
     prio: ['fireflies', 'pulse', 'stars', 'spark', 'ember', 'feather', 'cloak', 'tea', 'lure', 'boots', 'wick', 'clover'],
     boons: {}, arenaConvert: false, arenaMult: 0, titan: { dmg: 0, spd: 0, rsp: 0, hp: 0, on: true }, pet: {},
+    bossCall: { n: 1, str: 0, hp: 0, on: true },
   });
   // Begleiter hatten früher 3 feste Stufen, jetzt vier Werte ohne Obergrenze: alte Stufen werden zu Werten
   function migratePets(sl) {
@@ -692,6 +708,11 @@ span.ab { cursor: default; }
       wish: 'Sternenwunsch', wishes: 'Sternenwünsche', wishGot: 'Sternenwunsch erfüllt: {n}',
       blocked: 'Geblockt!', aegisSaved: 'Unbeugsam! Du bleibst mit 1 Leben stehen.',
       titan: 'Arena-Titan', titanSub: 'Dein eigener Boss für die Arena. Dreh die Regler so hoch du willst: je stärker der Titan, desto größer seine Beute. Mit der Wiederkehr kommt er öfter.',
+      call: 'Bossruf', callSub: 'Sobald du in der Arena Stufe 30 erreichst (und danach alle 30 Stufen), vergehen alle Schatten und lassen ihre Beute fallen. Dann kommen deine Bosse, und bis sie besiegt sind, kommen keine neuen Schatten. Stell ein, wie viele es sind, wie hart sie zuschlagen und wie viel Leben sie haben. Stärkere Bosse bringen mehr Beute.',
+      callStart: 'Bossruf! Alle Schatten vergehen – gleich kommen deine Bosse!', callDone: 'Bossruf geschafft! +{p} Arenapunkte',
+      c_n: 'Anzahl', c_nD: 'Wie viele Bosse auf einmal kommen (höchstens 20).', c_str: 'Stärke', c_strD: 'Wie hart die Bosse zuschlagen.', c_hp: 'Leben', c_hpD: 'Wie viel jeder Boss aushält.',
+      cOne: '1 Boss', cNV: '{n} Bosse', cHpV: '{n} Leben', callLoot: 'Beute pro Bossruf:', callLootPlus: '+ normale Boss-Beute',
+      callOnY: 'Bossruf an ✓', callOnN: 'Bossruf aus',
       titanWarn: 'Der Arena-Titan betritt die Arena!', titanDown: 'Titan besiegt! +{p} Arenapunkte', titanLoot: 'Beute pro Sieg:', titanLvl: 'Stufe {n}',
       titanOnY: 'Titan kommt in die Arena ✓', titanOnN: 'Titan bleibt weg',
       t_dmg: 'Schaden', t_dmgD: 'Wie hart der Titan zuschlägt.', t_spd: 'Tempo', t_spdD: 'Wie schnell er läuft, stürmt und angreift.',
@@ -756,6 +777,11 @@ span.ab { cursor: default; }
       wish: 'Star wish', wishes: 'Star wishes', wishGot: 'Star wish granted: {n}',
       blocked: 'Blocked!', aegisSaved: 'Unbreakable! You stay standing with 1 health.',
       titan: 'Arena Titan', titanSub: 'Your own boss for the arena. Turn the dials as high as you like: the stronger the titan, the bigger its loot. Return brings it back sooner.',
+      call: 'Boss Call', callSub: 'As soon as you reach level 30 in the arena (and every 30 levels after that), every shadow fades and drops its loot. Then your bosses arrive, and no new shadows come until they are defeated. Choose how many there are, how hard they hit and how much health they have. Stronger bosses bring more loot.',
+      callStart: 'Boss Call! Every shadow fades – your bosses are coming!', callDone: 'Boss Call cleared! +{p} arena points',
+      c_n: 'Count', c_nD: 'How many bosses come at once (up to 20).', c_str: 'Strength', c_strD: 'How hard the bosses hit.', c_hp: 'Health', c_hpD: 'How much each boss can take.',
+      cOne: '1 boss', cNV: '{n} bosses', cHpV: '{n} health', callLoot: 'Loot per Boss Call:', callLootPlus: '+ normal boss loot',
+      callOnY: 'Boss Call on ✓', callOnN: 'Boss Call off',
       titanWarn: 'The Arena Titan enters the arena!', titanDown: 'Titan defeated! +{p} arena points', titanLoot: 'Loot per win:', titanLvl: 'Level {n}',
       titanOnY: 'Titan joins the arena ✓', titanOnN: 'Titan stays away',
       t_dmg: 'Damage', t_dmgD: 'How hard the titan hits.', t_spd: 'Speed', t_spdD: 'How fast it walks, charges and attacks.',
@@ -2062,7 +2088,7 @@ span.ab { cursor: default; }
       won: false, dawnT: 0, deathT: 0, dawnSaid: false, choices: [], lvLock: 0,
       dashCd: 0, beaconCd: 0, callCd: 0, target: null, starN: 0, saveT: 0,
       slowCd: 0, slowT: 0, galeCd: 0, galeT: 0, trailT: 0, shards: 0, pets: [], bossKills: 0,
-      shieldT: 0, aegis: false, titanT: 20, titanN: 0, titanKills: 0, ap: 0,
+      shieldT: 0, aegis: false, titanT: 20, titanN: 0, titanKills: 0, ap: 0, callLv: 30, wave: null,
     };
     if (U('fStart')) run.items.spark = Math.min(ITEMS.spark.max, 1 + U('fStart'));
     setWorld(save.world);
@@ -2116,6 +2142,11 @@ span.ab { cursor: default; }
   }
   function spawnTick(dt) {
     const t = run.t;
+    if (run.endless && save.bossCall.on) {
+      bossCallTick(dt);
+      // während des Bossrufs: keine Schatten, keine anderen Bosse, alle Zeitgeber warten
+      if (run.wave) { run.nextBoss += dt; run.nextWave += dt; return; }
+    }
     run.acc += dt * curWorld.spawn * (1 + B('spawn')) * (0.8 + t * 0.03 + (t / 140) ** 2 + Math.max(0, t - 300) ** 2 / 2500);
     while (run.acc >= 1) {
       run.acc -= 1;
@@ -2182,6 +2213,64 @@ span.ab { cursor: default; }
     addLoot('berry', e.x, e.y + 26); addLoot('amberheart', e.x, e.y - 26);
     banner(tf('titanDown', { p: rw.ap * rolls }), 1.8);
     shake(10); flashes.push({ x: e.x, y: e.y, r: 360, life: 0.55, max: 0.55 }); Snd.play('win');
+  }
+
+  // ---------- Bossruf: ab Stufe 30 (dann alle 30 Stufen) vergehen alle Schatten, dann kommen eigene Bosse ----------
+  const CALL_EVERY = 30, CALL_MAX = 20;
+  const callDmg = lv => 1 + 0.2 * lv;
+  const callHp = lv => Math.round(1500 * (1 + 0.5 * lv) * WORLDS.find(w => w.endless).hp);
+  function callReward() {
+    // je Boss; stärkere Bosse bringen mehr
+    const c = save.bossCall, k = 1 + 0.25 * (c.str + c.hp);
+    return { amber: Math.round(15 * k), ap: Math.round(4 * k) };
+  }
+  function bossCallTick(dt) {
+    if (run.wave) {
+      if (run.wave.delay > 0 && (run.wave.delay -= dt) <= 0) spawnWave();
+      return;
+    }
+    if (run.lv < run.callLv) return;
+    run.callLv += CALL_EVERY;
+    // alle Schatten vergehen und lassen ihre Beute fallen, jeder mindestens einen Bernstein; alles fliegt zu dir
+    let n = 0;
+    for (const e of enemies) if (!e.dead && !e.d.boss) { kill(e); n++; }
+    const packs = Math.min(20, n);
+    for (let i = 0; i < packs; i++) {
+      const a = Math.random() * TAU, d = rand(60, 260);
+      addLoot('amber', P.x + Math.cos(a) * d, P.y + Math.sin(a) * d, Math.floor(n / packs) + (i < n % packs ? 1 : 0));
+    }
+    for (const g of gems) g.m = true;
+    for (const o of loot) o.m = true;
+    for (const sp of spores) sp.dead = true;
+    flashes.push({ x: P.x, y: P.y, r: 600, life: 0.8, max: 0.8 });
+    shake(8); Snd.play('win');
+    banner(T('callStart'), 2.4);
+    run.wave = { delay: 2.5, left: 0 };
+  }
+  function spawnWave() {
+    const c = save.bossCall, cnt = clamp(c.n, 1, CALL_MAX), hp = callHp(c.hp);
+    let first = null;
+    for (let i = 0; i < cnt; i++) {
+      const [x, y] = edgePoint((i / cnt) * TAU + Math.random() * 0.3);
+      const e = spawnEnemy(BOSSES[(Math.random() * BOSSES.length) | 0], x, y);
+      e.hp = e.max = hp; e.callBoss = true; e.dmgMul = callDmg(c.str);
+      if (!first) first = e;
+    }
+    run.wave.left = cnt;
+    run.boss = first;
+    Snd.play('boss'); shake(5);
+  }
+  // ein Boss aus dem Bossruf ist besiegt: Extra-Beute, nach dem letzten geht es normal weiter
+  function callBossDown(e) {
+    const rw = callReward(), rolls = 1 + B('loot');
+    addLoot('amber', e.x, e.y - 30, rw.amber * rolls);
+    run.ap += rw.ap * rolls;
+    if (!run.wave) return;
+    run.wave.got = (run.wave.got || 0) + rw.ap * rolls;
+    if (--run.wave.left <= 0) {
+      banner(tf('callDone', { p: run.wave.got }), 2);
+      run.wave = null;
+    }
   }
 
   function updatePlayer(dt) {
@@ -2542,6 +2631,7 @@ span.ab { cursor: default; }
     // Wunsch „Doppelte Beute“ und Glücksrad: die Beute wird mehrmals ausgewürfelt
     const rolls = 1 + B('loot') + (Math.random() < 0.1 * U('gWheel') ? 1 : 0);
     const rare = 1 + 0.25 * U('gRare');
+    if (e.callBoss) callBossDown(e);
     if (e.titan) titanLoot(e);
     else if (d.boss) {
       run.bossKills++;
@@ -3349,7 +3439,7 @@ span.ab { cursor: default; }
   function setText(id, v) { if (txt[id] !== v) { txt[id] = v; E(id).textContent = v; } }
 
   function showScreen(id) {
-    for (const s of ['menu', 'shop', 'slotsScr', 'worldScr', 'titanScr', 'compScr', 'prioScr', 'lvl', 'pause', 'over']) E(s).hidden = s !== id;
+    for (const s of ['menu', 'shop', 'slotsScr', 'worldScr', 'titanScr', 'callScr', 'compScr', 'prioScr', 'lvl', 'pause', 'over']) E(s).hidden = s !== id;
     E('hud').hidden = !(state === 'play' || state === 'levelup' || state === 'pause');
   }
   let bannerTimer = 0;
@@ -3837,7 +3927,7 @@ span.ab { cursor: default; }
         t: R.t, kills: R.kills, amber: R.amber, xp: R.xp, lv: R.lv, need: R.need, pending: R.pending, items: R.items, ws: R.ws,
         acc: R.acc, nextWave: R.nextWave, bossN: R.bossN, rerolls: R.rerolls, revives: R.revives, dawnSaid: R.dawnSaid,
         dashCd: R.dashCd, beaconCd: R.beaconCd, callCd: R.callCd, starN: R.starN, slowCd: R.slowCd, galeCd: R.galeCd, shards: R.shards,
-        bossKills: R.bossKills, nextBoss: R.nextBoss, shieldT: R.shieldT, aegis: R.aegis, titanT: R.titanT, titanN: R.titanN, titanKills: R.titanKills, ap: R.ap,
+        bossKills: R.bossKills, nextBoss: R.nextBoss, callLv: R.callLv, shieldT: R.shieldT, aegis: R.aegis, titanT: R.titanT, titanN: R.titanN, titanKills: R.titanKills, ap: R.ap,
       },
       world: curWorld.id,
       p: [r1(P.x), r1(P.y), r1(P.hp), P.face],
@@ -3957,6 +4047,7 @@ span.ab { cursor: default; }
         ap: Math.max(0, o.ap | 0), arenaBest: Math.max(0, +o.arenaBest || 0),
         boons: Object.fromEntries(Object.entries(o.boons || {}).filter(([k, v]) => BOONS[k] && Number.isFinite(v)).map(([k, v]) => [k, Math.max(0, v | 0)])),
         arenaConvert: o.arenaConvert === true, arenaMult: Math.max(0, o.arenaMult | 0),
+        bossCall: Object.assign(newSlot().bossCall, Object.fromEntries(['n', 'str', 'hp'].filter(k => o.bossCall && Number.isFinite(o.bossCall[k])).map(k => [k, Math.max(k === 'n' ? 1 : 0, o.bossCall[k] | 0)])), { on: !(o.bossCall && o.bossCall.on === false) }),
         titan: Object.assign(newSlot().titan, Object.fromEntries(['dmg', 'spd', 'rsp', 'hp'].filter(k => o.titan && Number.isFinite(o.titan[k])).map(k => [k, Math.max(0, o.titan[k] | 0)])), { on: !(o.titan && o.titan.on === false) }),
         auto: Object.fromEntries(Object.entries(o.auto || {}).filter(([, v]) => typeof v === 'boolean' || ['off', 'smart', 'always'].includes(v))),
         ...(Array.isArray(o.prio) ? { prio: o.prio.filter(id => ITEMS[id]) } : {}),
@@ -4006,6 +4097,9 @@ span.ab { cursor: default; }
         const tb = makeBtn(T('titan'), 'btn small', openTitan);
         tb.insertAdjacentHTML('afterbegin', icon('crown'));
         row.appendChild(tb);
+        const cb = makeBtn(T('call'), 'btn small', openCall);
+        cb.insertAdjacentHTML('afterbegin', icon('antlers'));
+        row.appendChild(cb);
       }
       el.appendChild(row);
       if (w.endless && open) {
@@ -4058,6 +4152,41 @@ span.ab { cursor: default; }
     E('titanLoot').innerHTML = `${T('titanLoot')} ${rw.amber} ${icon('amber')} · ${rw.shards} ${icon('shard')} · ${rw.ap} ${icon('trophy')}`;
     E('titanOn').textContent = T(t.on ? 'titanOnY' : 'titanOnN');
     E('titanOn').classList.toggle('on', t.on);
+  }
+
+  // ---------- Bossruf einstellen ----------
+  const CALL_UI = { n: 'antlers', str: 'crit', hp: 'heart' };
+  function openCall() { state = 'call'; renderCall(); showScreen('callScr'); }
+  function callEffect(k, lv) {
+    if (k === 'n') return lv === 1 ? T('cOne') : tf('cNV', { n: lv });
+    if (k === 'str') return tf('tDmgV', { n: Math.round((callDmg(lv) - 1) * 100) });
+    return tf('cHpV', { n: fmtNum(callHp(lv)) });
+  }
+  function renderCall() {
+    const box = E('callList'), c = save.bossCall;
+    box.innerHTML = '';
+    E('callLv').textContent = tf('titanLvl', { n: c.str + c.hp });
+    for (const k of ['n', 'str', 'hp']) {
+      const el = document.createElement('div');
+      el.className = 'wcard';
+      el.style.setProperty('--c', '#ff8a5c');
+      const max = k === 'n' && c[k] >= CALL_MAX;
+      el.innerHTML = `<div class="comp-head"><span class="comp-ico">${icon(CALL_UI[k])}</span><div><h3>${T('c_' + k)}</h3><span class="ni-tag">${k === 'n' ? callEffect(k, c[k]) : tf('compLv', { n: c[k] })}</span></div></div>` +
+        `<p>${T('c_' + k + 'D')}</p><p class="ni-tag">${max ? callEffect(k, c[k]) : `${callEffect(k, c[k])} → ${callEffect(k, c[k] + 1)}`}</p>`;
+      const row = document.createElement('div');
+      row.className = 'row';
+      const minus = makeBtn('−', 'btn small', () => { c[k] = Math.max(k === 'n' ? 1 : 0, c[k] - 1); persist(); renderCall(); });
+      minus.disabled = c[k] <= (k === 'n' ? 1 : 0);
+      const plus = makeBtn('+', 'btn small primary', () => { c[k] = k === 'n' ? Math.min(CALL_MAX, c[k] + 1) : c[k] + 1; persist(); renderCall(); });
+      plus.disabled = max;
+      row.append(minus, plus);
+      el.appendChild(row);
+      box.appendChild(el);
+    }
+    const rw = callReward(), n = clamp(c.n, 1, CALL_MAX);
+    E('callLoot').innerHTML = `${T('callLoot')} ${rw.amber * n} ${icon('amber')} · ${rw.ap * n} ${icon('trophy')} <small>${T('callLootPlus')}</small>`;
+    E('callOn').textContent = T(c.on ? 'callOnY' : 'callOnN');
+    E('callOn').classList.toggle('on', c.on);
   }
 
   // ---------- Begleiter-Auswahl ----------
@@ -4220,6 +4349,8 @@ span.ab { cursor: default; }
   on('worldsBtn', openWorlds);
   on('worldBack', backToMenu);
   on('titanBack', openWorlds);
+  on('callBack', openWorlds);
+  on('callOn', () => { save.bossCall.on = !save.bossCall.on; persist(); renderCall(); });
   on('titanOn', () => { save.titan.on = !save.titan.on; persist(); renderTitan(); });
   on('compBtn', openComps);
   on('compBack', backToMenu);
