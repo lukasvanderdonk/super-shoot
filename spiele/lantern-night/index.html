@@ -227,6 +227,18 @@ h2 { margin: 0; font-family: var(--f-display); font-weight: 800; font-size: clam
 /* Welten und Begleiter */
 .titan-loot { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 12px 0 0; color: #ff8a5c; font-weight: 600; }
 .titan-loot svg { width: 18px; height: 18px; }
+.pstats { display: flex; flex-direction: column; gap: 6px; }
+.pstat { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; align-items: center; gap: 8px; }
+.pstat .pico svg { width: 18px; height: 18px; color: var(--c); }
+.pst-name { display: flex; flex-direction: column; min-width: 0; }
+.pst-name small { color: var(--ink-dim); font-size: .82rem; }
+.pstat .btn.small { min-width: 0; min-height: 34px; padding: 4px 9px; font-size: .85rem; gap: 4px; white-space: nowrap; }
+.pstat .btn svg { width: 14px; height: 14px; }
+.pabil { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; font-size: .85rem; color: var(--ink-dim); }
+.pabil b { display: inline-block; min-width: 38px; font-family: var(--f-num); }
+.pabil li.on { color: var(--ink); }
+.pabil li.on b { color: var(--c); }
+@media (max-width: 420px) { .pstat { grid-template-columns: auto minmax(0, 1fr) auto; } .pstat .btn:last-child { grid-column: 2 / -1; } }
 .cards2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .cards4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
 @media (max-width: 900px) { .cards4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
@@ -485,7 +497,7 @@ span.ab { cursor: default; }
         </div>
       </div>
       <p class="sub" data-t="compSub"></p>
-      <div class="cards4" id="compList"></div>
+      <div class="cards2" id="compList"></div>
       <div class="row"><button class="btn" id="compBack" type="button" data-t="back"></button></div>
     </div>
   </section>
@@ -586,8 +598,19 @@ span.ab { cursor: default; }
     name, amber: 0, best: 0, wins: 0, runs: 0, up: {}, night: null, played: 0,
     shards: 0, comp: { fox: 1 }, compSel: ['fox'], world: 'wald', worldWins: {}, ap: 0, arenaBest: 0, auto: {},
     prio: ['fireflies', 'pulse', 'stars', 'spark', 'ember', 'feather', 'cloak', 'tea', 'lure', 'boots', 'wick', 'clover'],
-    boons: {}, arenaConvert: false, arenaMult: 0, titan: { dmg: 0, spd: 0, rsp: 0, hp: 0, on: true },
+    boons: {}, arenaConvert: false, arenaMult: 0, titan: { dmg: 0, spd: 0, rsp: 0, hp: 0, on: true }, pet: {},
   });
+  // Begleiter hatten früher 3 feste Stufen, jetzt vier Werte ohne Obergrenze: alte Stufen werden zu Werten
+  function migratePets(sl) {
+    if (!sl || sl.petV) return sl;
+    sl.pet = sl.pet || {};
+    for (const id in sl.comp || {}) {
+      const t = sl.comp[id] | 0;
+      if (t >= 2) { sl.pet[id] = { dmg: t >= 3 ? 14 : 6, cd: t >= 3 ? 8 : 4, rng: t >= 3 ? 4 : 2, spd: 0 }; sl.comp[id] = 1; }
+    }
+    sl.petV = 1;
+    return sl;
+  }
   let store = { v: 2, cur: 0, slots: [null, null, null], music: true, sfx: true, lang: null, tempo: 1 };
   let storageOk = false;
   try {
@@ -604,7 +627,7 @@ span.ab { cursor: default; }
     }
   } catch (e) { /* kein Speicher verfügbar */ }
   function fixStore() {
-    store.slots = [0, 1, 2].map(i => (store.slots[i] ? Object.assign(newSlot(), store.slots[i]) : null));
+    store.slots = [0, 1, 2].map(i => (store.slots[i] ? migratePets(Object.assign(newSlot(), store.slots[i])) : null));
     store.cur = clamp(store.cur | 0, 0, 2);
     if (!store.slots[store.cur]) store.slots[store.cur] = newSlot();
   }
@@ -648,9 +671,11 @@ span.ab { cursor: default; }
       badCode: 'Dieser Code passt nicht. Prüfe, ob er vollständig ist.', deleted: 'Spielstand gelöscht', switched: 'Spielstand gewechselt',
       shards: 'Mondsplitter', worldLbl: 'Welt', compLbl: 'Begleiter', none: 'keiner', tempo: 'Tempo',
       worlds: 'Welten', worldsSub: 'Jede Welt ist schwerer als die vorige, bringt aber mehr Bernstein und Mondsplitter. Eine Welt öffnet sich, wenn du in der vorigen den Morgen erlebst.',
-      wHp: 'Schatten +{n} % Leben', wSpeed: '+{n} % schneller', wReward: 'Bernstein ×{n}', wShards: 'Sieg: {n}', wWins: '{n}× gewonnen',
+      wHp: 'Schatten +{n} % Leben', wSpeed: '+{n} % schneller', wKb: '−{n} % Rückstoß', wGrow: 'Schatten wachsen ×{n} so schnell', wReward: 'Bernstein ×{n}', wShards: 'Sieg: {n}', wWins: '{n}× gewonnen',
       wLocked: 'Erlebe zuerst den Morgen im {n}', choose: 'Wählen', chosen: 'Gewählt', worldOpen: 'Neue Welt offen: {n}',
-      comps: 'Begleiter', compSub: 'Begleiter gehen mit dir in die Nacht. Du schaltest sie mit Mondsplittern frei und verbesserst sie damit. Mondsplitter gibt es für jeden besiegten Schattenhirsch, für jeden Sieg und manchmal als Fund im Gras.',
+      comps: 'Begleiter', compSub: 'Begleiter gehen mit dir in die Nacht. Schalte sie mit Mondsplittern frei und verbessere Schaden, Nachladen, Reichweite und Tempo, so oft du willst. Alle 50 Stufen lernt jeder Begleiter eine neue Fähigkeit.',
+      pst_dmg: 'Schaden', pst_heal: 'Heilkraft', pst_cd: 'Nachladen', pst_rng: 'Reichweite', pst_spd: 'Tempo', pstMul: '×{n}', pstOften: '×{n} so oft',
+      petMaster: 'Meister: +{n} % Stärke (je 50 Stufen über 200 kommen 25 % dazu)', petNew: '{c} lernt {n}!', petMasterGot: '{c} wird zum Meister: +25 % Stärke',
       compCount: '{a} von {b} dabei', unlock: 'Freischalten', upgrade: 'Verbessern', take: 'Mitnehmen', taken: 'Dabei', compLv: 'Stufe {n}',
       eyebrowW: 'Eine Nacht im {w} · 22:00 bis 6:00 Uhr',
       remain: 'noch {t} bis zum Morgen', remainShort: 'noch {t}', remainPause: 'Noch {t} bis zum Morgengrauen.',
@@ -710,9 +735,11 @@ span.ab { cursor: default; }
       badCode: 'This code does not fit. Check that it is complete.', deleted: 'Save deleted', switched: 'Save switched',
       shards: 'Moon Shards', worldLbl: 'World', compLbl: 'Companion', none: 'none', tempo: 'Speed',
       worlds: 'Worlds', worldsSub: 'Each world is harder than the one before, but pays more amber and moon shards. A world opens once you see dawn in the previous one.',
-      wHp: 'Shadows +{n}% health', wSpeed: '+{n}% faster', wReward: 'Amber ×{n}', wShards: 'Victory: {n}', wWins: 'Won {n}×',
+      wHp: 'Shadows +{n}% health', wSpeed: '+{n}% faster', wKb: '−{n}% knockback', wGrow: 'Shadows grow ×{n} as fast', wReward: 'Amber ×{n}', wShards: 'Victory: {n}', wWins: 'Won {n}×',
       wLocked: 'First see dawn in the {n}', choose: 'Choose', chosen: 'Chosen', worldOpen: 'New world open: {n}',
-      comps: 'Companions', compSub: 'Companions join you for the night. Unlock and upgrade them with moon shards. You get moon shards for every Shadow Stag you defeat, for every victory, and now and then in the grass.',
+      comps: 'Companions', compSub: 'Companions join you for the night. Unlock them with moon shards and upgrade damage, reload, range and speed as often as you like. Every 50 levels each companion learns a new ability.',
+      pst_dmg: 'Damage', pst_heal: 'Healing', pst_cd: 'Reload', pst_rng: 'Range', pst_spd: 'Speed', pstMul: '×{n}', pstOften: '×{n} as often',
+      petMaster: 'Master: +{n}% strength (every 50 levels above 200 add 25%)', petNew: '{c} learns {n}!', petMasterGot: '{c} becomes a master: +25% strength',
       compCount: '{a} of {b} along', unlock: 'Unlock', upgrade: 'Upgrade', take: 'Take along', taken: 'Along', compLv: 'Level {n}',
       eyebrowW: 'One night in the {w} · 10 pm to 6 am',
       remain: '{t} until dawn', remainShort: '{t} left', remainPause: '{t} left until dawn.',
@@ -856,6 +883,43 @@ span.ab { cursor: default; }
     ember: { kind: 'p', max: 5, icon: 'heart', name: { de: 'Glutherz', en: 'Ember Heart' }, d: { de: '+10 % Schaden', en: '+10% damage' } },
     feather: { kind: 'p', max: 5, icon: 'feather', name: { de: 'Eulenfeder', en: 'Owl Feather' }, d: { de: '−8 % Abklingzeit', en: '−8% cooldowns' } },
   };
+
+  // ---------- Gaben bis Stufe 15 ----------
+  // Ab Stufe 7 wachsen die Waffen nach festem Muster weiter: mehr Schaden, ab und zu ein Geschoss mehr
+  const ITEM_MAX = 15;
+  const WEXT = {
+    spark: { dmg: 1.08, n: [10, 14], pierce: [12, 15], one: { de: 'Funke', en: 'spark' } },
+    fireflies: { dmg: 1.08, n: [9, 12, 15], rad: 4, sp: 0.08, one: { de: 'Glühwürmchen', en: 'firefly' } },
+    pulse: { dmg: 1.1, rad: 4 },   // nicht häufiger: sonst kommt kein Schatten mehr an dich heran
+    stars: { dmg: 1.08, cd: 0.98, n: [10, 14], rad: 3, one: { de: 'Stern', en: 'star' } },
+  };
+  for (const id in WEXT) {
+    const it = ITEMS[id], x = WEXT[id], st = it.s;
+    for (let lv = it.max + 1; lv <= ITEM_MAX; lv++) {
+      const i = lv - 1, de = [], en = [];
+      st.dmg.push(Math.round(st.dmg[i - 1] * x.dmg));
+      de.push(`+${Math.round((x.dmg - 1) * 100)} % Schaden`); en.push(`+${Math.round((x.dmg - 1) * 100)}% damage`);
+      if (st.n) { const m = x.n.includes(lv) ? 1 : 0; st.n.push(st.n[i - 1] + m); if (m) { de.push(`+1 ${x.one.de}`); en.push(`+1 ${x.one.en}`); } }
+      if (st.cd) { st.cd.push(+(st.cd[i - 1] * (x.cd || 1)).toFixed(3)); if (x.cd) { de.push('häufiger'); en.push('more often'); } }
+      if (st.rad) { st.rad.push(st.rad[i - 1] + (x.rad || 0)); if (x.rad) { de.push('größer'); en.push('bigger'); } }
+      if (st.sp) st.sp.push(+(st.sp[i - 1] + (x.sp || 0)).toFixed(2));
+      if (st.pierce) { const m = x.pierce.includes(lv) ? 1 : 0; st.pierce.push(st.pierce[i - 1] + m); if (m) { de.push('durchschlägt einen mehr'); en.push('pierces one more'); } }
+      it.d.de.push(de.join(', ')); it.d.en.push(en.join(', '));
+    }
+    it.max = ITEM_MAX;
+  }
+  // Talente: bis Stufe 5 wie gewohnt (etwas stärker), danach kleinere Schritte bis 15
+  const PASSIVE_TXT = {
+    boots: { de: ['+12 % Tempo', '+5 % Tempo'], en: ['+12% move speed', '+5% move speed'] },
+    cloak: { de: ['+25 max. Leben', '+15 max. Leben'], en: ['+25 max health', '+15 max health'] },
+    tea: { de: ['+0,5 Leben pro Sekunde', '+0,2 Leben pro Sekunde'], en: ['+0.5 health per second', '+0.2 health per second'] },
+    lure: { de: ['+35 % Sammelradius', '+15 % Sammelradius'], en: ['+35% pickup range', '+15% pickup range'] },
+    wick: { de: ['+18 % Lichtradius. Schatten im Licht sind langsamer.', '+8 % Lichtradius'], en: ['+18% light radius. Shadows in your light move slower.', '+8% light radius'] },
+    clover: { de: ['+15 % Erfahrung', '+6 % Erfahrung'], en: ['+15% experience', '+6% experience'] },
+    ember: { de: ['+12 % Schaden', '+5 % Schaden'], en: ['+12% damage', '+5% damage'] },
+    feather: { de: ['−10 % Abklingzeit', '−3 % Abklingzeit'], en: ['−10% cooldowns', '−3% cooldowns'] },
+  };
+  for (const id in PASSIVE_TXT) Object.assign(ITEMS[id], { max: ITEM_MAX, d: PASSIVE_TXT[id] });
 
   // ---------- Werkstatt: Sternkarte mit vier Pfaden (dauerhaft) ----------
   // x/y auf einer 1420 × 820 großen Karte, p = Vorgänger, act = Fähigkeit statt Talent.
@@ -1064,25 +1128,25 @@ span.ab { cursor: default; }
       dec: { glow: ['crystal', '#ff4d6d', '#ffd0d8'], glowKey: 'red', plant: ['fern', '#2a1830', '#3a2040'], rock: ['pillar', '#2e2836', '#17121c'], log: ['log', '#1e1418', '#3a2a30', '#4a2238'] } },
     { id: 'vulkan', icon: 'volcano', name: { de: 'Glutvulkan', en: 'Ember Volcano' }, c: '#ff7a2a',
       d: { de: 'Glühende Lava zwischen schwarzem Gestein, Asche rieselt vom Himmel. Hier brennen sogar die Schatten.', en: 'Glowing lava between black rock, ash drifting from the sky. Even the shadows burn here.' },
-      hp: 5, spawn: 2.1, speed: 1.15, dmg: 2.8, reward: 4, shards: 30, weather: 'embers', wglow: 'amber', dark: '10,4,2', boss: 'firestag', swarm: 'cinder',
+      hp: 5, spawn: 2.1, speed: 1.15, dmg: 2.8, kb: 0.7, grow: 1.3, reward: 4, shards: 30, weather: 'embers', wglow: 'amber', dark: '10,4,2', boss: 'firestag', swarm: 'cinder',
       mix: { shade: ['ember', 0.6], moth: ['cinder', 0.6], crow: ['lavatoad', 0.6], rootling: ['lavatoad', 0.5], spitter: ['lavaspit', 0.8] },
       g: { base: '#1a0e0b', blot: ['90,30,12', '10,4,3'], leaf: ['#3a1c14', '#2a1410', '#4a2014', '#30180f'], grass: ['#2a1612', '#3a1e14'], pebble: ['#241816', '#3a2622'], twig: '#2a1a14' },
       dec: { glow: ['crystal', '#ff7a2a', '#ffd9a0'], glowKey: 'amber', plant: ['fern', '#2a1410', '#3a1a12'], rock: ['rock', '#22160f', '#3a2a22', '#6a2a10'], log: ['log', '#1a100c', '#3a2418', '#7a2a10'] } },
     { id: 'kristall', icon: 'gem', name: { de: 'Kristallhöhle', en: 'Crystal Cave' }, c: '#c9a0ff',
       d: { de: 'Tief unter der Erde leuchten violette Kristalle. Aus jedem Spalt kriechen Schatten.', en: 'Deep underground, violet crystals glow. Shadows crawl out of every crack.' },
-      hp: 7, spawn: 2.4, speed: 1.15, dmg: 3.4, reward: 5, shards: 40, weather: 'embers', wglow: 'lilac', dark: '6,4,14', boss: 'crystgiant', swarm: 'cavebat',
+      hp: 7, spawn: 2.4, speed: 1.15, dmg: 3.4, kb: 0.5, grow: 1.6, reward: 5, shards: 40, weather: 'embers', wglow: 'lilac', dark: '6,4,14', boss: 'crystgiant', swarm: 'cavebat',
       mix: { shade: ['gloomling', 0.6], moth: ['cavebat', 0.6], crow: ['crystknight', 0.5], rootling: ['crystgolem', 0.7], spitter: ['crystgolem', 0.4] },
       g: { base: '#0f0c1c', blot: ['60,40,110', '6,4,14'], leaf: ['#2a2440', '#3a2e58', '#221c36', '#463a6a'], grass: ['#1e1a34', '#2a2448'], pebble: ['#1c1a2e', '#2e2a48'], twig: '#2a2440' },
       dec: { glow: ['crystal', '#b98aff', '#f0e0ff'], glowKey: 'lilac', plant: ['fern', '#241c3c', '#30264e'], rock: ['pillar', '#2e2a48', '#16142a'], log: ['log', '#1c1828', '#342c48', '#5a46a0'] } },
     { id: 'wueste', icon: 'dune', name: { de: 'Sternenwüste', en: 'Star Desert' }, c: '#ffd98a',
       d: { de: 'Unter einem Himmel voller Sterne fegt der Wind Sand über die Dünen. Hier jagen Schakale im Rudel.', en: 'Under a sky full of stars the wind sweeps sand across the dunes. Jackals hunt in packs here.' },
-      hp: 9, spawn: 2.6, speed: 1.2, dmg: 4, reward: 6, shards: 50, weather: 'sand', dark: '8,6,10', boss: 'sandking', swarm: 'scarab',
+      hp: 9, spawn: 2.6, speed: 1.2, dmg: 4, kb: 0.35, grow: 2, reward: 6, shards: 50, weather: 'sand', dark: '8,6,10', boss: 'sandking', swarm: 'scarab',
       mix: { shade: ['jackal', 0.5], moth: ['scarab', 0.6], crow: ['sandcrow', 0.8], rootling: ['jackal', 0.4], spitter: ['sandspit', 0.8] },
       g: { base: '#2a2014', blot: ['120,92,48', '20,14,8'], leaf: ['#4a3a22', '#5a4628', '#3a2e1c', '#6a5430'], grass: ['#3a2e1c', '#4a3c24'], pebble: ['#3a2e20', '#5a4a34'], twig: '#4a3a26' },
       dec: { glow: ['crystal', '#ffd98a', '#fff4d0'], glowKey: 'gold', plant: ['reed', '#5a4a2a', '#7a5a2a'], rock: ['rock', '#3a2e22', '#6a5a44', '#8a6a3a'], log: ['log', '#2a2016', '#5a4630', '#7a6040'] } },
     { id: 'leere', icon: 'void', name: { de: 'Die Leere', en: 'The Void' }, c: '#8fe8ff',
       d: { de: 'Das Ende der Welt: kaum Boden, kaum Licht, nur Schatten. Die härteste Wache von allen.', en: 'The end of the world: hardly any ground, hardly any light, only shadows. The hardest watch of all.' },
-      hp: 12, spawn: 2.9, speed: 1.2, dmg: 4.8, reward: 8, shards: 70, weather: 'embers', wglow: 'moon', dark: '2,2,6', boss: 'voidlord', swarm: 'voidwraith',
+      hp: 12, spawn: 2.9, speed: 1.2, dmg: 4.8, kb: 0.25, grow: 2.5, reward: 8, shards: 70, weather: 'embers', wglow: 'moon', dark: '2,2,6', boss: 'voidlord', swarm: 'voidwraith',
       mix: { shade: ['voidshade', 0.6], moth: ['voidwraith', 0.7], crow: ['voidknight', 0.6], rootling: ['voidgolem', 0.6], spitter: ['voidknight', 0.3] },
       g: { base: '#06060c', blot: ['30,40,70', '2,2,6'], leaf: ['#121624', '#1a2032', '#0e1018', '#222a40'], grass: ['#10141e', '#161c2a'], pebble: ['#10121c', '#1e2232'], twig: '#141826' },
       dec: { glow: ['crystal', '#8fe8ff', '#e8fcff'], glowKey: 'moon', plant: ['fern', '#121828', '#1a2238'], rock: ['pillar', '#1e2232', '#0a0c14'], log: ['log', '#0e1018', '#222838', '#3a5a7a'] } },
@@ -1129,6 +1193,53 @@ span.ab { cursor: default; }
   };
   const COMP_IDS = Object.keys(COMPS);
   const compMax = () => 1 + U('second');
+  // vier Werte ohne Obergrenze; Nachladen, Reichweite und Tempo nähern sich einer Grenze
+  const PSTATS = ['dmg', 'cd', 'rng', 'spd'];
+  const PST_ICON = { dmg: 'crit', cd: 'hourglass', rng: 'target', spd: 'wind' };
+  const PM = { dmg: L => 1 + 0.1 * L, cd: L => 1 / (1 + 0.05 * L), rng: L => 1 + 2 * (1 - 0.97 ** L), spd: L => 1 + 2 * (1 - 0.96 ** L) };
+  const pl = (id, k) => ((save.pet && save.pet[id]) || {})[k] || 0;
+  const petLevel = id => PSTATS.reduce((a, k) => a + pl(id, k), 0);
+  const petCost = L => 2 + L;
+  const petCostN = (L, n) => { let c = 0; for (let j = 0; j < n; j++) c += petCost(L + j); return c; };
+  // alle 50 Stufen eine neue Fähigkeit, ab Stufe 250 macht jede weitere 50 den Begleiter 25 % stärker
+  const PET_ABIL = {
+    fox: [
+      { de: ['Doppelbiss', 'Jeder Biss trifft zweimal.'], en: ['Double Bite', 'Every bite hits twice.'] },
+      { de: ['Glutpfoten', 'Bisse hinterlassen brennenden Boden.'], en: ['Ember Paws', 'Bites leave burning ground.'] },
+      { de: ['Wirbelwind', 'Alle 6 s wirbelt der Fuchs herum und trifft alle Schatten um sich mit dreifachem Schaden.'], en: ['Whirlwind', 'Every 6 s the fox spins and hits every shadow around it for triple damage.'] },
+      { de: ['Rudel', 'Ein zweiter Geisterfuchs jagt mit.'], en: ['Pack', 'A second ghost fox hunts along.'] },
+    ],
+    owl: [
+      { de: ['Dreifeder', 'Wirft drei Federn auf einmal.'], en: ['Triple Feather', 'Throws three feathers at once.'] },
+      { de: ['Scharfe Federn', 'Federn durchbohren bis zu vier Schatten.'], en: ['Sharp Feathers', 'Feathers pierce up to four shadows.'] },
+      { de: ['Sturzflug', 'Alle 7 s stürzt die Eule auf einen Schatten und trifft alles dort mit sechsfachem Schaden.'], en: ['Dive', 'Every 7 s the owl dives onto a shadow and hits everything there for six times the damage.'] },
+      { de: ['Eulenauge', '+10 % Chance auf kritische Treffer für dich.'], en: ['Owl Eye', '+10% critical hit chance for you.'] },
+    ],
+    hedgehog: [
+      { de: ['Stachelsturm', '50 % mehr Stacheln.'], en: ['Spike Storm', '50% more spikes.'] },
+      { de: ['Doppelsalve', 'Jede Salve kommt zweimal.'], en: ['Double Volley', 'Every volley fires twice.'] },
+      { de: ['Stachelpanzer', 'Du nimmst 10 % weniger Schaden.'], en: ['Spike Armor', 'You take 10% less damage.'] },
+      { de: ['Igelwall', 'Stacheln durchbohren zwei Schatten.'], en: ['Hedge Wall', 'Spikes pierce two shadows.'] },
+    ],
+    wisp: [
+      { de: ['Lichtfunken', 'Das Irrlicht schießt Lichtfunken auf Schatten.'], en: ['Light Sparks', 'The wisp shoots light sparks at shadows.'] },
+      { de: ['Magnetlicht', '+50 % Sammelradius für dich.'], en: ['Magnet Light', '+50% pickup range for you.'] },
+      { de: ['Lebenslicht', 'Heilt dreimal so stark, wenn du unter 30 % Leben hast.'], en: ['Life Light', 'Heals three times as much while you are below 30% health.'] },
+      { de: ['Seelenflamme', 'Einmal mehr pro Nacht wieder aufstehen.'], en: ['Soul Flame', 'Get back up one more time per night.'] },
+    ],
+  };
+  function petStats(p) {
+    const id = p.id, lv = petLevel(id);
+    p.lv = lv; p.ab = Math.min(4, Math.floor(lv / 50));
+    p.mD = PM.dmg(pl(id, 'dmg')) * (1 + 0.25 * Math.max(0, Math.floor(lv / 50) - 4));
+    p.mC = PM.cd(pl(id, 'cd')); p.mR = PM.rng(pl(id, 'rng')); p.mS = PM.spd(pl(id, 'spd'));
+    return p;
+  }
+  function petAb(id) {
+    let a = 0;
+    if (run && run.pets) for (const p of run.pets) if (p.id === id) a = Math.max(a, p.ab || 0);
+    return a;
+  }
 
   // ---------- Canvas ----------
   const cv = $('cv');
@@ -1849,26 +1960,28 @@ span.ab { cursor: default; }
   const motes = Array.from({ length: 30 }, () => ({ x: Math.random() * 1600, y: Math.random() * 1600, vx: rand(-8, 8), vy: rand(-6, 6), f: rand(1, 3), p: rand(0, TAU) }));
 
   const lvOf = id => (run ? run.items[id] || 0 : 0);
+  // Talent-Stufen 1–5 zählen voll (a), ab Stufe 6 kleinere Schritte (b)
+  const lv2 = (id, a, b) => { const l = lvOf(id); return a * Math.min(l, 5) + b * Math.max(0, l - 5); };
   function recalc() {
     const gz = glanz;   // Glanzstufen: kleine Boni je Pfad
-    P.maxHp = 100 + 10 * U('vitality') + 20 * lvOf('cloak') + 5 * gz('mantel');
-    P.speed = 150 * (1 + 0.05 * U('swift') + 0.04 * U('tail') + 0.1 * lvOf('boots') + 0.005 * gz('wander') + 0.008 * gz('wind'));
-    P.magnet = 85 * (1 + 0.15 * U('reach') + 0.3 * lvOf('lure') + 0.02 * gz('wander'));
-    P.regen = 0.4 * lvOf('tea') + 0.3 * U('herbs');
-    P.light = 220 * (1 + 0.15 * lvOf('wick') + 0.1 * U('farsight'));
-    P.xpMul = (1 + 0.12 * lvOf('clover') + 0.08 * U('gXp') + 0.03 * gz('wahl')) * (1 + B('xp'));
-    P.dmgMul = (1 + 0.06 * U('power') + 0.03 * gz('glut')) * (1 + 0.1 * lvOf('ember')) * (1 + B('dmg'));
+    P.maxHp = 100 + 10 * U('vitality') + lv2('cloak', 25, 15) + 5 * gz('mantel');
+    P.speed = 150 * (1 + 0.05 * U('swift') + 0.04 * U('tail') + lv2('boots', 0.12, 0.05) + 0.005 * gz('wander') + 0.008 * gz('wind'));
+    P.magnet = 85 * (1 + 0.15 * U('reach') + lv2('lure', 0.35, 0.15) + 0.02 * gz('wander')) * (petAb('wisp') >= 2 ? 1.5 : 1);
+    P.regen = lv2('tea', 0.5, 0.2) + 0.3 * U('herbs');
+    P.light = 220 * (1 + lv2('wick', 0.18, 0.08) + 0.1 * U('farsight'));
+    P.xpMul = (1 + lv2('clover', 0.15, 0.06) + 0.08 * U('gXp') + 0.03 * gz('wahl')) * (1 + B('xp'));
+    P.dmgMul = (1 + 0.06 * U('power') + 0.03 * gz('glut')) * (1 + lv2('ember', 0.12, 0.05)) * (1 + B('dmg'));
     P.wpnMul = 1 + 0.03 * gz('schmiede');
     P.starMul = 1 + 0.12 * U('fStar') + 0.05 * gz('sterne');
-    P.cdMul = (1 - 0.08 * lvOf('feather')) * (1 - 0.04 * U('quick')) * (U('fMaster') ? 0.9 : 1);
+    P.cdMul = 0.9 ** Math.min(5, lvOf('feather')) * 0.97 ** Math.max(0, lvOf('feather') - 5) * (1 - 0.04 * U('quick')) * (U('fMaster') ? 0.9 : 1);
     P.abilCd = Math.max(0.7, 1 - 0.01 * gz('mond'));
     P.petMul = P.dmgMul * (1 + 0.2 * U('bond') + 0.04 * gz('mond'));
-    P.crit = 0.05 * U('crit');
-    P.armor = (1 - 0.06 * U('bark')) * Math.max(0.6, 1 - 0.01 * gz('waechter'));
+    P.crit = 0.05 * U('crit') + (petAb('owl') >= 4 ? 0.1 : 0);
+    P.armor = (1 - 0.06 * U('bark')) * Math.max(0.6, 1 - 0.01 * gz('waechter')) * (petAb('hedgehog') >= 3 ? 0.9 : 1);
     P.amberMul = 1 + 0.15 * U('gAmber') + 0.03 * gz('glueck');
     P.apMul = 1 + 0.04 * gz('arena');
   }
-  const xpNeed = lv => Math.round(5 + lv * 5 + lv * lv * 0.15);
+  const xpNeed = lv => Math.round(4 + lv * 3.5 + lv * lv * 0.1);
   function fmtClock(t) {
     const m = 22 * 60 + Math.floor(t);
     return `${String(Math.floor(m / 60) % 24).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
@@ -1960,7 +2073,11 @@ span.ab { cursor: default; }
     if (run.endless && U('arenaWarm')) { run.lv = 5; run.need = xpNeed(5); run.pending = 4; }
     // Begleiter mitnehmen
     const sel = save.compSel.filter(id => COMPS[id] && (save.comp[id] || 0) > 0).slice(0, compMax());
-    run.pets = sel.map((id, i) => ({ id, x: -20 - i * 16, y: 12, vx: 0, t: 1, anim: Math.random() * 5, face: 1, a: i * Math.PI, tg: null }));
+    run.pets = sel.map((id, i) => petStats({ id, x: -20 - i * 16, y: 12, vx: 0, t: 1, anim: Math.random() * 5, face: 1, a: i * Math.PI, tg: null }));
+    // Rudel (Fuchs ab Stufe 200): ein Geisterfuchs jagt mit
+    const fox = run.pets.find(p => p.id === 'fox' && p.ab >= 4);
+    if (fox) run.pets.push(Object.assign({}, fox, { x: 20, a: 1, ghost: true }));
+    if (petAb('wisp') >= 4) run.revives++;   // Seelenflamme
     if (U('starlore')) run.items.stars = 1;
     if (U('backpack')) {
       const pool = ['fireflies', 'pulse', 'stars'].filter(id => !run.items[id]);
@@ -1991,7 +2108,8 @@ span.ab { cursor: default; }
     return r < 0.38 ? 'shade' : r < 0.6 ? 'moth' : r < 0.74 ? 'crow' : r < 0.88 ? 'rootling' : 'spitter';
   }
   function spawnEnemy(type, x, y) {
-    const d = EN[type], hp = d.hp * curWorld.hp * (1 + run.t / 170 + (run.t / 320) ** 2);
+    // grow: in schweren Welten legen die Schatten im Lauf der Nacht schneller zu
+    const d = EN[type], hp = d.hp * curWorld.hp * (1 + (run.t / 170 + (run.t / 320) ** 2) * (curWorld.grow || 1));
     const e = { type, d, x, y, kx: 0, ky: 0, hp, max: hp, r: d.r, face: 1, fl: 0, oc: 0, anim: Math.random() * 10, ph: Math.random() * TAU, st: 0, tm: rand(1, 3), t2: 6, ax: 0, ay: 0, dead: false };
     enemies.push(e);
     return e;
@@ -2406,7 +2524,7 @@ span.ab { cursor: default; }
     if (e.d.boss) dmg *= 1 + 0.3 * U('wrath');
     if (U('wLast') && P.hp < P.maxHp * 0.25) dmg *= 1 + 0.3 * U('wLast');
     e.hp -= dmg; e.fl = e.d.boss ? 0.06 : 0.1;
-    if (kb && !e.d.boss) { const k = kb / e.d.mass; e.kx += nx * k; e.ky += ny * k; }
+    if (kb && !e.d.boss) { const k = (kb / e.d.mass) * (curWorld.kb || 1); e.kx += nx * k; e.ky += ny * k; }   // schwere Welten: Schatten lassen sich kaum wegstoßen
     if (texts.length < (crit ? 40 : 28)) texts.push({ x: e.x + rand(-6, 6), y: e.y - e.r - 4, v: Math.round(dmg), life: crit ? 0.75 : 0.55, crit });
     Snd.play('hit');
     if (e.hp <= 0) kill(e);
@@ -2698,12 +2816,14 @@ span.ab { cursor: default; }
   const LEASH = { fox: 460, owl: 420, hedgehog: 340, wisp: 520 };
   const distP = o => Math.hypot(o.x - P.x, o.y - P.y);
   // nächster Schatten zum Begleiter, der noch innerhalb seiner Leine liegt
+  const leash = p => LEASH[p.id] * (p.mR || 1);
   function petTarget(p, range, minFromP = 0) {
     let best = null, bd = range * range;
+    const lim = leash(p);
     for (const e of enemies) {
       if (e.dead) continue;
       const d = (e.x - p.x) ** 2 + (e.y - p.y) ** 2, dp = distP(e);
-      if (d < bd && dp < LEASH[p.id] && dp >= minFromP) { bd = d; best = e; }
+      if (d < bd && dp < lim && dp >= minFromP) { bd = d; best = e; }
     }
     return best;
   }
@@ -2717,72 +2837,122 @@ span.ab { cursor: default; }
     const tx = P.x + p.rx, ty = P.y + p.ry, d = Math.hypot(tx - p.x, ty - p.y);
     if (d > 8) moveTo(p, tx, ty, d > 160 ? sp * 1.8 : sp * 0.6, dt); else p.vx = 0;
   }
+  function spikes(p, s, dmg, R) {
+    const n = Math.round(s.n[0] * (p.ab >= 1 ? 1.5 : 1)), off = Math.random() * TAU;
+    for (let k = 0; k < n; k++) {
+      const a = off + (k * TAU) / n;
+      shots.push({ x: p.x, y: p.y - 3, vx: Math.cos(a) * 380, vy: Math.sin(a) * 380, r: 5, dmg, pierce: p.ab >= 4 ? 2 : 0, life: 0.6 * R, hit: [], k: 'spike' });
+    }
+  }
+  // Schaden im Kreis um einen Punkt (Wirbelwind, Sturzflug)
+  function petBlast(x, y, R, dmg, kb) {
+    const q = query(x, y, R + 40).slice();
+    for (const e of q) { const dx = e.x - x, dy = e.y - y, d = Math.hypot(dx, dy) || 1; if (d < R + e.r) hit(e, dmg, dx / d, dy / d, kb); }
+  }
   function updatePets(dt) {
     for (const p of run.pets) {
-      const s = COMPS[p.id].s, i = Math.min(2, (save.comp[p.id] || 1) - 1);
-      p.anim += dt * 8; p.t -= dt;
-      const away = distP(p) > LEASH[p.id];   // zu weit weg: erst zurückkommen
+      const s = COMPS[p.id].s, R = p.mR, V = p.mS, cd = v => v * p.mC;
+      const dmg = (s.dmg ? s.dmg[0] : 0) * P.petMul * p.mD;
+      p.anim += dt * 8; p.t -= dt; p.t2 = (p.t2 || 0) - dt;
+      const L = leash(p), away = distP(p) > L;   // zu weit weg: erst zurückkommen
       if (p.id === 'fox') {
         // streift umher und jagt Schatten, auch ein gutes Stück von dir entfernt
-        if (p.tg && (p.tg.dead || distP(p.tg) > LEASH.fox)) p.tg = null;
-        if (!p.tg && !away) p.tg = petTarget(p, 420);
+        if (p.tg && (p.tg.dead || distP(p.tg) > L)) p.tg = null;
+        if (!p.tg && !away) p.tg = petTarget(p, 420 * R);
         const tg = p.tg;
         if (tg) {
-          const d = moveTo(p, tg.x, tg.y, 300, dt);
-          if (d < tg.r + 12 && p.t <= 0) { p.t = s.cd[i]; const k = d || 1; hit(tg, s.dmg[i] * P.petMul, (tg.x - p.x) / k, (tg.y - p.y) / k, 60); }
-        } else if (away) moveTo(p, P.x, P.y, 340, dt);
-        else roam(p, dt, 170);
+          const d = moveTo(p, tg.x, tg.y, 300 * V, dt);
+          if (d < tg.r + 12 && p.t <= 0) {
+            p.t = cd(s.cd[0]);
+            const k = d || 1, nx = (tg.x - p.x) / k, ny = (tg.y - p.y) / k;
+            hit(tg, dmg, nx, ny, 60);
+            if (p.ab >= 1) hit(tg, dmg, nx, ny, 0);   // Doppelbiss
+            if (p.ab >= 2) zones.push({ x: tg.x, y: tg.y, R: 40 * R, life: 1.6, max: 1.6, tick: 0, dmg: dmg * 0.5 });   // Glutpfoten
+          }
+        } else if (away) moveTo(p, P.x, P.y, 340 * V, dt);
+        else roam(p, dt, 170 * V);
+        if (p.ab >= 3 && p.t2 <= 0 && nearestTo(p.x, p.y, 90 * R)) {
+          // Wirbelwind
+          p.t2 = cd(6);
+          petBlast(p.x, p.y, 90 * R, dmg * 3, 200);
+          pulses.push({ x: p.x, y: p.y, R: 90 * R, life: 0.35, max: 0.35 });
+        }
       } else if (p.id === 'owl') {
         // fliegt zu den Schatten und kreist über ihnen, sonst über dir
-        if (p.tg && (p.tg.dead || distP(p.tg) > LEASH.owl)) p.tg = null;
+        if (p.tg && (p.tg.dead || distP(p.tg) > L)) p.tg = null;
         // lieber Schatten etwas weiter draußen, damit sie dir die Ränder frei hält
-        if ((p.rt = (p.rt || 0) - dt) <= 0) { p.rt = 2.5; p.tg = away ? null : petTarget(p, 480, 140) || petTarget(p, 480); }
-        p.a += dt * 2.2;
-        const tg = p.tg, cx = tg ? tg.x : P.x, cy = (tg ? tg.y : P.y) - 34, R = tg ? 38 : 50;
-        moveTo(p, cx + Math.cos(p.a) * R, cy + Math.sin(p.a) * R * 0.35, 280, dt);
+        if ((p.rt = (p.rt || 0) - dt) <= 0) { p.rt = 2.5; p.tg = away ? null : petTarget(p, 480 * R, 140) || petTarget(p, 480 * R); }
+        p.a += dt * 2.2 * V;
+        const tg = p.tg, cx = tg ? tg.x : P.x, cy = (tg ? tg.y : P.y) - 34, rr = tg ? 38 : 50;
+        moveTo(p, cx + Math.cos(p.a) * rr, cy + Math.sin(p.a) * rr * 0.35, 280 * V, dt);
         p.vx = 0;   // die Eule schaut immer nach vorn
         if (p.t <= 0) {
-          const e = nearestTo(p.x, p.y, 430);
+          const e = nearestTo(p.x, p.y, 430 * R);
           if (e) {
-            p.t = s.cd[i];
+            p.t = cd(s.cd[0]);
             const a = Math.atan2(e.y - p.y, e.x - p.x);
-            shots.push({ x: p.x, y: p.y, vx: Math.cos(a) * 520, vy: Math.sin(a) * 520, r: 6, dmg: s.dmg[i] * P.petMul, pierce: 1, life: 1.2, hit: [], k: 'feather' });
+            for (const o of p.ab >= 1 ? [-0.22, 0, 0.22] : [0]) {   // Dreifeder
+              shots.push({ x: p.x, y: p.y, vx: Math.cos(a + o) * 520, vy: Math.sin(a + o) * 520, r: 6, dmg, pierce: p.ab >= 2 ? 4 : 1, life: 1.2 * R, hit: [], k: 'feather' });
+            }
           } else p.t = 0.2;
+        }
+        if (p.ab >= 3 && p.t2 <= 0) {
+          // Sturzflug
+          const e = nearestTo(p.x, p.y, 430 * R);
+          if (e) {
+            p.t2 = cd(7); p.x = e.x; p.y = e.y - 10;
+            petBlast(e.x, e.y, 80 * R, dmg * 6, 220);
+            flashes.push({ x: e.x, y: e.y, r: 140 * R, life: 0.35, max: 0.35 });
+            Snd.play('dash');
+          } else p.t2 = 0.3;
         }
       } else if (p.id === 'hedgehog') {
         // läuft mitten in die Schatten und schießt dort Stacheln in alle Richtungen
-        if (p.tg && (p.tg.dead || distP(p.tg) > LEASH.hedgehog)) p.tg = null;
-        if (!p.tg && !away) p.tg = petTarget(p, 320);
+        if (p.tg && (p.tg.dead || distP(p.tg) > L)) p.tg = null;
+        if (!p.tg && !away) p.tg = petTarget(p, 320 * R);
         const tg = p.tg;
-        if (tg) { if (Math.hypot(tg.x - p.x, tg.y - p.y) > 45) moveTo(p, tg.x, tg.y, 190, dt); else p.vx = 0; }
-        else if (away) moveTo(p, P.x, P.y, 300, dt);
-        else roam(p, dt, 150);
-        if (p.t <= 0 && nearestTo(p.x, p.y, 170)) {
-          p.t = s.cd[i];
-          const n = s.n[i], off = Math.random() * TAU;
-          for (let k = 0; k < n; k++) {
-            const a = off + (k * TAU) / n;
-            shots.push({ x: p.x, y: p.y - 3, vx: Math.cos(a) * 380, vy: Math.sin(a) * 380, r: 5, dmg: s.dmg[i] * P.petMul, pierce: 0, life: 0.6, hit: [], k: 'spike' });
-          }
+        if (tg) { if (Math.hypot(tg.x - p.x, tg.y - p.y) > 45) moveTo(p, tg.x, tg.y, 190 * V, dt); else p.vx = 0; }
+        else if (away) moveTo(p, P.x, P.y, 300 * V, dt);
+        else roam(p, dt, 150 * V);
+        if (p.t <= 0 && nearestTo(p.x, p.y, 170 * R)) {
+          p.t = cd(s.cd[0]);
+          spikes(p, s, dmg, R);
+          if (p.ab >= 2) p.t3 = 0.25;   // Doppelsalve
         }
+        if (p.t3 > 0 && (p.t3 -= dt) <= 0) spikes(p, s, dmg, R);
       } else if (p.id === 'wisp') {
         // fliegt los zu liegengebliebenen Funken und Beute, schickt sie zu dir und heilt dich
-        if (p.tg && (p.tg.dead || p.tg.m || distP(p.tg) > LEASH.wisp)) p.tg = null;
+        if (p.tg && (p.tg.dead || p.tg.m || distP(p.tg) > L)) p.tg = null;
         if (!p.tg && !away && (p.rt = (p.rt || 0) - dt) <= 0) {
           p.rt = 0.3;
-          let bd = s.roam[i] ** 2;
+          let bd = (s.roam[0] * R) ** 2;
           for (const list of [loot, gems]) for (const g of list) {
             if (g.dead || g.m) continue;
             const d = (g.x - p.x) ** 2 + (g.y - p.y) ** 2;
-            if (d < bd && distP(g) < LEASH.wisp) { bd = d; p.tg = g; }
+            if (d < bd && distP(g) < L) { bd = d; p.tg = g; }
           }
         }
-        if (p.tg) moveTo(p, p.tg.x, p.tg.y, 280, dt);
-        else { p.a += dt * 0.9; moveTo(p, P.x + Math.cos(p.a) * 70, P.y - 10 + Math.sin(p.a) * 40, away ? 340 : 220, dt); }
-        const R2 = s.rad[i] ** 2;
+        if (p.tg) moveTo(p, p.tg.x, p.tg.y, 280 * V, dt);
+        else { p.a += dt * 0.9; moveTo(p, P.x + Math.cos(p.a) * 70, P.y - 10 + Math.sin(p.a) * 40, (away ? 340 : 220) * V, dt); }
+        const R2 = (s.rad[0] * R) ** 2;
         for (const g of gems) if (!g.m && (g.x - p.x) ** 2 + (g.y - p.y) ** 2 < R2) g.m = true;
         for (const o of loot) if (!o.m && (o.x - p.x) ** 2 + (o.y - p.y) ** 2 < R2) o.m = true;
-        P.hp = Math.min(P.maxHp, P.hp + s.heal[i] * (1 + 0.2 * U('bond')) * dt);
+        // heilt in kleinen Schüben; Nachladen macht sie häufiger
+        if (p.t <= 0) {
+          p.t = cd(1);
+          let h = s.heal[0] * p.mD * (1 + 0.2 * U('bond'));
+          if (p.ab >= 3 && P.hp < P.maxHp * 0.3) h *= 3;   // Lebenslicht
+          P.hp = Math.min(P.maxHp, P.hp + h);
+        }
+        if (p.ab >= 1 && p.t2 <= 0) {
+          // Lichtfunken
+          const e = nearestTo(p.x, p.y, 300 * R);
+          if (e) {
+            p.t2 = cd(0.9);
+            const a = Math.atan2(e.y - p.y, e.x - p.x);
+            shots.push({ x: p.x, y: p.y, vx: Math.cos(a) * 560, vy: Math.sin(a) * 560, r: 5, dmg: 12 * P.petMul * p.mD, pierce: 0, life: 0.8 * R, hit: [], k: 'feather' });
+          } else p.t2 = 0.2;
+        }
       }
       if (Math.abs(p.vx) > 5) p.face = p.vx > 0 ? 1 : -1;
     }
@@ -2981,7 +3151,9 @@ span.ab { cursor: default; }
       else ctx.drawImage(shadowSpr, p.x - 11, p.y + 7, 22, 7);
       const s = ps.spr[(p.anim | 0) & 1], f = p.id === 'owl' ? 1 : p.face;
       ctx.setTransform(k * f, 0, 0, k, tx + p.x * k, ty + p.y * k);
+      if (p.ghost) ctx.globalAlpha = 0.55;
       ctx.drawImage(s.c, -s.h, -s.h, s.s, s.s);
+      ctx.globalAlpha = 1;
       ctx.setTransform(k, 0, 0, k, tx, ty);
     }
 
@@ -3324,7 +3496,7 @@ span.ab { cursor: default; }
         b.innerHTML = `${icon('berries')}<span class="c-body"><span class="c-name">${T('berriesName')}</span><span class="c-desc">${T('berriesDesc')}</span></span><kbd>${i + 1}</kbd>`;
       } else {
         const it = ITEMS[id], lv = run.items[id] || 0;
-        const desc = it.kind === 'w' ? it.d[lang][lv] : it.d[lang];
+        const desc = it.kind === 'w' ? it.d[lang][lv] : it.d[lang][lv >= 5 ? 1 : 0];
         const line = lv ? `<span class="c-lv">${tf('lvLine', { a: lv, b: lv + 1 })}</span>` : `<span class="c-new">${T('isNew')}</span>`;
         b.className = 'card locked' + (it.kind === 'p' ? ' pas' : '');
         b.innerHTML = `${icon(it.icon)}<span class="c-body"><span class="c-name">${it.name[lang]}</span>${line}<span class="c-desc">${desc}</span></span><kbd>${i + 1}</kbd>`;
@@ -3779,7 +3951,7 @@ span.ab { cursor: default; }
       for (const id of COMP_IDS) if (o.comp && Number.isFinite(o.comp[id])) comp[id] = clamp(Math.floor(o.comp[id]), 0, 3);
       for (const w of WORLDS) if (o.worldWins && Number.isFinite(o.worldWins[w.id])) worldWins[w.id] = Math.max(0, o.worldWins[w.id] | 0);
       const compSel = Array.isArray(o.compSel) ? o.compSel.filter(id => COMPS[id]).slice(0, 2) : ['fox'];
-      return {
+      return migratePets({
         ...newSlot(String(o.name || '').slice(0, 20)), amber: Math.max(0, Math.floor(o.amber)), best: clamp(+o.best || 0, 0, RUN_LEN),
         wins: Math.max(0, o.wins | 0), runs: Math.max(0, o.runs | 0), up, shards: Math.max(0, o.shards | 0), comp, compSel, worldWins,
         ap: Math.max(0, o.ap | 0), arenaBest: Math.max(0, +o.arenaBest || 0),
@@ -3789,7 +3961,9 @@ span.ab { cursor: default; }
         auto: Object.fromEntries(Object.entries(o.auto || {}).filter(([, v]) => typeof v === 'boolean' || ['off', 'smart', 'always'].includes(v))),
         ...(Array.isArray(o.prio) ? { prio: o.prio.filter(id => ITEMS[id]) } : {}),
         world: WORLDS.some(w => w.id === o.world) ? o.world : 'wald',
-      };
+        pet: Object.fromEntries(COMP_IDS.filter(id => o.pet && o.pet[id]).map(id => [id, Object.fromEntries(PSTATS.map(k => [k, Math.max(0, o.pet[id][k] | 0)]))])),
+        petV: o.petV ? 1 : 0,
+      });
     } catch (e) { return null; }
   }
   // ---------- Welten-Auswahl ----------
@@ -3808,6 +3982,8 @@ span.ab { cursor: default; }
       if (w.dmg > 1) chips.push(tf('wDmg', { n: Math.round((w.dmg - 1) * 100) }));
       if (w.spawn > 1) chips.push(tf('wSpawn', { n: Math.round((w.spawn - 1) * 100) }));
       if (w.speed > 1) chips.push(tf('wSpeed', { n: Math.round((w.speed - 1) * 100) }));
+      if (w.kb) chips.push(tf('wKb', { n: Math.round((1 - w.kb) * 100) }));
+      if (w.grow) chips.push(tf('wGrow', { n: fmtNum(w.grow) }));
       chips.push(w.boss === 'rotate' ? T('wAllBosses') : tf('wBoss', { n: EN[w.boss].name[lang] }));
       if (w.endless) {
         chips.push(`${T('ap')} ${icon('trophy')}`);
@@ -3886,39 +4062,86 @@ span.ab { cursor: default; }
 
   // ---------- Begleiter-Auswahl ----------
   function openComps() { state = 'comps'; renderComps(); showScreen('compScr'); }
+  // Text zu einem Begleiter-Wert, z. B. „×1,8“ oder „×1,5 so oft“
+  function petStatText(k, L) {
+    const v = k === 'cd' ? 1 / PM.cd(L) : PM[k](L);
+    return tf(k === 'cd' ? 'pstOften' : 'pstMul', { n: fmtNum(+v.toFixed(2)) });
+  }
   function renderComps() {
     const box = E('compList');
     box.innerHTML = '';
     E('compShards').textContent = save.shards;
     E('compCount').textContent = tf('compCount', { a: save.compSel.length, b: compMax() });
     for (const id of COMP_IDS) {
-      const c = COMPS[id], lv = save.comp[id] || 0, on = save.compSel.includes(id);
+      const c = COMPS[id], own = (save.comp[id] || 0) > 0, on = save.compSel.includes(id), lvl = petLevel(id);
       const el = document.createElement('div');
-      el.className = 'wcard' + (on ? ' cur' : '') + (lv ? '' : ' locked');
+      el.className = 'wcard' + (on ? ' cur' : '') + (own ? '' : ' locked');
       el.style.setProperty('--c', c.c);
-      const pips = `<span class="pips">${'<i class="on"></i>'.repeat(lv)}${'<i></i>'.repeat(3 - lv)}</span>`;
-      el.innerHTML = `<div class="comp-head"><span class="comp-ico">${icon(c.icon)}</span><div><h3>${c.name[lang]}</h3>${pips}</div></div>` +
-        `<p>${c.d[lang]}</p><p class="ni-tag">${lv ? `${tf('compLv', { n: lv })}: ${c.lv[lang][lv - 1]}` : c.lv[lang][0]}</p>`;
+      el.innerHTML = `<div class="comp-head"><span class="comp-ico">${icon(c.icon)}</span><div><h3>${c.name[lang]}</h3><span class="ni-tag">${own ? tf('compLv', { n: lvl }) : c.lv[lang][0]}</span></div></div><p>${c.d[lang]}</p>`;
+      if (own) {
+        // vier Werte, jeder ohne Obergrenze
+        const st = document.createElement('div');
+        st.className = 'pstats';
+        for (const k of PSTATS) {
+          const L = pl(id, k), row = document.createElement('div');
+          row.className = 'pstat';
+          row.innerHTML = `<span class="pico">${icon(PST_ICON[k])}</span><span class="pst-name"><b>${T(id === 'wisp' && k === 'dmg' ? 'pst_heal' : 'pst_' + k)}</b><small>${tf('compLv', { n: L })} · ${petStatText(k, L)}</small></span>`;
+          for (const n of [1, 10]) {
+            const cost = petCostN(L, n), b = makeBtn(`+${n} · ${cost}`, 'btn small buy' + (n === 1 ? ' primary' : ''), () => buyPet(id, k, n));
+            b.insertAdjacentHTML('beforeend', icon('shard'));
+            b.disabled = save.shards < cost;
+            row.appendChild(b);
+          }
+          st.appendChild(row);
+        }
+        el.appendChild(st);
+      }
+      // Fähigkeiten alle 50 Stufen
+      const ab = document.createElement('ul');
+      ab.className = 'pabil';
+      PET_ABIL[id].forEach((a, n) => {
+        const t = a[lang === 'de' ? 'de' : 'en'];
+        ab.insertAdjacentHTML('beforeend', `<li class="${lvl >= 50 * (n + 1) ? 'on' : ''}"><b>${50 * (n + 1)}</b>${t[0]}: ${t[1]}</li>`);
+      });
+      const ms = Math.max(0, Math.floor(lvl / 50) - 4);
+      ab.insertAdjacentHTML('beforeend', `<li class="${ms ? 'on' : ''}"><b>250+</b>${tf('petMaster', { n: ms * 25 })}</li>`);
+      el.appendChild(ab);
       const row = document.createElement('div');
       row.className = 'row';
-      if (lv < 3) {
-        const cost = c.cost[lv], b = makeBtn(`${T(lv ? 'upgrade' : 'unlock')} · ${cost}`, 'btn small primary buy', () => buyComp(id));
+      if (!own) {
+        const cost = c.cost[0], b = makeBtn(`${T('unlock')} · ${cost}`, 'btn small primary buy', () => buyComp(id));
         b.insertAdjacentHTML('beforeend', icon('shard'));
         b.disabled = save.shards < cost;
         row.appendChild(b);
-      }
-      if (lv) row.appendChild(makeBtn(on ? `${T('taken')} ✓` : T('take'), 'btn small' + (on ? ' on' : ''), () => toggleComp(id)));
+      } else row.appendChild(makeBtn(on ? `${T('taken')} ✓` : T('take'), 'btn small' + (on ? ' on' : ''), () => toggleComp(id)));
       el.appendChild(row);
       box.appendChild(el);
     }
   }
   function buyComp(id) {
-    const c = COMPS[id], lv = save.comp[id] || 0;
-    if (lv >= 3 || save.shards < c.cost[lv]) return;
-    save.shards -= c.cost[lv]; save.comp[id] = lv + 1;
+    const c = COMPS[id];
+    if (save.comp[id] || save.shards < c.cost[0]) return;
+    save.shards -= c.cost[0]; save.comp[id] = 1;
     // frisch freigeschaltet: gleich mitnehmen, wenn Platz ist
-    if (!lv && save.compSel.length < compMax()) save.compSel.push(id);
+    if (save.compSel.length < compMax()) save.compSel.push(id);
     persist(); Snd.play('amber'); renderComps(); updateMenuMeta();
+  }
+  function buyPet(id, k, n) {
+    const L = pl(id, k), cost = petCostN(L, n);
+    if (!save.comp[id] || save.shards < cost) return;
+    const before = petLevel(id);
+    save.shards -= cost;
+    save.pet = save.pet || {};
+    save.pet[id] = Object.assign({ dmg: 0, cd: 0, rng: 0, spd: 0 }, save.pet[id]);
+    save.pet[id][k] = L + n;
+    const after = petLevel(id);
+    // neue Fähigkeit bei jeder vollen 50
+    if (Math.floor(after / 50) > Math.floor(before / 50)) {
+      const n50 = Math.floor(after / 50), a = PET_ABIL[id][n50 - 1];
+      toast(a ? tf('petNew', { c: COMPS[id].name[lang], n: a[lang === 'de' ? 'de' : 'en'][0] }) : tf('petMasterGot', { c: COMPS[id].name[lang] }));
+      Snd.play('level');
+    } else Snd.play('amber');
+    persist(); renderComps(); updateMenuMeta();
   }
   function toggleComp(id) {
     const sel = save.compSel, i = sel.indexOf(id);
