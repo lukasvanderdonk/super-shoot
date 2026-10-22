@@ -201,7 +201,8 @@ h2 { margin: 0; font-family: var(--f-display); font-weight: 800; font-size: clam
 .pick span { font: 700 .7rem/1.2 var(--f-num); letter-spacing: .1em; text-transform: uppercase; color: var(--ink-dim); }
 .pick b { font-weight: 800; font-size: 1rem; }
 .menu-meta .shd, .stat.shd svg, .purse.shard { color: var(--moon); }
-.menu-meta .shd { display: inline-flex; align-items: center; gap: 5px; font-weight: 700; }
+.menu-meta .shd, .menu-meta .apv { display: inline-flex; align-items: center; gap: 5px; font-weight: 700; }
+.menu-meta .apv, .purse.ap, .earn.ap, .chips .apc svg { color: #ff8a5c; }
 
 /* Welten und Begleiter */
 .cards2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
@@ -211,6 +212,7 @@ h2 { margin: 0; font-family: var(--f-display); font-weight: 800; font-size: clam
 .wcard { display: flex; flex-direction: column; gap: 8px; min-width: 0; padding: 12px; border-radius: 8px; border: 1px solid rgba(239, 230, 207, .14); background: rgba(255, 255, 255, .03); }
 .wcard.cur { border-color: var(--c, var(--amber)); box-shadow: 0 0 0 1px var(--c, var(--amber)) inset; }
 .wcard.locked { opacity: .55; }
+.wcard.wide { grid-column: 1 / -1; }
 .swatch { position: relative; height: 70px; border-radius: 6px; display: grid; place-items: center; color: var(--c); overflow: hidden; }
 .swatch .ico { width: 34px; height: 34px; filter: drop-shadow(0 0 8px var(--c)); }
 .wcard h3 { margin: 0; font-size: 1.15rem; }
@@ -239,6 +241,7 @@ p.slot-name { margin: 0; padding-left: 0; }
 .ab.ready { box-shadow: 0 0 18px -4px var(--c); }
 .ab kbd { position: absolute; left: 0; right: 0; bottom: 3px; text-align: center; font: 700 .62rem/1 var(--f-num); letter-spacing: .04em; color: var(--ink); text-shadow: 0 1px 3px #000; }
 span.ab { cursor: default; }
+.ab.auto::after { content: 'AUTO'; position: absolute; top: 3px; left: 0; right: 0; text-align: center; font: 700 .52rem/1 var(--f-num); letter-spacing: .1em; color: var(--c); text-shadow: 0 1px 3px #000; }
 @media (hover: none) { .ab { width: 62px; height: 62px; } .ab kbd.key { display: none; } }
 @media (max-width: 420px) { #abil { gap: 8px; } .ab { width: 54px; height: 54px; } }
 #slowTint { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse at center, transparent 40%, rgba(120, 150, 255, .22)); opacity: 0; transition: opacity .3s; }
@@ -366,6 +369,7 @@ span.ab { cursor: default; }
         <span id="winsVal"></span>
         <span class="amb" data-ico="amber"><span id="amberVal">0</span></span>
         <span class="shd" data-ico="shard"><span id="shardVal">0</span></span>
+        <span class="apv" id="apWrap" data-ico="trophy"><span id="apVal">0</span></span>
       </div>
       <div class="row">
         <button class="btn small" id="musBtn" type="button"></button>
@@ -384,6 +388,7 @@ span.ab { cursor: default; }
         <div class="shop-meta">
           <span class="lit" id="litCount"></span>
           <span class="purse" data-ico="amber"><span id="shopAmber">0</span></span>
+          <span class="purse ap" id="shopApWrap" data-ico="trophy"><span id="shopAp">0</span></span>
         </div>
       </div>
       <p class="sub" data-t="wsSub"></p>
@@ -465,6 +470,7 @@ span.ab { cursor: default; }
         <button class="btn small" id="musBtn2" type="button"></button>
         <button class="btn small" id="sfxBtn2" type="button"></button>
         <button class="btn small" id="tempoBtn2" type="button"></button>
+        <div class="col" id="autoList" hidden></div>
         <button class="btn small" id="quitBtn" type="button" data-t="giveUp"></button>
       </div>
     </div>
@@ -482,6 +488,7 @@ span.ab { cursor: default; }
       </dl>
       <p class="earn" id="overEarn"></p>
       <p class="earn shard" id="overShards" hidden></p>
+      <p class="earn ap" id="overAp" hidden></p>
       <p class="eyebrow rec" id="overUnlock" hidden></p>
       <div class="row">
         <button class="btn primary" id="againBtn" type="button" data-t="again"></button>
@@ -521,7 +528,7 @@ span.ab { cursor: default; }
   const SAVE_KEY = 'lantern-night-v2', OLD_KEY = 'lantern-night-v1';
   const newSlot = (name = '') => ({
     name, amber: 0, best: 0, wins: 0, runs: 0, up: {}, night: null, played: 0,
-    shards: 0, comp: { fox: 1 }, compSel: ['fox'], world: 'wald', worldWins: {},
+    shards: 0, comp: { fox: 1 }, compSel: ['fox'], world: 'wald', worldWins: {}, ap: 0, arenaBest: 0, auto: {},
   });
   let store = { v: 2, cur: 0, slots: [null, null, null], music: true, sfx: true, lang: null, tempo: 1 };
   let storageOk = false;
@@ -589,6 +596,11 @@ span.ab { cursor: default; }
       compCount: '{a} von {b} dabei', unlock: 'Freischalten', upgrade: 'Verbessern', take: 'Mitnehmen', taken: 'Dabei', compLv: 'Stufe {n}',
       eyebrowW: 'Eine Nacht im {w} · 22:00 bis 6:00 Uhr',
       remain: 'noch {t} bis zum Morgen', remainShort: 'noch {t}', remainPause: 'Noch {t} bis zum Morgengrauen.',
+      bossWarnN: 'Der {n} erwacht', wDmg: 'Schatten +{n} % Schaden', wSpawn: '+{n} % mehr Schatten', wBoss: 'Boss: {n}', wAllBosses: 'Alle Bosse, immer stärker',
+      wEndless: 'Endlose Nacht', wBestArena: 'Rekord: {t} min', ap: 'Arenapunkte',
+      arenaLocked: 'Entzünde zuerst das Arena-Tor in der Werkstatt.', arenaEndless: 'Arena · endlose Nacht', arenaShort: 'endlos',
+      arenaOver: 'Die Arena-Nacht endet', arenaSub: 'Du hast {t} Minuten in der Arena durchgehalten.', survivedArena: 'Durchgehalten', recordArena: 'Neue längste Arena-Nacht',
+      auto: 'Automatik', tagAuto: 'Automatik',
     },
     en: {
       eyebrow: 'One night in the woods · 10 pm to 6 am',
@@ -627,6 +639,11 @@ span.ab { cursor: default; }
       compCount: '{a} of {b} along', unlock: 'Unlock', upgrade: 'Upgrade', take: 'Take along', taken: 'Along', compLv: 'Level {n}',
       eyebrowW: 'One night in the {w} · 10 pm to 6 am',
       remain: '{t} until dawn', remainShort: '{t} left', remainPause: '{t} left until dawn.',
+      bossWarnN: 'The {n} awakens', wDmg: 'Shadows +{n}% damage', wSpawn: '+{n}% more shadows', wBoss: 'Boss: {n}', wAllBosses: 'Every boss, ever stronger',
+      wEndless: 'Endless night', wBestArena: 'Record: {t} min', ap: 'Arena points',
+      arenaLocked: 'First light the Arena Gate in the workshop.', arenaEndless: 'Arena · endless night', arenaShort: 'endless',
+      arenaOver: 'The arena night ends', arenaSub: 'You held out for {t} minutes in the arena.', survivedArena: 'Held out', recordArena: 'New longest arena night',
+      auto: 'Auto', tagAuto: 'Automation',
     },
   };
   let lang = store.lang || ((navigator.language || 'en').toLowerCase().startsWith('de') ? 'de' : 'en');
@@ -682,6 +699,9 @@ span.ab { cursor: default; }
     bolt: '<path class="f" d="M13.5 2L4 14h7l-1.5 8L19 10h-7z"/>',
     tornado: '<path class="s" d="M3 4h18M5 8h14M7.5 12h9M9.5 16h5M11 20h2"/>',
     wind: '<path class="s" d="M2.5 9h10a2.6 2.6 0 1 0-2.6-2.6M2.5 15h14a2.6 2.6 0 1 1-2.6 2.6"/>',
+    arena: '<path class="s" d="M3.5 3.5l11 11M20.5 3.5l-11 11M14 17.5l3.5 3.5M10 17.5L6.5 21M16 13l3 3M8 13l-3 3"/>',
+    trophy: '<path class="f" d="M7 2.5h10V8a5 5 0 0 1-10 0z"/><path class="s" d="M7 4.5H4a3.2 3.2 0 0 0 3.5 4.3M17 4.5h3a3.2 3.2 0 0 1-3.5 4.3M12 13v4.5M8 21.5h8M9.5 17.5h5"/>',
+    crown: '<path class="f" d="M3 7.5l4.6 4.3L12 4.5l4.4 7.3L21 7.5l-2 11.5H5z"/>',
     tree: '<path class="f" d="M12 2l6 8h-3l4.5 6.5H14V22h-4v-5.5H4.5L9 10H6z"/>',
     reed: '<path class="s" d="M6 21.5V9.5M12 21.5V5M18 21.5V10M2 21.5h20"/><path class="f" d="M10.5 4.5h3v7h-3zM4.5 9h3v5.5h-3zM16.5 9.5h3v5h-3z"/>',
     snow: '<path class="s" d="M12 2v20M3.3 7l17.4 10M20.7 7L3.3 17M9 3.5l3 2.2 3-2.2M9 20.5l3-2.2 3 2.2"/>',
@@ -738,18 +758,22 @@ span.ab { cursor: default; }
   };
 
   // ---------- Werkstatt: Sternkarte mit vier Pfaden (dauerhaft) ----------
-  // x/y auf einer 1100 × 820 großen Karte, p = Vorgänger, act = Fähigkeit statt Talent.
+  // x/y auf einer 1420 × 820 großen Karte, p = Vorgänger, act = Fähigkeit statt Talent.
   // Die alten Werkstatt-Ids (vitality, power, swift, reach, luck, greed, flame) bleiben, damit Spielstände passen.
   const BR = {
     root: { c: '#ffd27a' },
     glut: { c: '#ffb84d', de: 'Glut', en: 'Ember', x: 60, y: 46 },
-    sterne: { c: '#c3a6ff', de: 'Sterne', en: 'Stars', x: 1040, y: 46, right: true },
+    sterne: { c: '#c3a6ff', de: 'Sterne', en: 'Stars', x: 1040, y: 180, right: true },
     mantel: { c: '#8fd6a4', de: 'Mantel', en: 'Cloak', x: 60, y: 790 },
     wander: { c: '#9fd0ff', de: 'Wanderer', en: 'Wanderer', x: 1040, y: 790, right: true },
     mond: { c: '#dfe8ff', de: 'Mond', en: 'Moon', x: 600, y: 42 },
     wind: { c: '#9ff0d8', de: 'Wind', en: 'Wind', x: 600, y: 780 },
+    arena: { c: '#ff8a5c', de: 'Arena', en: 'Arena', x: 1400, y: 160, right: true },
   };
   const mk = (id, br, p, x, y, icon, cost, de, en, dde, den, act = false) => ({ id, br, p, x, y, icon, cost, max: cost.length, name: { de, en }, d: { de: dde, en: den }, act });
+  const ap = n => Object.assign(n, { cur: 'ap' });   // kostet Arenapunkte statt Bernstein
+  const au = (n, k) => Object.assign(n, { auto: k });   // schaltet die Automatik für eine Fähigkeit frei
+  const MAP_W = 1420, MAP_H = 840;
   const TREE = [
     { id: 'root', br: 'root', x: 550, y: 410, icon: 'wick', cost: [], max: 0, name: { de: 'Deine Laterne', en: 'Your Lantern' },
       d: { de: 'Von hier wachsen vier Pfade. Entzünde Sterne mit Bernstein, um stärker in die Nacht zu gehen.', en: 'Four paths grow from here. Light stars with amber to face the night stronger.' } },
@@ -757,7 +781,7 @@ span.ab { cursor: default; }
     mk('power', 'glut', 'root', 450, 310, 'spark', [15, 30, 50, 75, 110], 'Strahlkraft', 'Radiance', '+6 % Schaden pro Stufe.', '+6% damage per level.'),
     mk('crit', 'glut', 'power', 370, 215, 'crit', [30, 50, 80, 120], 'Kritisches Licht', 'Critical Light', 'Pro Stufe 5 % Chance auf doppelten Schaden.', 'Each level adds a 5% chance to deal double damage.'),
     mk('pierce', 'glut', 'crit', 290, 120, 'pierce', [60, 110], 'Durchdringung', 'Piercing Light', 'Lichtfunken durchschlagen pro Stufe einen Schatten mehr.', 'Spark Bolts pierce one more shadow per level.'),
-    mk('wrath', 'glut', 'pierce', 175, 90, 'antlers', [180], 'Hirschjäger', 'Stag Hunter', '+30 % Schaden gegen den Schattenhirsch.', '+30% damage against the Shadow Stag.'),
+    mk('wrath', 'glut', 'pierce', 175, 90, 'antlers', [180], 'Bossjäger', 'Boss Hunter', '+30 % Schaden gegen alle Bosse.', '+30% damage against every boss.'),
     mk('heat', 'glut', 'power', 335, 330, 'heat', [25, 45, 70], 'Hitzewelle', 'Heat Wave', 'Laternenpuls: +10 % Radius pro Stufe.', 'Lantern Pulse: +10% radius per level.'),
     mk('swarmer', 'glut', 'heat', 225, 255, 'fireflies', [90], 'Schwärmer', 'Swarmer', '+1 Glühwürmchen, sobald du welche hast.', '+1 firefly once you have them.'),
     mk('double', 'glut', 'heat', 215, 355, 'pulse2', [140], 'Doppelpuls', 'Double Pulse', 'Der Laternenpuls schlägt kurz danach ein zweites Mal zu (60 % Schaden).', 'Lantern Pulse strikes a second time right after (60% damage).'),
@@ -812,6 +836,32 @@ span.ab { cursor: default; }
     mk('storm', 'wind', 'gale', 470, 710, 'tornado', [150], 'Orkan', 'Hurricane', 'Beim Sturmlauf hinterlässt du eine Windspur, die Schatten zerfetzt.', 'During Gale Run you leave a wind trail that shreds shadows.'),
     mk('featherweight', 'wind', 'quick', 630, 710, 'feather', [120], 'Federleicht', 'Featherweight', 'Lichtsprung: 30 % weiter und 1 Sekunde kürzere Abklingzeit.', 'Light Dash: 30% farther and 1 second shorter cooldown.'),
     mk('windheart', 'wind', 'storm', 550, 780, 'heart', [250], 'Sturmherz', 'Storm Heart', '+12 % Schaden, solange du in Bewegung bist.', '+12% damage while you are moving.'),
+    // Arena: das Tor kostet Bernstein, alles danach Arenapunkte und wirkt nur in der Arena
+    mk('arena', 'arena', 'root', 1100, 410, 'arena', [150], 'Arena-Tor', 'Arena Gate', 'Öffnet die Arena: eine endlose Nacht, in der du Arenapunkte für diesen Pfad sammelst.', 'Opens the Arena: an endless night where you earn arena points for this path.'),
+    ap(mk('arenaHorde', 'arena', 'arena', 1180, 320, 'eyes', [20, 40, 70], 'Lockfeuer', 'Lure Fire', 'Arena: pro Stufe 15 % mehr Schatten. Mehr Gegner, mehr Beute.', 'Arena: 15% more shadows per level. More enemies, more loot.')),
+    ap(mk('arenaRush', 'arena', 'arenaHorde', 1270, 250, 'bolt', [50, 100], 'Bosshatz', 'Boss Rush', 'Arena: Bosse kommen pro Stufe 30 Sekunden früher.', 'Arena: bosses arrive 30 seconds sooner per level.')),
+    ap(mk('arenaTrophy', 'arena', 'arenaHorde', 1290, 360, 'trophy', [30, 60, 100], 'Trophäen', 'Trophies', 'Arena: Bosse lassen pro Stufe 4 Bernstein und 1 Mondsplitter mehr fallen.', 'Arena: bosses drop 4 more amber and 1 more moon shard per level.')),
+    ap(mk('arenaChamp', 'arena', 'arenaTrophy', 1370, 290, 'crown', [60, 120], 'Champion', 'Champion', '+25 % Arenapunkte pro Stufe.', '+25% arena points per level.')),
+    ap(mk('arenaLoot', 'arena', 'arena', 1180, 500, 'amber', [25, 50, 90], 'Beutejäger', 'Plunderer', 'Arena: Bernstein fällt pro Stufe 25 % öfter.', 'Arena: amber drops 25% more often per level.')),
+    ap(mk('arenaShard', 'arena', 'arenaLoot', 1290, 460, 'shard', [40, 80], 'Splitterglanz', 'Shard Gleam', 'Arena: Mondsplitter fallen pro Stufe 50 % öfter.', 'Arena: moon shards drop 50% more often per level.')),
+    ap(mk('arenaHeal', 'arena', 'arenaLoot', 1270, 570, 'berries', [20, 40], 'Heilquellen', 'Healing Springs', 'Arena: Waldbeeren fallen pro Stufe 50 % öfter.', 'Arena: forest berries drop 50% more often per level.')),
+    ap(mk('arenaWarm', 'arena', 'arenaShard', 1370, 530, 'pulse', [80], 'Aufwärmen', 'Warm-up', 'Arena: Jede Arena-Nacht beginnt auf Stufe 5, du wählst gleich vier Gaben.', 'Arena: every arena night starts at level 5, you pick four gifts right away.')),
+    // Automatik an den Pfadspitzen: die Fähigkeit wird von selbst eingesetzt (ein- und ausschaltbar)
+    au(mk('autoDash', 'mantel', 'dash', 110, 480, 'dash', [200], 'Reflexe', 'Reflexes',
+      'Automatik: Der Lichtsprung springt von selbst weg, wenn dich ein Schatten oder Geschoss fast trifft. Hier oder im Pausemenü ein- und ausschaltbar.',
+      'Automation: Light Dash leaps away on its own when a shadow or projectile almost hits you. Toggle it here or in the pause menu.', true), 'dash'),
+    au(mk('autoBeacon', 'wander', 'beacon', 1050, 730, 'beacon', [220], 'Leuchtturm', 'Lighthouse',
+      'Automatik: Das Leuchtfeuer zündet von selbst, wenn sehr viele Schatten um dich sind, ein Boss nah ist oder du wenig Leben hast.',
+      'Automation: Beacon fires on its own when lots of shadows surround you, a boss is close or your health is low.', true), 'beacon'),
+    au(mk('autoStars', 'sterne', 'meteor', 1025, 70, 'target', [250], 'Sternenauge', 'Star Eye',
+      'Automatik: Deine Sternschnuppen zielen von selbst auf die dichteste Schattengruppe, und der Sternenruf feuert dorthin.',
+      'Automation: your Falling Stars aim at the densest group of shadows on their own, and Star Call fires there.', true), 'stars'),
+    au(mk('autoSlow', 'mond', 'fullmoon', 390, 45, 'hourglass', [220], 'Mondwache', 'Moon Watch',
+      'Automatik: Mondruhe startet von selbst, wenn es richtig eng wird, ein Boss nah ist oder du wenig Leben hast.',
+      'Automation: Moon Calm starts on its own when things get really crowded, a boss is close or your health is low.', true), 'slow'),
+    au(mk('autoGale', 'wind', 'windheart', 450, 795, 'gale', [220], 'Windgeist', 'Wind Spirit',
+      'Automatik: Der Sturmlauf startet von selbst, wenn du umzingelt bist oder wenig Leben hast.',
+      'Automation: Gale Run starts on its own when you are surrounded or your health is low.', true), 'gale'),
   ];
   const NODE = Object.fromEntries(TREE.map(t => [t.id, t]));
   const TOTAL_LIT = TREE.reduce((a, t) => a + t.max, 0);
@@ -822,47 +872,65 @@ span.ab { cursor: default; }
   const WORLDS = [
     { id: 'wald', icon: 'tree', name: { de: 'Wald', en: 'Forest' }, c: '#3ec2ad',
       d: { de: 'Der Waldrand bei Nacht, mit leuchtenden Pilzen im Moos. Hier beginnt jede Wache.', en: 'The forest edge at night, with glowing mushrooms in the moss. Every watch starts here.' },
-      hp: 1, spawn: 1, speed: 1, reward: 1, shards: 5, weather: null, dark: '3,5,15',
+      hp: 1, spawn: 1, speed: 1, dmg: 1, reward: 1, shards: 5, weather: null, dark: '3,5,15', boss: 'stag', swarm: 'moth', mix: {},
       g: { base: '#0e1619', blot: ['22,40,35', '8,11,18'], leaf: ['#3b2e24', '#47321f', '#2e2a20', '#3d2a26'], grass: ['#1c3530', '#23413a'], pebble: ['#1b232b', '#28323d'], twig: '#2a231c' },
       dec: { glow: ['mush', '#3ec2ad', '#b8fff1', '#9fb3ac'], glowKey: 'teal', plant: ['fern', '#1d3a2c', '#21432f'], rock: ['rock', '#1a2129', '#26303b', '#22372d'], log: ['log', '#261c15', '#4a3a2a', '#22402f'] } },
     { id: 'moor', icon: 'reed', name: { de: 'Moor', en: 'Marsh' }, c: '#c7d84a',
       d: { de: 'Nebel liegt über dem Sumpf, Irrlichter tanzen im Schilf. Die Schatten hier sind zäher.', en: 'Fog lies over the swamp and wisps dance in the reeds. The shadows here are tougher.' },
-      hp: 1.35, spawn: 1.15, speed: 1, reward: 1.5, shards: 8, weather: 'fog', dark: '5,9,6',
+      hp: 1.4, spawn: 1.3, speed: 1, dmg: 1.25, reward: 1.5, shards: 8, weather: 'fog', dark: '5,9,6', boss: 'toadking', swarm: 'wraith',
+      mix: { moth: ['wraith', 0.6], crow: ['toad', 0.8], shade: ['toad', 0.25], spitter: ['toad', 0.4] },
       g: { base: '#11170f', blot: ['40,52,26', '6,10,8'], leaf: ['#3a3a1e', '#2f3a20', '#46401f', '#2a2f1c'], grass: ['#2a3a1c', '#34482a'], pebble: ['#1c2218', '#2a3224'], twig: '#2a2a18' },
       dec: { glow: ['mush', '#c7d84a', '#f6ffc0', '#8f9a70'], glowKey: 'moss', plant: ['reed', '#3b5530', '#6b4a28'], rock: ['rock', '#1d2219', '#2a3123', '#3a4a26'], log: ['log', '#231d14', '#3f3626', '#3a4a26'] } },
     { id: 'frost', icon: 'snow', name: { de: 'Frostwald', en: 'Frost Forest' }, c: '#7fe0ff',
       d: { de: 'Schnee dämpft jeden Schritt, Eiskristalle glimmen blau. Die Schatten sind schneller und zäher.', en: 'Snow muffles every step and ice crystals glow blue. The shadows are faster and tougher.' },
-      hp: 1.7, spawn: 1.2, speed: 1.15, reward: 2, shards: 12, weather: 'snow', dark: '4,8,18',
+      hp: 1.75, spawn: 1.5, speed: 1.15, dmg: 1.45, reward: 2, shards: 12, weather: 'snow', dark: '4,8,18', boss: 'frostgiant', swarm: 'wolf',
+      mix: { shade: ['wolf', 0.45], crow: ['wolf', 0.6], rootling: ['golem', 0.8], spitter: ['golem', 0.5] },
       g: { base: '#1c2633', blot: ['190,210,232', '16,24,36'], leaf: ['#3a4656', '#4a5868', '#2f3a48', '#56677a'], grass: ['#3a4c5c', '#4b6070'], pebble: ['#2a3442', '#455468'], twig: '#3a4452' },
       dec: { glow: ['crystal', '#7fe0ff', '#e6fbff'], glowKey: 'ice', plant: ['fern', '#3d5566', '#5a7488'], rock: ['rock', '#26303c', '#c8d8e6', '#9fb4c6'], log: ['log', '#2a2622', '#4a4038', '#d6e4ef'] } },
     { id: 'schatten', icon: 'ruin', name: { de: 'Schattenreich', en: 'Shadow Realm' }, c: '#ff4d6d',
       d: { de: 'Alte Ruinen, rote Kristalle, kein Mond. Nur für erfahrene Wächter.', en: 'Old ruins, red crystals, no moon. For seasoned wardens only.' },
-      hp: 2.2, spawn: 1.3, speed: 1.1, reward: 3, shards: 20, weather: 'embers', dark: '8,3,12',
+      hp: 2.3, spawn: 1.75, speed: 1.1, dmg: 1.7, reward: 3, shards: 20, weather: 'embers', dark: '8,3,12', boss: 'shadowking', swarm: 'bat',
+      mix: { moth: ['bat', 0.7], shade: ['bat', 0.25], crow: ['knight', 0.6], rootling: ['knight', 0.6], spitter: ['knight', 0.3] },
       g: { base: '#120c16', blot: ['60,22,52', '6,3,10'], leaf: ['#3a2230', '#2c1a28', '#47263a', '#25161f'], grass: ['#2a1a2c', '#3a2238'], pebble: ['#1e1622', '#2f2434'], twig: '#2a1c26' },
       dec: { glow: ['crystal', '#ff4d6d', '#ffd0d8'], glowKey: 'red', plant: ['fern', '#2a1830', '#3a2040'], rock: ['pillar', '#2e2836', '#17121c'], log: ['log', '#1e1418', '#3a2a30', '#4a2238'] } },
+    // Arena: endlose Nacht mit Schatten und Bossen aus allen Welten, öffnet sich über das Arena-Tor im Baum
+    { id: 'arena', icon: 'arena', name: { de: 'Arena', en: 'Arena' }, c: '#ff8a5c', endless: true,
+      d: { de: 'Eine Nacht, die nie endet. Schatten und Bosse aus allen Welten, alle paar Minuten ein neuer Boss. Bringt Arenapunkte.', en: 'A night that never ends. Shadows and bosses from every world, a new boss every few minutes. Earns arena points.' },
+      hp: 1.25, spawn: 1.25, speed: 1.05, dmg: 1.25, reward: 1, shards: 0, weather: 'embers', dark: '6,4,3', boss: 'rotate', swarm: 'any', mix: 'all',
+      g: { base: '#1c1714', blot: ['62,50,40', '10,8,6'], leaf: ['#3a3028', '#4a3c30', '#2a221c', '#54463a'], grass: ['#2a2420', '#352c26'], pebble: ['#2a2420', '#4a4038'], twig: '#3a2c22' },
+      dec: { glow: ['crystal', '#ff9a3c', '#ffe0b0'], glowKey: 'amber', plant: ['reed', '#4a3a28', '#6a4a2a'], rock: ['pillar', '#5a5048', '#2a2420'], log: ['log', '#2a1e16', '#4a3626', '#3a2a1a'] } },
   ];
-  // eine Welt ist offen, wenn sie die erste ist oder die vorige gewonnen wurde
-  const worldOpen = i => i === 0 || (save.worldWins[WORLDS[i - 1].id] || 0) > 0;
+  // eine Welt ist offen, wenn sie die erste ist oder die vorige gewonnen wurde; die Arena über das Arena-Tor
+  const worldOpen = i => (WORLDS[i].endless ? U('arena') > 0 : i === 0 || (save.worldWins[WORLDS[i - 1].id] || 0) > 0);
+  const BOSSES = ['stag', 'toadking', 'frostgiant', 'shadowking'];
+  const SWARMS = ['moth', 'wraith', 'wolf', 'bat'];
+  // Schatten je Welt: Grundtyp wird mit einer Chance durch den Schatten der Welt ersetzt
+  function worldType(type) {
+    let mix = curWorld.mix;
+    if (mix === 'all') mix = WORLDS[(Math.random() * 4) | 0].mix;
+    const m = mix[type];
+    return m && Math.random() < m[1] ? m[0] : type;
+  }
 
   // ---------- Begleiter (mit Mondsplittern) ----------
   // cost[0] = Freischalten, cost[1..] = Verbessern
   const COMPS = {
     fox: { icon: 'fox', c: '#e8863a', cost: [0, 8, 15], name: { de: 'Fuchs', en: 'Fox' },
-      d: { de: 'Jagt Schatten in deiner Nähe und beißt zu.', en: 'Hunts shadows near you and bites.' },
+      d: { de: 'Streift weit umher, jagt Schatten und beißt zu.', en: 'Roams far and wide, hunts shadows and bites.' },
       lv: { de: ['Biss: 9 Schaden', 'Biss: 15 Schaden, schneller', 'Biss: 22 Schaden, noch schneller'], en: ['Bite: 9 damage', 'Bite: 15 damage, faster', 'Bite: 22 damage, even faster'] },
       s: { dmg: [9, 15, 22], cd: [0.6, 0.48, 0.38] } },
     owl: { icon: 'owl', c: '#d8b27a', cost: [10, 12, 20], name: { de: 'Eule', en: 'Owl' },
-      d: { de: 'Kreist über dir und wirft scharfe Federn auf Schatten.', en: 'Circles above you and throws sharp feathers at shadows.' },
+      d: { de: 'Fliegt zu den Schatten, kreist über ihnen und wirft scharfe Federn.', en: 'Flies to the shadows, circles above them and throws sharp feathers.' },
       lv: { de: ['Feder: 18 Schaden', 'Feder: 26 Schaden, öfter', 'Feder: 36 Schaden, noch öfter'], en: ['Feather: 18 damage', 'Feather: 26 damage, more often', 'Feather: 36 damage, even more often'] },
       s: { dmg: [18, 26, 36], cd: [1.6, 1.3, 1.0] } },
     hedgehog: { icon: 'hedgehog', c: '#b98a5c', cost: [15, 14, 24], name: { de: 'Igel', en: 'Hedgehog' },
-      d: { de: 'Läuft hinter dir her und schießt Stacheln in alle Richtungen.', en: 'Trots behind you and fires spikes in every direction.' },
+      d: { de: 'Läuft mitten in die Schatten und schießt dort Stacheln in alle Richtungen.', en: 'Trots right into the shadows and fires spikes in every direction.' },
       lv: { de: ['8 Stacheln, 10 Schaden', '10 Stacheln, 14 Schaden', '12 Stacheln, 20 Schaden'], en: ['8 spikes, 10 damage', '10 spikes, 14 damage', '12 spikes, 20 damage'] },
       s: { n: [8, 10, 12], dmg: [10, 14, 20], cd: [2.5, 2.0, 1.6] } },
     wisp: { icon: 'wisp', c: '#8fe9ff', cost: [20, 16, 28], name: { de: 'Irrlicht', en: 'Will-o’-Wisp' },
-      d: { de: 'Schwebt um dich herum, sammelt Funken ein und heilt dich langsam.', en: 'Floats around you, gathers sparks and slowly heals you.' },
-      lv: { de: ['Heilt 0,5 Leben pro Sekunde', 'Heilt 0,8 pro Sekunde, sammelt weiter', 'Heilt 1,2 pro Sekunde, sammelt am weitesten'], en: ['Heals 0.5 health per second', 'Heals 0.8 per second, gathers farther', 'Heals 1.2 per second, gathers farthest'] },
-      s: { heal: [0.5, 0.8, 1.2], rad: [150, 190, 230] } },
+      d: { de: 'Fliegt los, sammelt liegengebliebene Funken und Beute für dich ein und heilt dich langsam.', en: 'Flies off to gather sparks and loot left behind and slowly heals you.' },
+      lv: { de: ['Heilt 0,5 Leben pro Sekunde', 'Heilt 0,8 pro Sekunde, fliegt weiter', 'Heilt 1,2 pro Sekunde, fliegt am weitesten'], en: ['Heals 0.5 health per second', 'Heals 0.8 per second, flies farther', 'Heals 1.2 per second, flies farthest'] },
+      s: { heal: [0.5, 0.8, 1.2], rad: [90, 115, 140], roam: [380, 460, 540] } },
   };
   const COMP_IDS = Object.keys(COMPS);
   const compMax = () => 1 + U('second');
@@ -933,6 +1001,7 @@ span.ab { cursor: default; }
     white: glowSprite(255, 255, 255), teal: glowSprite(80, 230, 200), berry: glowSprite(255, 90, 120),
     moss: glowSprite(200, 240, 90), ice: glowSprite(130, 225, 255), red: glowSprite(255, 70, 100), wind: glowSprite(170, 245, 225), silver: glowSprite(225, 235, 255),
     eyeR: glowSprite(255, 70, 110), eyeO: glowSprite(255, 150, 60), eyeV: glowSprite(215, 120, 255), eyeB: glowSprite(170, 220, 255),
+    eyeY: glowSprite(255, 220, 80), eyeG: glowSprite(170, 255, 140),
   };
   const lightSpr = (() => {
     const c = canvas(128), x = c.getContext('2d'), gr = x.createRadialGradient(64, 64, 0, 64, 64, 64);
@@ -1200,13 +1269,124 @@ span.ab { cursor: default; }
     g.fillStyle = '#bfe3ff'; g.beginPath(); g.arc(41, -26, 2.2, 0, TAU); g.fill();
   }
 
+  // ---------- Schatten der neuen Welten ----------
+  const circ = (g, x, y, r) => { g.beginPath(); g.arc(x, y, r, 0, TAU); g.fill(); };
+  function drawToad(g, f) {
+    const j = f ? 3 : 0;
+    g.fillStyle = '#3f5226'; g.beginPath(); g.ellipse(-8, 8 - j, 7, 4 + j, f ? 0.6 : 0.2, 0, TAU); g.fill();
+    g.fillStyle = '#56692f'; g.beginPath(); g.ellipse(0, 2 - j, 13, 9 - j * 0.3, -0.1 - j * 0.07, 0, TAU); g.fill();
+    g.fillStyle = '#a4a35c'; g.beginPath(); g.ellipse(3, 6 - j, 8, 4, 0, 0, TAU); g.fill();
+    g.fillStyle = '#3f5226';
+    for (const [x, y] of [[-4, -3], [2, -5], [-8, 0], [6, -2]]) circ(g, x, y - j, 1.5);
+    g.fillStyle = '#56692f'; circ(g, 8, -6 - j, 4); circ(g, 3, -7 - j, 3.6);
+    g.fillStyle = '#f5d84a'; circ(g, 8, -6 - j, 1.6); circ(g, 3, -7 - j, 1.4);
+    g.strokeStyle = '#3f5226'; g.lineWidth = 2.5; g.beginPath(); g.moveTo(8, 6 - j); g.lineTo(11 + j, 11 - j); g.stroke();
+  }
+  function drawWraith(g, f) {
+    g.globalAlpha = 0.8; g.fillStyle = '#7f9f86'; g.beginPath();
+    g.arc(4, -3, 9, Math.PI, 0); g.quadraticCurveTo(13, 6, 6, 8); g.quadraticCurveTo(-4, f ? 4 : 10, -14, f ? 10 : 4); g.quadraticCurveTo(-6, 4, -5, -3); g.closePath(); g.fill();
+    g.globalAlpha = 0.35; g.fillStyle = '#c8e8c8'; g.beginPath(); g.arc(4, -5, 6, Math.PI, 0); g.fill();
+    g.globalAlpha = 1; g.fillStyle = '#1a2a1a'; g.beginPath(); g.ellipse(7, -3, 5, 3.5, 0, 0, TAU); g.fill();
+    g.fillStyle = '#c8ff8a'; circ(g, 4.5, -3.5, 1.3); circ(g, 9, -3.5, 1.3);
+  }
+  function drawWolf(g, f) {
+    const o = f ? 3 : -3;
+    g.strokeStyle = '#5d6a7a'; g.lineWidth = 3; g.beginPath();
+    g.moveTo(-10, 4); g.lineTo(-12 + o, 13); g.moveTo(-5, 5); g.lineTo(-4 - o, 13); g.moveTo(7, 5); g.lineTo(8 + o, 13); g.moveTo(11, 4); g.lineTo(11 - o, 13); g.stroke();
+    g.fillStyle = '#8796a8'; g.beginPath(); g.ellipse(-17, -2, 7, 3, -0.4, 0, TAU); g.fill();
+    g.beginPath(); g.ellipse(0, 0, 14, 6.5, 0, 0, TAU); g.fill();
+    g.fillStyle = '#c4cfdb'; g.beginPath(); g.ellipse(2, 3, 10, 3, 0, 0, TAU); g.fill();
+    g.fillStyle = '#8796a8'; g.beginPath(); g.ellipse(14, -5, 6, 5, 0.2, 0, TAU); g.fill();
+    g.beginPath(); g.moveTo(17, -6); g.lineTo(24, -3); g.lineTo(17, -1); g.fill();
+    g.fillStyle = '#5d6a7a'; g.beginPath(); g.moveTo(11, -8); g.lineTo(12, -14); g.lineTo(15, -9); g.fill();
+    g.fillStyle = '#1a1f26'; circ(g, 24, -3, 1);
+    g.fillStyle = '#9fe0ff'; circ(g, 15, -6, 1.3);
+  }
+  function drawGolem(g, f) {
+    const o = f ? 2 : -2;
+    g.fillStyle = '#4f7d99'; g.fillRect(-12 + o, 12, 8, 10); g.fillRect(4 - o, 12, 8, 10);
+    g.fillStyle = '#6fa6c4'; g.beginPath();
+    g.moveTo(-16, 14); g.lineTo(-18, -6); g.lineTo(-8, -16); g.lineTo(10, -16); g.lineTo(18, -4); g.lineTo(16, 14); g.closePath(); g.fill();
+    g.fillStyle = '#a9dcf0'; g.beginPath(); g.moveTo(-8, -16); g.lineTo(10, -16); g.lineTo(4, -8); g.lineTo(-6, -9); g.closePath(); g.fill();
+    g.fillStyle = '#4f7d99'; g.fillRect(-24, -6 + o, 7, 16); g.fillRect(17, -6 - o, 7, 16);
+    g.fillStyle = '#c8f2ff'; g.beginPath(); g.moveTo(-6, -16); g.lineTo(-3, -24); g.lineTo(0, -16); g.moveTo(3, -16); g.lineTo(7, -23); g.lineTo(9, -16); g.fill();
+    g.fillStyle = '#16323f'; g.fillRect(1, -12, 14, 6);
+    g.fillStyle = '#9fe8ff'; circ(g, 4, -9, 1.5); circ(g, 12, -9, 1.5);
+  }
+  function drawBat(g, f) {
+    const wy = f ? -9 : 5;
+    g.fillStyle = '#2a1a2e';
+    g.beginPath(); g.moveTo(-2, 0); g.lineTo(-16, wy); g.lineTo(-12, wy + 4); g.lineTo(-8, wy + 2); g.lineTo(-5, 4); g.closePath(); g.fill();
+    g.beginPath(); g.moveTo(2, 0); g.lineTo(16, wy); g.lineTo(12, wy + 4); g.lineTo(8, wy + 2); g.lineTo(5, 4); g.closePath(); g.fill();
+    g.fillStyle = '#3a2440'; g.beginPath(); g.ellipse(0, 1, 4.5, 6, 0, 0, TAU); g.fill();
+    g.beginPath(); g.moveTo(-3, -4); g.lineTo(-4, -9); g.lineTo(-1, -5); g.closePath(); g.fill();
+    g.beginPath(); g.moveTo(3, -4); g.lineTo(4, -9); g.lineTo(1, -5); g.closePath(); g.fill();
+    g.fillStyle = '#ff4d6d'; circ(g, -1.6, -1, 1); circ(g, 1.6, -1, 1);
+  }
+  function drawKnight(g, f) {
+    const o = f ? 2 : -2;
+    g.fillStyle = '#1e1826'; g.fillRect(-7 + o, 10, 5, 12); g.fillRect(2 - o, 10, 5, 12);
+    g.fillStyle = '#4a1424'; g.beginPath(); g.moveTo(-6, -10); g.lineTo(-14, 16); g.lineTo(4, 14); g.closePath(); g.fill();
+    g.fillStyle = '#3a3346'; g.beginPath(); g.moveTo(-9, 12); g.lineTo(-10, -8); g.quadraticCurveTo(0, -14, 10, -8); g.lineTo(9, 12); g.closePath(); g.fill();
+    g.strokeStyle = '#5a5068'; g.lineWidth = 1.2; g.beginPath(); g.moveTo(0, -10); g.lineTo(0, 10); g.stroke();
+    g.fillStyle = '#2a2434'; circ(g, 1, -16, 7);
+    g.fillStyle = '#0a060c'; g.fillRect(-1, -17, 10, 2.5);
+    g.fillStyle = '#ff3355'; g.fillRect(3, -16.8, 5, 1.8);
+    g.strokeStyle = '#8a8496'; g.lineWidth = 2; g.beginPath(); g.moveTo(10, 4); g.lineTo(22, -12); g.stroke();
+    g.strokeStyle = '#3a3346'; g.lineWidth = 3; g.beginPath(); g.moveTo(8, 6); g.lineTo(12, 2); g.stroke();
+  }
+  // ---------- Bosse der neuen Welten ----------
+  function drawToadKing(g, f) {
+    g.save(); g.scale(2.6, 2.6); drawToad(g, f);
+    const j = f ? 3 : 0;
+    g.fillStyle = '#e8c44a'; g.beginPath();
+    g.moveTo(-1, -9 - j); g.lineTo(-1, -14 - j); g.lineTo(1.5, -11 - j); g.lineTo(4, -15 - j); g.lineTo(6.5, -11 - j); g.lineTo(9, -14 - j); g.lineTo(9, -9 - j); g.closePath(); g.fill();
+    g.restore();
+  }
+  function drawGiant(g, f) {
+    const o = f ? 4 : -4;
+    g.fillStyle = '#3c5a70'; g.fillRect(-16 + o, 20, 12, 26); g.fillRect(4 - o, 20, 12, 26);
+    g.fillStyle = '#5f86a0'; g.beginPath(); g.moveTo(-22, 24); g.lineTo(-26, -14); g.quadraticCurveTo(0, -30, 26, -14); g.lineTo(22, 24); g.closePath(); g.fill();
+    g.fillStyle = '#d6e8f2'; g.beginPath(); g.ellipse(0, -14, 22, 9, 0, Math.PI, 0); g.fill();
+    g.fillStyle = '#3c5a70'; g.beginPath(); g.ellipse(-30, 4 + o, 7, 18, 0.15, 0, TAU); g.fill(); g.beginPath(); g.ellipse(30, 4 - o, 7, 18, -0.15, 0, TAU); g.fill();
+    g.fillStyle = '#5f86a0'; circ(g, 9, -34, 11);
+    g.fillStyle = '#d6e8f2'; g.beginPath(); g.ellipse(9, -26, 9, 5, 0, 0, Math.PI); g.fill();
+    g.fillStyle = '#9fe8ff'; circ(g, 6, -36, 2); circ(g, 14, -36, 2);
+    g.fillStyle = '#c8f2ff'; g.beginPath();
+    g.moveTo(1, -42); g.lineTo(3, -52); g.lineTo(6, -43); g.closePath(); g.moveTo(8, -44); g.lineTo(10, -55); g.lineTo(13, -44); g.closePath(); g.moveTo(15, -42); g.lineTo(18, -51); g.lineTo(19, -40); g.closePath(); g.fill();
+  }
+  function drawKing(g, f) {
+    const sw = f ? 2 : -2;
+    g.fillStyle = '#2a0a1e'; g.beginPath(); g.moveTo(-10, -24); g.quadraticCurveTo(-30 + sw, 10, -24 + sw, 40); g.lineTo(24 - sw, 40); g.quadraticCurveTo(28 - sw, 10, 10, -24); g.closePath(); g.fill();
+    g.fillStyle = '#1a1424'; g.beginPath(); g.moveTo(-11, 36); g.lineTo(-13, -16); g.quadraticCurveTo(0, -24, 13, -16); g.lineTo(11, 36); g.closePath(); g.fill();
+    g.fillStyle = '#120c18'; circ(g, 6, -30, 9);
+    g.fillStyle = '#ff4d6d'; g.globalAlpha = 0.9; g.beginPath();
+    g.moveTo(-2, -37); g.lineTo(-1, -46); g.lineTo(3, -40); g.lineTo(6, -48); g.lineTo(9, -40); g.lineTo(13, -46); g.lineTo(14, -37); g.closePath(); g.fill();
+    g.globalAlpha = 1; g.fillStyle = '#ff3355'; circ(g, 3, -30, 1.8); circ(g, 9, -30, 1.8);
+    g.strokeStyle = '#3a2a40'; g.lineWidth = 2.5; g.beginPath(); g.moveTo(18, 36); g.lineTo(22, -26); g.stroke();
+    g.fillStyle = '#ff4d6d'; circ(g, 22, -28, 4);
+  }
+
   const EN = {
     shade: { hp: 12, sp: 64, r: 14, dmg: 8, xp: 1, mass: 1, anim: 5, size: 40, draw: drawShade, eyes: [[2, -3], [8, -3]], eye: 'eyeR', smoke: '48,34,82' },
-    moth: { hp: 6, sp: 104, r: 10, dmg: 5, xp: 1, mass: 0.6, anim: 16, size: 36, draw: drawMoth, eyes: [[7, -1.6], [7, 1.6]], eye: 'eyeR', smoke: '84,70,100' },
+    moth: { hp: 6, sp: 104, r: 10, dmg: 5, xp: 1, mass: 0.6, anim: 16, size: 36, draw: drawMoth, eyes: [[7, -1.6], [7, 1.6]], eye: 'eyeR', smoke: '84,70,100', swarm: { de: 'Ein Mottenschwarm naht', en: 'A swarm of moths is coming' } },
     crow: { hp: 22, sp: 76, r: 13, dmg: 8, xp: 2, mass: 0.8, anim: 10, size: 44, draw: drawCrow, eyes: [[11, -5]], eye: 'eyeR', smoke: '34,32,48' },
     rootling: { hp: 55, sp: 38, r: 22, dmg: 10, xp: 4, mass: 3, anim: 6, size: 56, draw: drawRoot, eyes: [[1, -3], [10, -3]], eye: 'eyeO', smoke: '70,50,34' },
     spitter: { hp: 30, sp: 50, r: 16, dmg: 8, xp: 3, mass: 1.5, anim: 3, size: 42, draw: drawSpit, eyes: [[-2.5, 6], [2.5, 6]], eye: 'eyeV', smoke: '104,44,96' },
-    stag: { hp: 1500, sp: 58, r: 40, dmg: 20, xp: 30, mass: 40, anim: 6, size: 112, draw: drawStag, eyes: [[41, -26]], eye: 'eyeB', smoke: '40,30,74', boss: true },
+    // Moor
+    toad: { hp: 28, sp: 70, r: 15, dmg: 10, xp: 2, mass: 1.4, anim: 4, size: 44, draw: drawToad, eyes: [[8, -7], [3, -8]], eye: 'eyeY', smoke: '60,72,40' },
+    wraith: { hp: 10, sp: 96, r: 12, dmg: 7, xp: 1, mass: 0.6, anim: 8, size: 40, draw: drawWraith, eyes: [[4.5, -3.5], [9, -3.5]], eye: 'eyeG', smoke: '120,150,120', swarm: { de: 'Ein Geisterschwarm naht', en: 'A swarm of wraiths is coming' } },
+    // Frostwald
+    wolf: { hp: 24, sp: 122, r: 14, dmg: 10, xp: 2, mass: 1, anim: 12, size: 52, draw: drawWolf, eyes: [[15, -6]], eye: 'eyeB', smoke: '150,170,190', swarm: { de: 'Ein Wolfsrudel naht', en: 'A wolf pack is coming' } },
+    golem: { hp: 140, sp: 32, r: 24, dmg: 16, xp: 6, mass: 4, anim: 4, size: 60, draw: drawGolem, eyes: [[4, -9], [12, -9]], eye: 'eyeB', smoke: '140,190,220' },
+    // Schattenreich
+    bat: { hp: 12, sp: 128, r: 11, dmg: 7, xp: 1, mass: 0.5, anim: 18, size: 40, draw: drawBat, eyes: [[-1.6, -1], [1.6, -1]], eye: 'eyeR', smoke: '40,20,40', swarm: { de: 'Ein Fledermausschwarm naht', en: 'A swarm of bats is coming' } },
+    knight: { hp: 110, sp: 52, r: 18, dmg: 15, xp: 5, mass: 3, anim: 6, size: 52, draw: drawKnight, eyes: [[5, -16]], eye: 'eyeR', smoke: '50,30,60' },
+    // Bosse
+    stag: { hp: 1500, sp: 58, r: 40, dmg: 20, xp: 30, mass: 40, anim: 6, size: 112, draw: drawStag, eyes: [[41, -26]], eye: 'eyeB', smoke: '40,30,74', boss: true, name: { de: 'Schattenhirsch', en: 'Shadow Stag' } },
+    toadking: { hp: 1500, sp: 50, r: 40, dmg: 22, xp: 30, mass: 40, anim: 3, size: 110, draw: drawToadKing, eyes: [[20.8, -15.6], [7.8, -18.2]], eye: 'eyeY', smoke: '60,72,40', boss: true, name: { de: 'Krötenkönig', en: 'Toad King' } },
+    frostgiant: { hp: 1500, sp: 40, r: 40, dmg: 24, xp: 30, mass: 40, anim: 4, size: 120, draw: drawGiant, eyes: [[6, -36], [14, -36]], eye: 'eyeB', smoke: '150,190,220', boss: true, name: { de: 'Frostriese', en: 'Frost Giant' } },
+    shadowking: { hp: 1500, sp: 60, r: 34, dmg: 26, xp: 30, mass: 40, anim: 5, size: 110, draw: drawKing, eyes: [[3, -30], [9, -30]], eye: 'eyeR', smoke: '40,10,40', boss: true, name: { de: 'Schattenkönig', en: 'Shadow King' } },
   };
   for (const k in EN) { const d = EN[k]; d.spr = [0, 1].map(f => makeSprite(d.size, g => d.draw(g, f))); }
 
@@ -1507,9 +1687,13 @@ span.ab { cursor: default; }
       acc: 0, nextWave: 50, boss: null, bossN: 0, rerolls: 1 + U('luck'), revives: U('flame') + U('flame2'),
       won: false, dawnT: 0, deathT: 0, dawnSaid: false, choices: [], lvLock: 0,
       dashCd: 0, beaconCd: 0, callCd: 0, target: null, starN: 0, saveT: 0,
-      slowCd: 0, slowT: 0, galeCd: 0, galeT: 0, trailT: 0, shards: 0, pets: [],
+      slowCd: 0, slowT: 0, galeCd: 0, galeT: 0, trailT: 0, shards: 0, pets: [], bossKills: 0,
     };
     setWorld(save.world);
+    run.endless = !!curWorld.endless;
+    run.nextBoss = Math.max(120, 180 - 30 * U('arenaRush'));
+    // Arena „Aufwärmen“: gleich auf Stufe 5, die vier Gaben werden sofort gewählt
+    if (run.endless && U('arenaWarm')) { run.lv = 5; run.need = xpNeed(5); run.pending = 4; }
     // Begleiter mitnehmen
     const sel = save.compSel.filter(id => COMPS[id] && (save.comp[id] || 0) > 0).slice(0, compMax());
     run.pets = sel.map((id, i) => ({ id, x: -20 - i * 16, y: 12, vx: 0, t: 1, anim: Math.random() * 5, face: 1, a: i * Math.PI, tg: null }));
@@ -1553,22 +1737,30 @@ span.ab { cursor: default; }
     run.acc += dt * curWorld.spawn * (0.8 + t * 0.03 + (t / 140) ** 2 + Math.max(0, t - 300) ** 2 / 2500);
     while (run.acc >= 1) {
       run.acc -= 1;
-      if (enemies.length < MAXE) { const [x, y] = edgePoint(); spawnEnemy(pickType(t), x, y); }
+      if (enemies.length < MAXE) { const [x, y] = edgePoint(); spawnEnemy(worldType(pickType(t)), x, y); }
     }
     if (t >= run.nextWave) {
+      // Schwarm der Welt: Motten, Geister, Wölfe oder Fledermäuse
       run.nextWave += 60;
+      const sw = curWorld.swarm === 'any' ? SWARMS[(Math.random() * SWARMS.length) | 0] : curWorld.swarm;
       const n = Math.round(14 + t / 15), a0 = Math.random() * TAU;
-      for (let i = 0; i < n && enemies.length < MAXE + 40; i++) { const [x, y] = edgePoint(a0 + (i / n) * TAU); spawnEnemy('moth', x, y); }
-      banner(T('waveWarn'), 1.6);
+      for (let i = 0; i < n && enemies.length < MAXE + 40; i++) { const [x, y] = edgePoint(a0 + (i / n) * TAU); spawnEnemy(sw, x, y); }
+      banner(EN[sw].swarm[lang], 1.6);
     }
-    if ((run.bossN === 0 && t >= 180) || (run.bossN === 1 && t >= 360)) {
-      run.bossN++;
-      const [x, y] = edgePoint(), e = spawnEnemy('stag', x, y);
-      e.hp = e.max = (run.bossN === 1 ? 1500 : 4200) * curWorld.hp;
-      run.boss = e;
-      banner(T('bossWarn')); Snd.play('boss'); shake(4);
-    }
-    if (!run.dawnSaid && t >= 400) { run.dawnSaid = true; banner(T('dawnSoon')); }
+    const bossDue = run.endless ? t >= run.nextBoss : (run.bossN === 0 && t >= 180) || (run.bossN === 1 && t >= 360);
+    if (bossDue) spawnBoss();
+    if (!run.endless && !run.dawnSaid && t >= 400) { run.dawnSaid = true; banner(T('dawnSoon')); }
+  }
+  // jede Welt hat ihren Boss; in der Arena kommen sie reihum und werden jedes Mal stärker
+  function spawnBoss() {
+    run.bossN++;
+    const type = curWorld.boss === 'rotate' ? BOSSES[(run.bossN - 1) % BOSSES.length] : curWorld.boss;
+    const [x, y] = edgePoint(), e = spawnEnemy(type, x, y);
+    const base = run.endless ? 1500 * (1 + 0.7 * (run.bossN - 1)) : run.bossN === 1 ? 1500 : 4200;
+    e.hp = e.max = base * curWorld.hp;
+    run.boss = e;
+    if (run.endless) run.nextBoss += Math.max(120, 180 - 30 * U('arenaRush'));
+    banner(tf('bossWarnN', { n: e.d.name[lang] })); Snd.play('boss'); shake(4);
   }
 
   function updatePlayer(dt) {
@@ -1658,8 +1850,10 @@ span.ab { cursor: default; }
   }
   // Sternenlenker und Sternenruf: Klick oder Tipp auf das Spielfeld
   function starClick(sx, sy) {
+    starAt(cam.x + (sx - W / 2) / zoom, cam.y + (sy - H / 2) / zoom, false);
+  }
+  function starAt(x, y, quiet) {
     if (!canUse() || !U('starguide')) return;
-    const x = cam.x + (sx - W / 2) / zoom, y = cam.y + (sy - H / 2) / zoom;
     run.target = { x, y, t: 3.5 };
     const lv = U('starcall');
     if (lv && run.callCd <= 0) {
@@ -1667,7 +1861,53 @@ span.ab { cursor: default; }
       const n = [3, 5, 7][lv - 1];
       for (let i = 0; i < n; i++) addStar(x + rand(-55, 55), y + rand(-45, 45), 0.35 + i * 0.07, null);
       Snd.play('moon');
-    } else Snd.play('click');
+    } else if (!quiet) Snd.play('click');
+  }
+
+  // ---------- Automatik (Sterne an den Pfadspitzen) ----------
+  const AUTO_NODE = { dash: 'autoDash', beacon: 'autoBeacon', stars: 'autoStars', slow: 'autoSlow', gale: 'autoGale' };
+  const AUTO_ABIL = { dash: 'dash', beacon: 'beacon', stars: 'starguide', slow: 'timeslow', gale: 'gale' };
+  const autoOn = k => U(AUTO_NODE[k]) > 0 && U(AUTO_ABIL[k]) > 0 && save.auto[k] !== false;
+  function countNear(r) {
+    let n = 0, boss = false;
+    for (const e of enemies) {
+      if (e.dead || (e.x - P.x) ** 2 + (e.y - P.y) ** 2 >= r * r) continue;
+      n++; if (e.d.boss) boss = true;
+    }
+    return [n, boss];
+  }
+  // Mitte der dichtesten Schattengruppe in deiner Nähe (Stichprobe, damit es schnell bleibt)
+  function densest() {
+    const c = [];
+    for (const e of enemies) if (!e.dead && (e.x - P.x) ** 2 + (e.y - P.y) ** 2 < 420 * 420) { c.push(e); if (c.length >= 40) break; }
+    let best = null, bn = 2;
+    for (const a of c) {
+      let n = 0;
+      for (const b of c) if ((a.x - b.x) ** 2 + (a.y - b.y) ** 2 < 8100) n++;
+      if (n > bn) { bn = n; best = a; }
+    }
+    return best;
+  }
+  function autoAbilities(dt) {
+    if ((run.autoT = (run.autoT || 0) - dt) > 0) return;
+    run.autoT = 0.1;   // zehnmal pro Sekunde nachsehen reicht
+    const low = P.hp < P.maxHp * 0.35;
+    if (autoOn('dash') && run.dashCd <= 0) {
+      // ausweichen, wenn ein Schatten oder Geschoss fast da ist: weg von der Gefahr
+      let th = null, td = 1e9;
+      for (const e of enemies) { if (e.dead) continue; const d = Math.hypot(e.x - P.x, e.y - P.y) - e.r; if (d < 28 && d < td) { td = d; th = e; } }
+      for (const s of spores) { if (s.dead) continue; const d = Math.hypot(s.x - P.x, s.y - P.y); if (d < 50 && d < td) { td = d; th = s; } }
+      if (th) { const dx = P.x - th.x, dy = P.y - th.y, d = Math.hypot(dx, dy) || 1; P.dx = dx / d; P.dy = dy / d; doDash(); }
+    }
+    const [n280, boss] = countNear(280);
+    if (autoOn('beacon') && run.beaconCd <= 0 && (n280 >= 18 || boss || (low && n280 >= 4))) doBeacon();
+    if (autoOn('slow') && run.slowCd <= 0 && (n280 >= 25 || boss || (low && n280 >= 6))) doSlow();
+    if (autoOn('gale') && run.galeCd <= 0) { const [n90] = countNear(90); if (n90 >= 6 || (low && n90 >= 2)) doGale(); }
+    if (autoOn('stars') && (run.starAimT = (run.starAimT || 0) - 0.1) <= 0) {
+      run.starAimT = 1.2;
+      const c = densest();
+      if (c) starAt(c.x, c.y, true);
+    }
   }
   function addStar(x, y, t, e) {
     const s = ITEMS.stars.s, l = Math.max(0, (run.items.stars || 1) - 1);
@@ -1705,15 +1945,81 @@ span.ab { cursor: default; }
       const dx = P.x - e.x, dy = P.y - e.y, dist = Math.hypot(dx, dy) || 1;
       let mx = dx / dist, my = dy / dist, sp = e.d.sp * curWorld.speed * (dist < P.light * 0.9 ? 0.8 : 1);
       switch (e.type) {
-        case 'moth': {
-          const a = Math.sin(t * 5 + e.ph) * 0.9, c = Math.cos(a), s = Math.sin(a);
+        case 'moth': case 'wraith': case 'bat': {
+          // flattern im Zickzack: Geister ruhig, Fledermäuse wild
+          const fq = e.type === 'bat' ? 9 : e.type === 'wraith' ? 3 : 5, am = e.type === 'bat' ? 1.1 : e.type === 'wraith' ? 0.6 : 0.9;
+          const a = Math.sin(t * fq + e.ph) * am, c = Math.cos(a), s = Math.sin(a);
           const nx = mx * c - my * s; my = mx * s + my * c; mx = nx;
           break;
         }
-        case 'crow':
-          if (e.st === 0) { e.tm -= dt; if (dist < 300 && e.tm <= 0) { e.st = 1; e.tm = 0.45; e.ax = mx; e.ay = my; } }
-          else if (e.st === 1) { sp = 0; e.tm -= dt; if (e.tm <= 0) { e.st = 2; e.tm = 0.5; Snd.play('dash'); } }
-          else { sp = 360; mx = e.ax; my = e.ay; e.tm -= dt; if (e.tm <= 0) { e.st = 0; e.tm = rand(1.8, 3); } }
+        case 'crow': case 'knight': {
+          // kurz stillhalten, dann zustoßen (der Ritter langsamer, aber härter)
+          const kn = e.type === 'knight';
+          if (e.st === 0) { e.tm -= dt; if (dist < (kn ? 260 : 300) && e.tm <= 0) { e.st = 1; e.tm = kn ? 0.6 : 0.45; e.ax = mx; e.ay = my; } }
+          else if (e.st === 1) { sp = 0; e.tm -= dt; if (e.tm <= 0) { e.st = 2; e.tm = kn ? 0.45 : 0.5; Snd.play('dash'); } }
+          else { sp = kn ? 330 : 360; mx = e.ax; my = e.ay; e.tm -= dt; if (e.tm <= 0) { e.st = 0; e.tm = kn ? rand(2.5, 4) : rand(1.8, 3); } }
+          break;
+        }
+        case 'toad':
+          // sitzt, dann ein weiter Sprung
+          e.tm -= dt;
+          if (e.st === 0) { sp = 0; if (e.tm <= 0) { e.st = 1; e.tm = 0.35; e.ax = mx; e.ay = my; } }
+          else { sp = 250; mx = e.ax; my = e.ay; if (e.tm <= 0) { e.st = 0; e.tm = rand(0.6, 1.1); } }
+          break;
+        case 'golem':
+          // langsam, wirft Eissplitter
+          e.tm -= dt;
+          if (e.tm <= 0 && dist < 380) {
+            e.tm = rand(2.6, 3.4);
+            spores.push({ x: e.x, y: e.y - 10, vx: (dx / dist) * 190, vy: (dy / dist) * 190, r: 8, dmg: 12, life: 4, k: 'ice' });
+            Snd.play('spore');
+          }
+          break;
+        case 'toadking':
+          // springt auf die Stelle, an der du stehst: Zielring, Flug, Aufprall mit Sporenring
+          e.tm -= dt;
+          if (e.st === 0) { if (e.tm <= 0) { e.st = 1; e.tm = 0.9; e.ax = P.x; e.ay = P.y; } }
+          else if (e.st === 1) { sp = 0; if (e.tm <= 0) { e.st = 2; e.tm = 0.7; e.jx = e.x; e.jy = e.y; Snd.play('dash'); } }
+          else {
+            sp = 0;
+            const q = 1 - Math.max(0, e.tm) / 0.7;
+            e.x = e.jx + (e.ax - e.jx) * q; e.y = e.jy + (e.ay - e.jy) * q; e.hop = Math.sin(q * Math.PI) * 70;
+            if (e.tm <= 0) {
+              e.st = 0; e.tm = rand(2.4, 3.4); e.hop = 0; shake(7);
+              flashes.push({ x: e.x, y: e.y, r: 200, life: 0.35, max: 0.35 });
+              if (!P.dead && Math.hypot(P.x - e.x, P.y - e.y) < 120) hurtPlayer(e.d.dmg * curWorld.dmg, 'boss');
+              for (let i = 0; i < 16; i++) { const a = (i / 16) * TAU; spores.push({ x: e.x, y: e.y, vx: Math.cos(a) * 150, vy: Math.sin(a) * 150, r: 7, dmg: 9, life: 4, k: 'moss' }); }
+              Snd.play('star');
+            }
+          }
+          break;
+        case 'frostgiant':
+          // wirft Eisbrocken, die zersplittern, und ruft alle 10 s Wölfe
+          e.tm -= dt; e.t2 -= dt;
+          if (e.tm <= 0 && dist < 560) {
+            e.tm = rand(2.8, 3.6);
+            spores.push({ x: e.x, y: e.y - 30, vx: (dx / dist) * 170, vy: (dy / dist) * 170, r: 15, dmg: 22, life: 2.6, k: 'ice', split: 8 });
+            Snd.play('spore');
+          }
+          if (e.t2 <= 0) { e.t2 = 10; for (let i = 0; i < 4; i++) { const a = (i / 4) * TAU; spawnEnemy('wolf', e.x + Math.cos(a) * 70, e.y + Math.sin(a) * 70); } }
+          break;
+        case 'shadowking':
+          // verschwindet, taucht neben dir auf, feuert einen Ring dunkler Kugeln, ruft Fledermäuse
+          e.tm -= dt; e.t2 -= dt;
+          if (e.st === 0) {
+            if (e.tm <= 0) { e.st = 1; e.tm = 0.6; const a = Math.random() * TAU; e.ax = P.x + Math.cos(a) * 230; e.ay = P.y + Math.sin(a) * 230; }
+          } else if (e.st === 1) {
+            sp = 0; e.fade = Math.max(0, e.tm / 0.6);
+            if (e.tm <= 0) { e.x = e.ax; e.y = e.ay; e.st = 2; e.tm = 0.5; }
+          } else {
+            sp = 0; e.fade = 1 - Math.max(0, e.tm) / 0.5;
+            if (e.tm <= 0) {
+              e.st = 0; e.tm = rand(4, 5.5); e.fade = 1;
+              for (let i = 0; i < 18; i++) { const a = (i / 18) * TAU; spores.push({ x: e.x, y: e.y - 10, vx: Math.cos(a) * 150, vy: Math.sin(a) * 150, r: 7, dmg: 10, life: 4, k: 'dark' }); }
+              Snd.play('spore');
+            }
+          }
+          if (e.t2 <= 0) { e.t2 = 9; for (let i = 0; i < 6; i++) { const a = (i / 6) * TAU; spawnEnemy('bat', e.x + Math.cos(a) * 60, e.y + Math.sin(a) * 60); } }
           break;
         case 'spitter':
           if (dist < 210) { mx = -mx; my = -my; sp *= 0.6; } else if (dist < 270) sp = 0;
@@ -1741,10 +2047,12 @@ span.ab { cursor: default; }
       const kd = Math.exp(-9 * dt); e.kx *= kd; e.ky *= kd;
       if (Math.abs(mx * sp) > 4) e.face = mx > 0 ? 1 : -1;
       e.anim += dt * e.d.anim; e.fl -= dt; e.oc -= dt;
+      // in der Luft (Krötenkönig) oder fast unsichtbar (Schattenkönig): keine Berührung
+      const ghost = (e.hop || 0) > 20 || (e.fade !== undefined && e.fade < 0.5);
       if (run.galeT > 0 && dist < e.r + P.r + 16) {
         // Sturmlauf schiebt Schatten beiseite, statt Schaden zu nehmen
         if (!e.d.boss) { e.kx = (-dx / dist) * 380; e.ky = (-dy / dist) * 380; }
-      } else if (!P.dead && dist < e.r + P.r - 2) hurtPlayer(e.d.boss ? e.d.dmg : e.d.dmg * (1 + t / 600), e.type);
+      } else if (!P.dead && !ghost && dist < e.r + P.r - 2) hurtPlayer((e.d.boss ? e.d.dmg : e.d.dmg * (1 + t / 600)) * curWorld.dmg, e.type);
       if (dist > far && !e.d.boss) { const p = edgePoint(); e.x = p[0]; e.y = p[1]; e.kx = e.ky = 0; }
     }
   }
@@ -1768,19 +2076,25 @@ span.ab { cursor: default; }
     const d = e.d;
     if (gems.length >= 450) gems[(Math.random() * gems.length) | 0].v += d.xp;
     else gems.push({ x: e.x + rand(-4, 4), y: e.y + rand(-4, 4), v: d.xp, m: false, sp: 0 });
+    const ar = run.endless;   // Arena-Pfad: mehr Beute, nur in der Arena
     if (d.boss) {
-      for (let i = 0; i < 12; i++) addLoot('amber', e.x + rand(-45, 45), e.y + rand(-35, 35));
+      run.bossKills++;
+      for (let i = 0; i < 12 + (ar ? 4 * U('arenaTrophy') : 0); i++) addLoot('amber', e.x + rand(-45, 45), e.y + rand(-35, 35));
       addLoot('berry', e.x, e.y + 20);
-      for (let i = 0; i < 3 + U('shardseeker'); i++) addLoot('shard', e.x + rand(-35, 35), e.y + rand(-30, 30));
-      run.boss = null; shake(9);
+      for (let i = 0; i < 3 + U('shardseeker') + (ar ? U('arenaTrophy') : 0); i++) addLoot('shard', e.x + rand(-35, 35), e.y + rand(-30, 30));
+      if (run.boss === e) run.boss = null;
+      shake(9);
       flashes.push({ x: e.x, y: e.y, r: 320, life: 0.5, max: 0.5 });
       Snd.play('win');
     } else {
-      const r = Math.random(), berry = 0.007 * (1 + 0.6 * U('berries'));
-      if (r < 0.032) addLoot('amber', e.x, e.y);
-      else if (r < 0.032 + berry) addLoot('berry', e.x, e.y);
-      else if (r < 0.034 + berry) addLoot('moon', e.x, e.y);
-      else if (r < 0.034 + berry + 0.0015 * (1 + U('mooncatch'))) addLoot('shard', e.x, e.y);
+      const r = Math.random();
+      const amberC = 0.032 * (ar ? 1 + 0.25 * U('arenaLoot') : 1);
+      const berry = 0.007 * (1 + 0.6 * U('berries')) * (ar ? 1 + 0.5 * U('arenaHeal') : 1);
+      const shardC = 0.0015 * (1 + U('mooncatch')) * (ar ? 1 + 0.5 * U('arenaShard') : 1);
+      if (r < amberC) addLoot('amber', e.x, e.y);
+      else if (r < amberC + berry) addLoot('berry', e.x, e.y);
+      else if (r < amberC + berry + 0.002) addLoot('moon', e.x, e.y);
+      else if (r < amberC + berry + 0.002 + shardC) addLoot('shard', e.x, e.y);
     }
     smoke(e.x, e.y, d.boss ? 30 : 6, d.smoke);
     for (const [ex, ey] of d.eyes) parts.push({ x: e.x + ex * e.face, y: e.y + ey, vx: rand(-60, 60), vy: rand(-90, -30), life: 0.5, max: 0.5, r: 3, g: d.eye });
@@ -1926,10 +2240,18 @@ span.ab { cursor: default; }
     for (const s of spores) {
       if (s.dead) continue;
       s.x += s.vx * dt * sk; s.y += s.vy * dt * sk; s.life -= dt;
-      if (s.life <= 0) { s.dead = true; continue; }
+      if (s.life <= 0) { s.dead = true; if (s.split) splitSpore(s); continue; }
       const dx = s.x - P.x, dy = s.y - P.y;
-      if (!P.dead && dx * dx + dy * dy < (s.r + P.r) ** 2) { s.dead = true; hurtPlayer(s.dmg, 'spore'); }
+      if (!P.dead && dx * dx + dy * dy < (s.r + P.r) ** 2) { s.dead = true; hurtPlayer(s.dmg * curWorld.dmg, 'spore'); if (s.split) splitSpore(s); }
     }
+  }
+  // Eisbrocken des Frostriesen zerspringen in kleine Splitter
+  function splitSpore(s) {
+    for (let i = 0; i < s.split; i++) {
+      const a = (i / s.split) * TAU;
+      spores.push({ x: s.x, y: s.y, vx: Math.cos(a) * 200, vy: Math.sin(a) * 200, r: 5, dmg: 8, life: 1.6, k: s.k });
+    }
+    burst(s.x, s.y, 8, 'ice', 140);
   }
 
   function updatePickups(dt) {
@@ -2010,25 +2332,53 @@ span.ab { cursor: default; }
     p.x += (dx / d) * s; p.y += (dy / d) * s; p.vx = (dx / d) * sp;
     return d;
   }
+  // Begleiter laufen los und arbeiten selbstständig, aber höchstens so weit von dir weg (ihre „Leine“)
+  const LEASH = { fox: 460, owl: 420, hedgehog: 340, wisp: 520 };
+  const distP = o => Math.hypot(o.x - P.x, o.y - P.y);
+  // nächster Schatten zum Begleiter, der noch innerhalb seiner Leine liegt
+  function petTarget(p, range, minFromP = 0) {
+    let best = null, bd = range * range;
+    for (const e of enemies) {
+      if (e.dead) continue;
+      const d = (e.x - p.x) ** 2 + (e.y - p.y) ** 2, dp = distP(e);
+      if (d < bd && dp < LEASH[p.id] && dp >= minFromP) { bd = d; best = e; }
+    }
+    return best;
+  }
+  // nichts zu tun: in deiner Nähe herumstreunen
+  function roam(p, dt, sp) {
+    if ((p.rt = (p.rt || 0) - dt) <= 0) {
+      p.rt = rand(1.5, 3);
+      const a = Math.random() * TAU, r = rand(50, 130);
+      p.rx = Math.cos(a) * r; p.ry = Math.sin(a) * r * 0.7;
+    }
+    const tx = P.x + p.rx, ty = P.y + p.ry, d = Math.hypot(tx - p.x, ty - p.y);
+    if (d > 8) moveTo(p, tx, ty, d > 160 ? sp * 1.8 : sp * 0.6, dt); else p.vx = 0;
+  }
   function updatePets(dt) {
     for (const p of run.pets) {
       const s = COMPS[p.id].s, i = Math.min(2, (save.comp[p.id] || 1) - 1);
       p.anim += dt * 8; p.t -= dt;
+      const away = distP(p) > LEASH[p.id];   // zu weit weg: erst zurückkommen
       if (p.id === 'fox') {
-        // jagt den nächsten Schatten in Spielernähe, sonst läuft er hinterher
-        if (p.tg && (p.tg.dead || Math.hypot(p.tg.x - P.x, p.tg.y - P.y) > 320)) p.tg = null;
-        if (!p.tg) p.tg = nearestTo(P.x, P.y, 280);
+        // streift umher und jagt Schatten, auch ein gutes Stück von dir entfernt
+        if (p.tg && (p.tg.dead || distP(p.tg) > LEASH.fox)) p.tg = null;
+        if (!p.tg && !away) p.tg = petTarget(p, 420);
         const tg = p.tg;
         if (tg) {
-          const d = moveTo(p, tg.x, tg.y, 290, dt);
+          const d = moveTo(p, tg.x, tg.y, 300, dt);
           if (d < tg.r + 12 && p.t <= 0) { p.t = s.cd[i]; const k = d || 1; hit(tg, s.dmg[i] * P.petMul, (tg.x - p.x) / k, (tg.y - p.y) / k, 60); }
-        } else {
-          const hx = P.x - 26 * P.face, hy = P.y + 10;
-          moveTo(p, hx, hy, Math.hypot(hx - p.x, hy - p.y) > 80 ? 300 : 170, dt);
-        }
+        } else if (away) moveTo(p, P.x, P.y, 340, dt);
+        else roam(p, dt, 170);
       } else if (p.id === 'owl') {
-        p.a += dt * 1.6;
-        p.x = P.x + Math.cos(p.a) * 46; p.y = P.y - 34 + Math.sin(p.a) * 14; p.vx = 0;
+        // fliegt zu den Schatten und kreist über ihnen, sonst über dir
+        if (p.tg && (p.tg.dead || distP(p.tg) > LEASH.owl)) p.tg = null;
+        // lieber Schatten etwas weiter draußen, damit sie dir die Ränder frei hält
+        if ((p.rt = (p.rt || 0) - dt) <= 0) { p.rt = 2.5; p.tg = away ? null : petTarget(p, 480, 140) || petTarget(p, 480); }
+        p.a += dt * 2.2;
+        const tg = p.tg, cx = tg ? tg.x : P.x, cy = (tg ? tg.y : P.y) - 34, R = tg ? 38 : 50;
+        moveTo(p, cx + Math.cos(p.a) * R, cy + Math.sin(p.a) * R * 0.35, 280, dt);
+        p.vx = 0;   // die Eule schaut immer nach vorn
         if (p.t <= 0) {
           const e = nearestTo(p.x, p.y, 430);
           if (e) {
@@ -2038,9 +2388,14 @@ span.ab { cursor: default; }
           } else p.t = 0.2;
         }
       } else if (p.id === 'hedgehog') {
-        const hx = P.x - 34 * P.face, hy = P.y + 6, d = Math.hypot(hx - p.x, hy - p.y);
-        if (d > 12) moveTo(p, hx, hy, d > 90 ? 320 : 190, dt); else p.vx = 0;
-        if (p.t <= 0) {
+        // läuft mitten in die Schatten und schießt dort Stacheln in alle Richtungen
+        if (p.tg && (p.tg.dead || distP(p.tg) > LEASH.hedgehog)) p.tg = null;
+        if (!p.tg && !away) p.tg = petTarget(p, 320);
+        const tg = p.tg;
+        if (tg) { if (Math.hypot(tg.x - p.x, tg.y - p.y) > 45) moveTo(p, tg.x, tg.y, 190, dt); else p.vx = 0; }
+        else if (away) moveTo(p, P.x, P.y, 300, dt);
+        else roam(p, dt, 150);
+        if (p.t <= 0 && nearestTo(p.x, p.y, 170)) {
           p.t = s.cd[i];
           const n = s.n[i], off = Math.random() * TAU;
           for (let k = 0; k < n; k++) {
@@ -2049,9 +2404,19 @@ span.ab { cursor: default; }
           }
         }
       } else if (p.id === 'wisp') {
-        // kreist um dich, zieht Funken und Beute heran und heilt
-        p.a += dt * 0.9;
-        moveTo(p, P.x + Math.cos(p.a) * 70, P.y - 10 + Math.sin(p.a) * 40, 220, dt);
+        // fliegt los zu liegengebliebenen Funken und Beute, schickt sie zu dir und heilt dich
+        if (p.tg && (p.tg.dead || p.tg.m || distP(p.tg) > LEASH.wisp)) p.tg = null;
+        if (!p.tg && !away && (p.rt = (p.rt || 0) - dt) <= 0) {
+          p.rt = 0.3;
+          let bd = s.roam[i] ** 2;
+          for (const list of [loot, gems]) for (const g of list) {
+            if (g.dead || g.m) continue;
+            const d = (g.x - p.x) ** 2 + (g.y - p.y) ** 2;
+            if (d < bd && distP(g) < LEASH.wisp) { bd = d; p.tg = g; }
+          }
+        }
+        if (p.tg) moveTo(p, p.tg.x, p.tg.y, 280, dt);
+        else { p.a += dt * 0.9; moveTo(p, P.x + Math.cos(p.a) * 70, P.y - 10 + Math.sin(p.a) * 40, away ? 340 : 220, dt); }
         const R2 = s.rad[i] ** 2;
         for (const g of gems) if (!g.m && (g.x - p.x) ** 2 + (g.y - p.y) ** 2 < R2) g.m = true;
         for (const o of loot) if (!o.m && (o.x - p.x) ** 2 + (o.y - p.y) ** 2 < R2) o.m = true;
@@ -2081,13 +2446,13 @@ span.ab { cursor: default; }
       if (run.dawnT > 3) { endRun(true); return; }
     } else if (!P.dead) {
       run.t += dt;
-      if (run.t >= RUN_LEN) startDawn();
+      if (!run.endless && run.t >= RUN_LEN) startDawn();   // die Arena-Nacht endet nie
     }
     if (!P.dead) updatePlayer(dt);
     if (!run.won && !P.dead) spawnTick(dt);
     updateEnemies(dt);
     buildGrid(); separate();
-    if (!P.dead && !run.won) { updateWeapons(dt); updatePets(dt); }
+    if (!P.dead && !run.won) { updateWeapons(dt); updatePets(dt); autoAbilities(dt); }
     updateShots(dt); updatePickups(dt); updateFx(dt);
     for (const a of [enemies, shots, spores, gems, loot, parts, texts, pulses, stars, flashes, zones]) compact(a);
     // alle 10 Sekunden still speichern, falls die Seite neu lädt oder der Browser abstürzt
@@ -2224,11 +2589,16 @@ span.ab { cursor: default; }
     for (const e of enemies) {
       if (!pDrawn && e.y > P.y) { drawPlayer(time); pDrawn = true; }
       if (!inView(e.x, e.y)) continue;
-      const s = e.d.spr[(e.anim | 0) & 1];
-      const bob = e.type === 'shade' ? Math.sin(e.anim) * 2 : 0;
+      // Kröten zeigen Sitzen oder Springen, sonst wechseln die Bilder mit der Animation
+      const fr = e.type === 'toad' ? (e.st ? 1 : 0) : e.type === 'toadking' ? (e.st === 2 ? 1 : 0) : (e.anim | 0) & 1;
+      const s = e.d.spr[fr];
+      const bob = (e.type === 'shade' ? Math.sin(e.anim) * 2 : 0) - (e.hop || 0);
+      const fa = e.fade === undefined ? 1 : Math.max(0.05, e.fade);
       ctx.setTransform(k * e.face, 0, 0, k, tx + e.x * k, ty + (e.y + bob) * k);
+      ctx.globalAlpha = fa;
       ctx.drawImage(s.c, -s.h, -s.h, s.s, s.s);
-      if (e.fl > 0) { ctx.globalAlpha = e.d.boss ? 0.35 : 0.7; ctx.drawImage(s.w, -s.h, -s.h, s.s, s.s); ctx.globalAlpha = 1; }
+      if (e.fl > 0) { ctx.globalAlpha = (e.d.boss ? 0.35 : 0.7) * fa; ctx.drawImage(s.w, -s.h, -s.h, s.s, s.s); }
+      ctx.globalAlpha = 1;
       ctx.setTransform(k, 0, 0, k, tx, ty);
     }
     if (!pDrawn) drawPlayer(time);
@@ -2258,7 +2628,8 @@ span.ab { cursor: default; }
       }
       ctx.setTransform(k, 0, 0, k, tx, ty);
     }
-    for (const s of spores) if (inView(s.x, s.y)) { ctx.fillStyle = '#2a1238'; ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, TAU); ctx.fill(); }
+    const SPORE_C = { ice: '#bfeeff', dark: '#140308', moss: '#33401a' };
+    for (const s of spores) if (inView(s.x, s.y)) { ctx.fillStyle = SPORE_C[s.k] || '#2a1238'; ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, TAU); ctx.fill(); }
 
     // Lichtquellen sammeln
     let fade = 1;
@@ -2281,7 +2652,7 @@ span.ab { cursor: default; }
     // Dunkelheit
     let dark = 0.87;
     if (run) {
-      if (run.t > 400) dark -= Math.min(1, (run.t - 400) / 80) * 0.3;
+      if (!run.endless && run.t > 400) dark -= Math.min(1, (run.t - 400) / 80) * 0.3;
       if (run.won) dark *= Math.max(0, 1 - run.dawnT / 2);
     }
     dctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -2320,12 +2691,27 @@ span.ab { cursor: default; }
       }
     }
     for (let i = 0; i < ff.length; i += 2) { glow('fire', ff[i], ff[i + 1], 18, 0.8); glow('white', ff[i], ff[i + 1], 4, 0.9); }
-    for (const s of spores) if (inView(s.x, s.y)) { glow('lilac', s.x, s.y, 16, 0.8); glow('white', s.x, s.y, 3, 0.5); }
+    const SPORE_G = { ice: 'ice', dark: 'red', moss: 'moss' };
+    for (const s of spores) if (inView(s.x, s.y)) { glow(SPORE_G[s.k] || 'lilac', s.x, s.y, s.r * 2.3, 0.8); glow('white', s.x, s.y, s.r * 0.45, 0.5); }
     for (const e of enemies) {
       if (!inView(e.x, e.y)) continue;
-      const bob = e.type === 'shade' ? Math.sin(e.anim) * 2 : 0;
-      const r = e.type === 'crow' && e.st === 1 ? 10 : e.d.boss ? 8 : 5;
-      for (const [ex, ey] of e.d.eyes) glow(e.d.eye, e.x + ex * e.face, e.y + ey + bob, r, 0.95);
+      const bob = (e.type === 'shade' ? Math.sin(e.anim) * 2 : 0) - (e.hop || 0);
+      const fa = e.fade === undefined ? 1 : Math.max(0, e.fade);
+      const r = (e.type === 'crow' || e.type === 'knight') && e.st === 1 ? 10 : e.d.boss ? 8 : 5;
+      for (const [ex, ey] of e.d.eyes) glow(e.d.eye, e.x + ex * e.face, e.y + ey + bob, r, 0.95 * fa);
+      if (e.type === 'toadking' && e.st >= 1) {
+        // Landeplatz des Krötenkönigs
+        const q = e.st === 1 ? 1 - e.tm / 0.9 : 1;
+        ctx.globalAlpha = 1; ctx.strokeStyle = `rgba(255,220,90,${0.25 + 0.45 * q})`; ctx.lineWidth = 3; ctx.setLineDash([10, 8]);
+        ctx.beginPath(); ctx.arc(e.ax, e.ay, 120, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
+        glow('eyeY', e.ax, e.ay, 120, 0.12 + 0.12 * q);
+      }
+      if (e.type === 'shadowking' && e.st >= 1) {
+        // hier taucht der Schattenkönig gleich auf
+        ctx.globalAlpha = 1; ctx.strokeStyle = 'rgba(255,70,100,.5)'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(e.ax, e.ay, 40, 0, TAU); ctx.stroke();
+        glow('red', e.ax, e.ay, 50, 0.3);
+      }
       if (e.type === 'stag' && e.st === 1) {
         ctx.globalAlpha = 1;
         ctx.strokeStyle = 'rgba(170,220,255,.12)'; ctx.lineWidth = e.r * 1.6; ctx.lineCap = 'round';
@@ -2382,7 +2768,7 @@ span.ab { cursor: default; }
 
     // Morgendämmerung
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-    if (run && run.t > 400) {
+    if (run && !run.endless && run.t > 400) {
       const a = Math.min(1, (run.t - 400) / 80) * 0.16 + (run.won ? Math.min(1, run.dawnT / 2) * 0.22 : 0);
       const gr = ctx.createLinearGradient(0, 0, 0, H);
       gr.addColorStop(0, `rgba(255,150,90,${a})`); gr.addColorStop(0.7, 'rgba(255,150,90,0)');
@@ -2437,17 +2823,18 @@ span.ab { cursor: default; }
     setText('lvTxt', tf('lvShort', { n: run.lv }));
     // bei schnellerem Spieltempo steht das Tempo neben der Uhr, damit klar ist, warum sie schneller läuft
     const tp = store.tempo || 1;
-    setText('clock', fmtClock(Math.min(run.t, RUN_LEN)) + (tp !== 1 ? ` · ${fmtNum(tp)}×` : ''));
+    setText('clock', fmtClock(run.endless ? run.t : Math.min(run.t, RUN_LEN)) + (tp !== 1 ? ` · ${fmtNum(tp)}×` : ''));
     // echte Restzeit bis zum Morgen (mit Spieltempo eingerechnet), in der letzten halben Minute bernsteinfarben
     const left = (RUN_LEN - run.t) / tp;
     E('remain').hidden = run.won;
-    setText('remain', tf(W < 520 ? 'remainShort' : 'remain', { t: fmtLeft(left) }));
-    E('remain').classList.toggle('soon', left <= 30);
+    if (run.endless) setText('remain', T(W < 520 ? 'arenaShort' : 'arenaEndless'));
+    else setText('remain', tf(W < 520 ? 'remainShort' : 'remain', { t: fmtLeft(left) }));
+    E('remain').classList.toggle('soon', !run.endless && left <= 30);
     setText('killTxt', String(run.kills));
     setText('amberTxt', String(run.amber));
     const b = run.boss;
     if (b && !b.dead) {
-      E('boss').hidden = false; setText('bossName', T('bossName'));
+      E('boss').hidden = false; setText('bossName', b.d.name[lang]);
       E('bossFill').style.width = ((Math.max(0, b.hp) / b.max) * 100).toFixed(1) + '%';
     } else E('boss').hidden = true;
     setText('shardTxt', String(run.shards));
@@ -2470,6 +2857,7 @@ span.ab { cursor: default; }
     show('abSlow', U('timeslow'), run.slowCd, CD.slow());
     show('abGale', U('gale'), run.galeCd, CD.gale());
     E('abil').hidden = !(U('dash') || U('beacon') || U('starguide') || U('timeslow') || U('gale'));
+    for (const [id, k] of [['abDash', 'dash'], ['abBeacon', 'beacon'], ['abStar', 'stars'], ['abSlow', 'slow'], ['abGale', 'gale']]) E(id).classList.toggle('auto', autoOn(k));
   }
   let toastTimer = 0;
   function toast(text) {
@@ -2568,11 +2956,24 @@ span.ab { cursor: default; }
     if (state !== 'play') return;
     state = 'pause'; joy.active = false;
     for (const k in keys) keys[k] = false;
-    updatePauseRemain();
+    updatePauseRemain(); renderAutoList();
     showScreen('pause'); Platform.gameplayStop();
   }
+  // Automatik-Schalter im Pausemenü, nur für gekaufte Automatiken
+  function renderAutoList() {
+    const box = E('autoList');
+    box.innerHTML = '';
+    for (const k in AUTO_NODE) {
+      if (!U(AUTO_NODE[k]) || !U(AUTO_ABIL[k])) continue;
+      const onA = save.auto[k] !== false;
+      const b = makeBtn(`${T('auto')} ${NODE[AUTO_ABIL[k]].name[lang]}: ${T(onA ? 'on' : 'off')}`, 'btn small' + (onA ? ' on' : ''), () => { save.auto[k] = !onA; persist(); renderAutoList(); });
+      b.setAttribute('aria-pressed', String(onA));
+      box.appendChild(b);
+    }
+    box.hidden = !box.childElementCount;
+  }
   function updatePauseRemain() {
-    if (run) E('pauseRemain').textContent = tf('remainPause', { t: fmtLeft((RUN_LEN - run.t) / (store.tempo || 1)) });
+    if (run) E('pauseRemain').textContent = run.endless ? T('arenaEndless') : tf('remainPause', { t: fmtLeft((RUN_LEN - run.t) / (store.tempo || 1)) });
   }
   function resume() {
     if (state !== 'pause') return;
@@ -2582,11 +2983,16 @@ span.ab { cursor: default; }
   function endRun(won) {
     state = 'over'; joy.active = false;
     Platform.gameplayStop();
-    const t = Math.min(run.t, RUN_LEN), greed = (1 + 0.15 * U('greed')) * curWorld.reward;
+    const arena = run.endless, t = arena ? run.t : Math.min(run.t, RUN_LEN), greed = (1 + 0.15 * U('greed')) * curWorld.reward;
     const drops = run.amber, timeB = Math.floor(t / 10), winB = won ? 80 : 0;
     const total = Math.round((drops + timeB + winB) * greed);
-    const rec = t > save.best + 0.5;
+    const rec = arena ? t > (save.arenaBest || 0) + 0.5 : t > save.best + 0.5;
     save.amber += total; save.runs++; save.night = null;
+    // Arenapunkte: Zeit, besiegte Schatten und Bosse
+    const apGain = arena ? Math.round((Math.floor(t / 10) + Math.floor(run.kills / 50) + 5 * run.bossKills) * (1 + 0.25 * U('arenaChamp'))) : 0;
+    if (arena) { save.ap = (save.ap || 0) + apGain; if (t > (save.arenaBest || 0)) save.arenaBest = t; }
+    E('overAp').hidden = !arena;
+    E('overAp').innerHTML = `+${apGain} ${icon('trophy')} <small>${T('ap')}</small>`;
     // Mondsplitter: eingesammelte plus Siegbonus der Welt
     const wasOpen = WORLDS.map((w, i) => worldOpen(i));
     const shards = run.shards + (won ? curWorld.shards + U('shardseeker') : 0);
@@ -2597,11 +3003,13 @@ span.ab { cursor: default; }
     E('overShards').innerHTML = `+${shards} ${icon('shard')} <small>${T('shards')}</small>`;
     E('overUnlock').hidden = !opened;
     if (opened) E('overUnlock').textContent = tf('worldOpen', { n: opened.name[lang] });
-    if (t > save.best) save.best = t;
+    if (!arena && t > save.best) save.best = t;
     persist();
-    E('overTitle').textContent = T(won ? 'winTitle' : 'loseTitle');
-    E('overSub').textContent = T(won ? 'winSub' : 'loseSub');
-    E('stTime').textContent = fmtClock(t);
+    E('overTitle').textContent = T(arena ? 'arenaOver' : won ? 'winTitle' : 'loseTitle');
+    E('overSub').textContent = arena ? tf('arenaSub', { t: fmtLeft(t) }) : T(won ? 'winSub' : 'loseSub');
+    document.querySelector('#over [data-t="survived"]').textContent = T(arena ? 'survivedArena' : 'survived');
+    E('stTime').textContent = arena ? fmtLeft(t) : fmtClock(t);
+    E('overRec').textContent = T(arena ? 'recordArena' : 'record');
     E('stKills').textContent = run.kills;
     E('stLv').textContent = run.lv;
     const parts_ = [`${drops} ${T('bdDrops')}`, `${timeB} ${T('bdTime')}`];
@@ -2640,10 +3048,10 @@ span.ab { cursor: default; }
   function renderShop() {
     const wrap = E('treeWrap'), tree = E('tree');
     const keepL = wrap.scrollLeft, keepT = wrap.scrollTop;
-    const s = clamp(Math.min(wrap.clientWidth / 1100, wrap.clientHeight / 820), 0.62, 1), ns = s < 0.8 ? 44 : 52;
+    const s = clamp(Math.min(wrap.clientWidth / MAP_W, wrap.clientHeight / MAP_H), 0.62, 1), ns = s < 0.8 ? 44 : 52;
     const first = s !== treeScale;   // neue Größe: wieder auf die Laterne zentrieren
     treeScale = s;
-    tree.style.width = 1100 * s + 'px'; tree.style.height = 820 * s + 'px';
+    tree.style.width = MAP_W * s + 'px'; tree.style.height = MAP_H * s + 'px';
     let lines = '', html = '', lit = 0;
     for (const t of TREE) {
       if (t.id === 'root') continue;
@@ -2657,11 +3065,13 @@ span.ab { cursor: default; }
     }
     for (const k in BR) {
       const b = BR[k];
-      if (b.de) html += `<span class="br-label" style="--c:${b.c};${b.right ? `right:${(1100 - b.x) * s}px` : `left:${b.x * s}px`};top:${b.y * s}px">${b[lang]}</span>`;
+      if (b.de) html += `<span class="br-label" style="--c:${b.c};${b.right ? `right:${(MAP_W - b.x) * s}px` : `left:${b.x * s}px`};top:${b.y * s}px">${b[lang]}</span>`;
     }
     tree.innerHTML = `<svg aria-hidden="true">${lines}</svg>${html}`;
     E('litCount').textContent = tf('lit', { a: lit, b: TOTAL_LIT });
     E('shopAmber').textContent = save.amber;
+    E('shopAp').textContent = save.ap || 0;
+    E('shopApWrap').hidden = !(save.ap || U('arena'));
     if (first) { wrap.scrollLeft = 550 * s - wrap.clientWidth / 2; wrap.scrollTop = 410 * s - wrap.clientHeight / 2; }
     else { wrap.scrollLeft = keepL; wrap.scrollTop = keepT; }
     renderNodeInfo();
@@ -2669,25 +3079,32 @@ span.ab { cursor: default; }
   function renderNodeInfo() {
     const t = NODE[selNode] || NODE.root, lv = U(t.id), st = nodeState(t), box = E('nodeInfo');
     box.style.setProperty('--c', BR[t.br].c);
-    const tag = t.id === 'root' ? '' : `<span class="ni-tag">${T(t.act ? 'tagAbility' : 'tagTalent')} · ${BR[t.br][lang]}</span>`;
+    const tag = t.id === 'root' ? '' : `<span class="ni-tag">${T(t.auto ? 'tagAuto' : t.act ? 'tagAbility' : 'tagTalent')} · ${BR[t.br][lang]}</span>`;
     const pips = t.max ? `<span class="pips" aria-label="${lv} / ${t.max}">${'<i class="on"></i>'.repeat(lv)}${'<i></i>'.repeat(t.max - lv)}</span>` : '';
     let action = '';
     if (t.max) {
-      if (lv >= t.max) action = `<button class="btn buy" type="button" disabled>${T('maxed')}</button>`;
+      if (lv >= t.max && t.auto) {
+        // gekaufte Automatik: hier ein- und ausschalten
+        const onA = save.auto[t.auto] !== false;
+        action = `<button class="btn buy${onA ? ' on' : ''}" id="autoBtn" type="button" aria-pressed="${onA}">${T('auto')}: ${T(onA ? 'on' : 'off')}</button>`;
+      } else if (lv >= t.max) action = `<button class="btn buy" type="button" disabled>${T('maxed')}</button>`;
       else if (st === 'locked') action = `<span class="ni-need">${tf('need', { n: NODE[t.p].name[lang] })}</span>`;
       else {
-        const cost = t.cost[lv];
-        action = `<button class="btn primary buy" id="buyBtn" type="button"${save.amber < cost ? ' disabled' : ''} aria-label="${T('buyFor')}: ${t.name[lang]}, ${cost} ${T('amber')}">${T('buyFor')} · ${cost}${icon('amber')}</button>`;
+        // Arena-Sterne kosten Arenapunkte, alle anderen Bernstein
+        const cost = t.cost[lv], isAp = t.cur === 'ap', have = isAp ? save.ap || 0 : save.amber;
+        action = `<button class="btn primary buy" id="buyBtn" type="button"${have < cost ? ' disabled' : ''} aria-label="${T('buyFor')}: ${t.name[lang]}, ${cost} ${T(isAp ? 'ap' : 'amber')}">${T('buyFor')} · ${cost}${icon(isAp ? 'trophy' : 'amber')}</button>`;
       }
     }
     box.innerHTML = `${icon(t.icon)}<div class="ni-body">${tag}<h3>${t.name[lang]}</h3><p>${t.d[lang]}</p>${pips}</div>${action}`;
     const bb = $('buyBtn');
     if (bb) bb.addEventListener('click', () => buyNode(t.id));
+    const ab = $('autoBtn');
+    if (ab) ab.addEventListener('click', () => { save.auto[t.auto] = save.auto[t.auto] === false; persist(); Snd.play('click'); renderNodeInfo(); });
   }
   function buyNode(id) {
-    const t = NODE[id], lv = U(id);
-    if (lv >= t.max || nodeState(t) === 'locked' || save.amber < t.cost[lv]) return;
-    save.amber -= t.cost[lv]; save.up[id] = lv + 1; persist();
+    const t = NODE[id], lv = U(id), key = t.cur === 'ap' ? 'ap' : 'amber';
+    if (lv >= t.max || nodeState(t) === 'locked' || (save[key] || 0) < t.cost[lv]) return;
+    save[key] -= t.cost[lv]; save.up[id] = lv + 1; persist();
     Snd.play('amber'); recalc(); renderShop(); updateMenuMeta();
     const bb = $('buyBtn');
     if (bb && !bb.disabled) bb.focus();
@@ -2703,6 +3120,7 @@ span.ab { cursor: default; }
         t: R.t, kills: R.kills, amber: R.amber, xp: R.xp, lv: R.lv, need: R.need, pending: R.pending, items: R.items, ws: R.ws,
         acc: R.acc, nextWave: R.nextWave, bossN: R.bossN, rerolls: R.rerolls, revives: R.revives, dawnSaid: R.dawnSaid,
         dashCd: R.dashCd, beaconCd: R.beaconCd, callCd: R.callCd, starN: R.starN, slowCd: R.slowCd, galeCd: R.galeCd, shards: R.shards,
+        bossKills: R.bossKills, nextBoss: R.nextBoss,
       },
       world: curWorld.id,
       p: [r1(P.x), r1(P.y), r1(P.hp), P.face],
@@ -2818,6 +3236,8 @@ span.ab { cursor: default; }
       return {
         ...newSlot(String(o.name || '').slice(0, 20)), amber: Math.max(0, Math.floor(o.amber)), best: clamp(+o.best || 0, 0, RUN_LEN),
         wins: Math.max(0, o.wins | 0), runs: Math.max(0, o.runs | 0), up, shards: Math.max(0, o.shards | 0), comp, compSel, worldWins,
+        ap: Math.max(0, o.ap | 0), arenaBest: Math.max(0, +o.arenaBest || 0),
+        auto: Object.fromEntries(Object.entries(o.auto || {}).filter(([, v]) => typeof v === 'boolean')),
         world: WORLDS.some(w => w.id === o.world) ? o.world : 'wald',
       };
     } catch (e) { return null; }
@@ -2833,16 +3253,26 @@ span.ab { cursor: default; }
       el.className = 'wcard' + (cur ? ' cur' : '') + (open ? '' : ' locked');
       el.style.setProperty('--c', w.c);
       const chips = [];
+      if (w.endless) chips.push(T('wEndless'));
       if (w.hp > 1) chips.push(tf('wHp', { n: Math.round((w.hp - 1) * 100) }));
+      if (w.dmg > 1) chips.push(tf('wDmg', { n: Math.round((w.dmg - 1) * 100) }));
+      if (w.spawn > 1) chips.push(tf('wSpawn', { n: Math.round((w.spawn - 1) * 100) }));
       if (w.speed > 1) chips.push(tf('wSpeed', { n: Math.round((w.speed - 1) * 100) }));
-      chips.push(tf('wReward', { n: fmtNum(w.reward) }));
-      chips.push(`${tf('wShards', { n: w.shards })} ${icon('shard')}`);
-      if (wins) chips.push(tf('wWins', { n: wins }));
+      chips.push(w.boss === 'rotate' ? T('wAllBosses') : tf('wBoss', { n: EN[w.boss].name[lang] }));
+      if (w.endless) {
+        chips.push(`${T('ap')} ${icon('trophy')}`);
+        if (save.arenaBest) chips.push(tf('wBestArena', { t: fmtLeft(save.arenaBest) }));
+      } else {
+        if (w.reward !== 1) chips.push(tf('wReward', { n: fmtNum(w.reward) }));
+        chips.push(`${tf('wShards', { n: w.shards })} ${icon('shard')}`);
+        if (wins) chips.push(tf('wWins', { n: wins }));
+      }
+      if (w.endless) el.classList.add('wide');
       el.innerHTML = `<div class="swatch" style="background: radial-gradient(circle at 50% 60%, ${w.c}40, transparent 60%), linear-gradient(160deg, ${w.g.base}, ${w.g.grass[1]})">${icon(w.icon)}</div>` +
         `<h3>${w.name[lang]}</h3><p>${w.d[lang]}</p><div class="chips">${chips.map(c => `<span>${c}</span>`).join('')}</div>`;
       const row = document.createElement('div');
       row.className = 'row';
-      if (!open) row.innerHTML = `<span class="ni-need">${tf('wLocked', { n: WORLDS[i - 1].name[lang] })}</span>`;
+      if (!open) row.innerHTML = `<span class="ni-need">${w.endless ? T('arenaLocked') : tf('wLocked', { n: WORLDS[i - 1].name[lang] })}</span>`;
       else if (cur) row.innerHTML = `<span class="ni-tag">${T('chosen')}</span>`;
       else row.appendChild(makeBtn(T('choose'), 'btn small primary', () => { save.world = w.id; persist(); setWorld(w.id); renderWorlds(); updateMenuMeta(); }));
       el.appendChild(row);
@@ -2915,6 +3345,8 @@ span.ab { cursor: default; }
     E('worldName').textContent = w.name[lang];
     E('compName').textContent = save.compSel.length ? save.compSel.map(id => COMPS[id].name[lang]).join(' + ') : T('none');
     E('shardVal').textContent = save.shards;
+    E('apVal').textContent = save.ap || 0;
+    E('apWrap').hidden = !(save.ap || U('arena'));
     document.querySelector('.title-card .eyebrow').textContent = tf('eyebrowW', { w: w.name[lang] });
     // gespeicherte Nacht: „Fortsetzen“ wird zum Hauptknopf
     const n = save.night;
@@ -3125,7 +3557,7 @@ span.ab { cursor: default; }
     // Spielzeit ohne Animation vorspulen (für Tests); dbg.autoPick wählt bei Stufenaufstieg die erste Karte
     sim(sec) {
       for (let i = 0; i < sec * 60; i++) {
-        if (state === 'levelup' && dbg.autoPick) { run.lvLock = 0; pick(typeof dbg.autoPick === 'function' ? dbg.autoPick(run.choices) : run.choices[0]); }
+        while (state === 'levelup' && dbg.autoPick) { run.lvLock = 0; pick(typeof dbg.autoPick === 'function' ? dbg.autoPick(run.choices) : run.choices[0]); }
         if (state !== 'play') break;
         if (dbg.steer) dbg.steer();
         step(1 / 60);
