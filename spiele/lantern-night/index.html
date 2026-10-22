@@ -258,7 +258,7 @@ p.slot-name { margin: 0; padding-left: 0; }
 .ab.ready { box-shadow: 0 0 18px -4px var(--c); }
 .ab kbd { position: absolute; left: 0; right: 0; bottom: 3px; text-align: center; font: 700 .62rem/1 var(--f-num); letter-spacing: .04em; color: var(--ink); text-shadow: 0 1px 3px #000; }
 span.ab { cursor: default; }
-.ab.auto::after { content: 'AUTO'; position: absolute; top: 3px; left: 0; right: 0; text-align: center; font: 700 .52rem/1 var(--f-num); letter-spacing: .1em; color: var(--c); text-shadow: 0 1px 3px #000; }
+.ab.auto::after { content: attr(data-auto); position: absolute; top: 3px; left: 0; right: 0; text-align: center; font: 700 .52rem/1 var(--f-num); letter-spacing: .1em; color: var(--c); text-shadow: 0 1px 3px #000; }
 @media (hover: none) { .ab { width: 62px; height: 62px; } .ab kbd.key { display: none; } }
 @media (max-width: 420px) { #abil { gap: 8px; } .ab { width: 54px; height: 54px; } }
 #slowTint { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse at center, transparent 40%, rgba(120, 150, 255, .22)); opacity: 0; transition: opacity .3s; }
@@ -632,6 +632,7 @@ span.ab { cursor: default; }
       prioTitle: 'Gabenliste', prioSub: 'Die obersten {n} Gaben werden bei der automatischen Wahl bevorzugt. Mit den Pfeilen änderst du die Reihenfolge.',
       prioCut: 'ab hier nicht in der Liste', prioEdit: 'Gabenliste bearbeiten', moveUp: '{n} nach oben', moveDown: '{n} nach unten', autoPicked: 'Gabe gewählt: {n}',
       amberHeart: 'Bernsteinherz: aller Bernstein kommt zu dir!', moonStone: 'Mondstein: alle Funken kommen zu dir!',
+      modeOff: 'aus', modeSmart: 'clever', modeAlways: 'immer', badgeAlways: 'IMMER',
     },
     en: {
       eyebrow: 'One night in the woods · 10 pm to 6 am',
@@ -678,6 +679,7 @@ span.ab { cursor: default; }
       prioTitle: 'Gift list', prioSub: 'The top {n} gifts are preferred by the automatic pick. Use the arrows to change the order.',
       prioCut: 'not in the list from here', prioEdit: 'Edit gift list', moveUp: 'Move {n} up', moveDown: 'Move {n} down', autoPicked: 'Gift picked: {n}',
       amberHeart: 'Amber Heart: all amber flies to you!', moonStone: 'Moonstone: all sparks fly to you!',
+      modeOff: 'off', modeSmart: 'smart', modeAlways: 'always', badgeAlways: 'ALWAYS',
     },
   };
   let lang = store.lang || ((navigator.language || 'en').toLowerCase().startsWith('de') ? 'de' : 'en');
@@ -882,18 +884,18 @@ span.ab { cursor: default; }
     ap(mk('arenaHeal', 'arena', 'arenaLoot', 1270, 570, 'berries', [20, 40], 'Heilquellen', 'Healing Springs', 'Arena: Waldbeeren fallen pro Stufe 50 % öfter.', 'Arena: forest berries drop 50% more often per level.')),
     ap(mk('arenaWarm', 'arena', 'arenaShard', 1370, 530, 'pulse', [80], 'Aufwärmen', 'Warm-up', 'Arena: Jede Arena-Nacht beginnt auf Stufe 5, du wählst gleich vier Gaben.', 'Arena: every arena night starts at level 5, you pick four gifts right away.')),
     // Automatik an den Pfadspitzen: die Fähigkeit wird von selbst eingesetzt (ein- und ausschaltbar)
-    au(mk('autoDash', 'mantel', 'dash', 110, 480, 'dash', [200], 'Reflexe', 'Reflexes',
-      'Automatik: Der Lichtsprung springt von selbst weg, wenn dich ein Schatten oder Geschoss fast trifft. Hier oder im Pausemenü ein- und ausschaltbar.',
-      'Automation: Light Dash leaps away on its own when a shadow or projectile almost hits you. Toggle it here or in the pause menu.', true), 'dash'),
-    au(mk('autoBeacon', 'wander', 'beacon', 1050, 730, 'beacon', [220], 'Leuchtturm', 'Lighthouse',
-      'Automatik: Das Leuchtfeuer zündet von selbst, wenn sehr viele Schatten um dich sind, ein Boss nah ist oder du wenig Leben hast.',
-      'Automation: Beacon fires on its own when lots of shadows surround you, a boss is close or your health is low.', true), 'beacon'),
-    au(mk('autoStars', 'sterne', 'meteor', 1025, 70, 'target', [250], 'Sternenauge', 'Star Eye',
-      'Automatik: Deine Sternschnuppen zielen von selbst auf die dichteste Schattengruppe, und der Sternenruf feuert dorthin.',
-      'Automation: your Falling Stars aim at the densest group of shadows on their own, and Star Call fires there.', true), 'stars'),
-    au(mk('autoSlow', 'mond', 'fullmoon', 390, 45, 'hourglass', [220], 'Mondwache', 'Moon Watch',
-      'Automatik: Mondruhe startet von selbst, wenn es richtig eng wird, ein Boss nah ist oder du wenig Leben hast.',
-      'Automation: Moon Calm starts on its own when things get really crowded, a boss is close or your health is low.', true), 'slow'),
+    au(mk('autoDash', 'mantel', 'dash', 110, 480, 'dash', [200, 150], 'Reflexe', 'Reflexes',
+      'Automatik: Der Lichtsprung springt von selbst weg, wenn dich ein Schatten oder Geschoss fast trifft. Stufe 2: auf Wunsch immer, sobald die Abklingzeit vorbei ist. Umschaltbar hier oder im Pausemenü.',
+      'Automation: Light Dash leaps away on its own when a shadow or projectile almost hits you. Level 2: optionally always, as soon as the cooldown is over. Switch it here or in the pause menu.', true), 'dash'),
+    au(mk('autoBeacon', 'wander', 'beacon', 1050, 730, 'beacon', [220, 160], 'Leuchtturm', 'Lighthouse',
+      'Automatik: Das Leuchtfeuer zündet von selbst, wenn sehr viele Schatten um dich sind, ein Boss nah ist oder du wenig Leben hast. Stufe 2: auf Wunsch immer, sobald die Abklingzeit vorbei ist.',
+      'Automation: Beacon fires on its own when lots of shadows surround you, a boss is close or your health is low. Level 2: optionally always, as soon as the cooldown is over.', true), 'beacon'),
+    au(mk('autoStars', 'sterne', 'meteor', 1025, 70, 'target', [250, 150], 'Sternenauge', 'Star Eye',
+      'Automatik: Deine Sternschnuppen zielen von selbst auf die dichteste Schattengruppe, und der Sternenruf feuert dorthin. Stufe 2: auf Wunsch zielen sie ständig neu, mehrmals pro Sekunde.',
+      'Automation: your Falling Stars aim at the densest group of shadows on their own, and Star Call fires there. Level 2: optionally they re-aim constantly, several times a second.', true), 'stars'),
+    au(mk('autoSlow', 'mond', 'fullmoon', 390, 45, 'hourglass', [220, 160], 'Mondwache', 'Moon Watch',
+      'Automatik: Mondruhe startet von selbst, wenn es richtig eng wird, ein Boss nah ist oder du wenig Leben hast. Stufe 2: auf Wunsch immer, sobald die Abklingzeit vorbei ist.',
+      'Automation: Moon Calm starts on its own when things get really crowded, a boss is close or your health is low. Level 2: optionally always, as soon as the cooldown is over.', true), 'slow'),
     // Wahl: Gaben beim Stufenaufstieg automatisch wählen, nach deiner Prioritätenliste
     au(mk('autopick', 'wahl', 'fourth', 985, 525, 'cards', [120], 'Gabenwahl', 'Gift Picker',
       'Automatik: Beim Stufenaufstieg wird eine Gabe von selbst gewählt, zuerst Waffen, dann Talente. Ein- und ausschaltbar.',
@@ -906,9 +908,9 @@ span.ab { cursor: default; }
     mk('wisepick', 'wahl', 'quickpick', 1265, 735, 'eye', [180], 'Weise Wahl', 'Wise Choice',
       'Steht nichts von deiner Liste zur Wahl, wird zuerst einmal neu gewürfelt (wenn du noch Würfe hast).',
       'If nothing from your list is offered, it rerolls once first (if you have rerolls left).'),
-    au(mk('autoGale', 'wind', 'windheart', 450, 795, 'gale', [220], 'Windgeist', 'Wind Spirit',
-      'Automatik: Der Sturmlauf startet von selbst, wenn du umzingelt bist oder wenig Leben hast.',
-      'Automation: Gale Run starts on its own when you are surrounded or your health is low.', true), 'gale'),
+    au(mk('autoGale', 'wind', 'windheart', 450, 795, 'gale', [220, 160], 'Windgeist', 'Wind Spirit',
+      'Automatik: Der Sturmlauf startet von selbst, wenn du umzingelt bist oder wenig Leben hast. Stufe 2: auf Wunsch immer, sobald die Abklingzeit vorbei ist.',
+      'Automation: Gale Run starts on its own when you are surrounded or your health is low. Level 2: optionally always, as soon as the cooldown is over.', true), 'gale'),
   ];
   const NODE = Object.fromEntries(TREE.map(t => [t.id, t]));
   const TOTAL_LIT = TREE.reduce((a, t) => a + t.max, 0);
@@ -1925,7 +1927,22 @@ span.ab { cursor: default; }
   // ---------- Automatik (Sterne an den Pfadspitzen) ----------
   const AUTO_NODE = { dash: 'autoDash', beacon: 'autoBeacon', stars: 'autoStars', slow: 'autoSlow', gale: 'autoGale' };
   const AUTO_ABIL = { dash: 'dash', beacon: 'beacon', stars: 'starguide', slow: 'timeslow', gale: 'gale' };
-  const autoOn = k => U(AUTO_NODE[k]) > 0 && U(AUTO_ABIL[k]) > 0 && save.auto[k] !== false;
+  // Modus einer Automatik: 'off' | 'smart' (nur wenn es brenzlig ist) | 'always' (sobald die Abklingzeit vorbei ist, ab Stufe 2)
+  function autoMode(k) {
+    if (!U(AUTO_NODE[k]) || !U(AUTO_ABIL[k])) return 'off';
+    const v = save.auto[k], lv2 = U(AUTO_NODE[k]) >= 2;
+    if (v === false || v === 'off') return 'off';
+    if (v === true || v === 'smart') return 'smart';
+    return lv2 ? 'always' : 'smart';   // ohne eigene Wahl: die höchste gekaufte Stufe
+  }
+  const autoOn = k => autoMode(k) !== 'off';
+  // umschalten: aus → clever → immer (immer erst ab Stufe 2) → aus
+  function cycleAuto(k) {
+    const m = autoMode(k), lv2 = U(AUTO_NODE[k]) >= 2;
+    save.auto[k] = m === 'off' ? 'smart' : m === 'smart' && lv2 ? 'always' : 'off';
+    persist();
+  }
+  const autoLabel = k => T({ off: 'modeOff', smart: U(AUTO_NODE[k]) >= 2 ? 'modeSmart' : 'on', always: 'modeAlways' }[autoMode(k)]);
   function countNear(r) {
     let n = 0, boss = false;
     for (const e of enemies) {
@@ -1949,7 +1966,12 @@ span.ab { cursor: default; }
   function autoAbilities(dt) {
     if ((run.autoT = (run.autoT || 0) - dt) > 0) return;
     run.autoT = 0.1;   // zehnmal pro Sekunde nachsehen reicht
-    const low = P.hp < P.maxHp * 0.35;
+    const low = P.hp < P.maxHp * 0.35, near = countNear(420)[0] > 0;
+    // Modus „immer“: einsetzen, sobald die Abklingzeit vorbei ist und Schatten in der Nähe sind
+    if (autoMode('dash') === 'always' && run.dashCd <= 0 && P.moving && near) doDash();
+    if (autoMode('beacon') === 'always' && run.beaconCd <= 0 && near) doBeacon();
+    if (autoMode('slow') === 'always' && run.slowCd <= 0 && near) doSlow();
+    if (autoMode('gale') === 'always' && run.galeCd <= 0 && near) doGale();
     if (autoOn('dash') && run.dashCd <= 0) {
       // ausweichen, wenn ein Schatten oder Geschoss fast da ist: weg von der Gefahr
       let th = null, td = 1e9;
@@ -1962,7 +1984,7 @@ span.ab { cursor: default; }
     if (autoOn('slow') && run.slowCd <= 0 && (n280 >= 25 || boss || (low && n280 >= 6))) doSlow();
     if (autoOn('gale') && run.galeCd <= 0) { const [n90] = countNear(90); if (n90 >= 6 || (low && n90 >= 2)) doGale(); }
     if (autoOn('stars') && (run.starAimT = (run.starAimT || 0) - 0.1) <= 0) {
-      run.starAimT = 1.2;
+      run.starAimT = autoMode('stars') === 'always' ? 0.4 : 1.2;
       const c = densest();
       if (c) starAt(c.x, c.y, true);
     }
@@ -2924,7 +2946,11 @@ span.ab { cursor: default; }
     show('abSlow', U('timeslow'), run.slowCd, CD.slow());
     show('abGale', U('gale'), run.galeCd, CD.gale());
     E('abil').hidden = !(U('dash') || U('beacon') || U('starguide') || U('timeslow') || U('gale'));
-    for (const [id, k] of [['abDash', 'dash'], ['abBeacon', 'beacon'], ['abStar', 'stars'], ['abSlow', 'slow'], ['abGale', 'gale']]) E(id).classList.toggle('auto', autoOn(k));
+    for (const [id, k] of [['abDash', 'dash'], ['abBeacon', 'beacon'], ['abStar', 'stars'], ['abSlow', 'slow'], ['abGale', 'gale']]) {
+      const m = autoMode(k), el = E(id), badge = m === 'always' ? T('badgeAlways') : 'AUTO';
+      el.classList.toggle('auto', m !== 'off');
+      if (el.dataset.auto !== badge) el.dataset.auto = badge;
+    }
   }
   let toastTimer = 0;
   function toast(text) {
@@ -3080,8 +3106,8 @@ span.ab { cursor: default; }
     E('prioBtn2').hidden = !U('prio');
     for (const k in AUTO_NODE) {
       if (!U(AUTO_NODE[k]) || !U(AUTO_ABIL[k])) continue;
-      const onA = save.auto[k] !== false;
-      const b = makeBtn(`${T('auto')} ${NODE[AUTO_ABIL[k]].name[lang]}: ${T(onA ? 'on' : 'off')}`, 'btn small' + (onA ? ' on' : ''), () => { save.auto[k] = !onA; persist(); renderAutoList(); });
+      const onA = autoOn(k);
+      const b = makeBtn(`${T('auto')} ${NODE[AUTO_ABIL[k]].name[lang]}: ${autoLabel(k)}`, 'btn small' + (onA ? ' on' : ''), () => { cycleAuto(k); renderAutoList(); });
       b.setAttribute('aria-pressed', String(onA));
       box.appendChild(b);
     }
@@ -3233,16 +3259,19 @@ span.ab { cursor: default; }
     const pips = t.max ? `<span class="pips" aria-label="${lv} / ${t.max}">${'<i class="on"></i>'.repeat(lv)}${'<i></i>'.repeat(t.max - lv)}</span>` : '';
     let action = '';
     if (t.max) {
-      if (lv >= t.max && t.auto) {
-        // gekaufte Automatik: hier ein- und ausschalten
-        const onA = save.auto[t.auto] !== false;
-        action = `<button class="btn buy${onA ? ' on' : ''}" id="autoBtn" type="button" aria-pressed="${onA}">${T('auto')}: ${T(onA ? 'on' : 'off')}</button>`;
-      } else if (lv >= t.max) action = `<button class="btn buy" type="button" disabled>${T('maxed')}</button>`;
+      if (lv >= t.max && t.auto) action = '';
+      else if (lv >= t.max) action = `<button class="btn buy" type="button" disabled>${T('maxed')}</button>`;
       else if (st === 'locked') action = `<span class="ni-need">${tf('need', { n: NODE[t.p].name[lang] })}</span>`;
       else {
         // Arena-Sterne kosten Arenapunkte, alle anderen Bernstein
         const cost = t.cost[lv], isAp = t.cur === 'ap', have = isAp ? save.ap || 0 : save.amber;
         action = `<button class="btn primary buy" id="buyBtn" type="button"${have < cost ? ' disabled' : ''} aria-label="${T('buyFor')}: ${t.name[lang]}, ${cost} ${T(isAp ? 'ap' : 'amber')}">${T('buyFor')} · ${cost}${icon(isAp ? 'trophy' : 'amber')}</button>`;
+      }
+      // gekaufte Automatik: umschalten (Gabenwahl an/aus, Fähigkeiten aus/clever/immer)
+      if (t.auto && lv > 0) {
+        const pk = t.auto === 'pick', onA = pk ? save.auto.pick !== false : autoOn(t.auto);
+        const lbl = pk ? T(onA ? 'on' : 'off') : autoLabel(t.auto);
+        action += `<button class="btn ${lv >= t.max ? 'buy' : 'small'}${onA ? ' on' : ''}" id="autoBtn" type="button">${T('auto')}: ${lbl}</button>`;
       }
     }
     if (t.id === 'prio' && lv > 0) action += `<button class="btn small" id="prioEditBtn" type="button">${T('prioEdit')}</button>`;
@@ -3252,7 +3281,10 @@ span.ab { cursor: default; }
     const pe = $('prioEditBtn');
     if (pe) pe.addEventListener('click', () => { Snd.play('click'); openPrio('shop'); });
     const ab = $('autoBtn');
-    if (ab) ab.addEventListener('click', () => { save.auto[t.auto] = save.auto[t.auto] === false; persist(); Snd.play('click'); renderNodeInfo(); });
+    if (ab) ab.addEventListener('click', () => {
+      if (t.auto === 'pick') { save.auto.pick = save.auto.pick === false; persist(); } else cycleAuto(t.auto);
+      Snd.play('click'); renderNodeInfo();
+    });
   }
   function buyNode(id) {
     const t = NODE[id], lv = U(id), key = t.cur === 'ap' ? 'ap' : 'amber';
@@ -3390,7 +3422,7 @@ span.ab { cursor: default; }
         ...newSlot(String(o.name || '').slice(0, 20)), amber: Math.max(0, Math.floor(o.amber)), best: clamp(+o.best || 0, 0, RUN_LEN),
         wins: Math.max(0, o.wins | 0), runs: Math.max(0, o.runs | 0), up, shards: Math.max(0, o.shards | 0), comp, compSel, worldWins,
         ap: Math.max(0, o.ap | 0), arenaBest: Math.max(0, +o.arenaBest || 0),
-        auto: Object.fromEntries(Object.entries(o.auto || {}).filter(([, v]) => typeof v === 'boolean')),
+        auto: Object.fromEntries(Object.entries(o.auto || {}).filter(([, v]) => typeof v === 'boolean' || ['off', 'smart', 'always'].includes(v))),
         ...(Array.isArray(o.prio) ? { prio: o.prio.filter(id => ITEMS[id]) } : {}),
         world: WORLDS.some(w => w.id === o.world) ? o.world : 'wald',
       };
