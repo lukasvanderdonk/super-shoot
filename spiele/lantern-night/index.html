@@ -2081,8 +2081,8 @@ span.ab { cursor: default; }
     if (!P.dead && !run.won) { updateWeapons(dt); updatePets(dt); }
     updateShots(dt); updatePickups(dt); updateFx(dt);
     for (const a of [enemies, shots, spores, gems, loot, parts, texts, pulses, stars, flashes, zones]) compact(a);
-    // alle 30 Sekunden still speichern, falls der Browser abstürzt
-    if (!P.dead && !run.won && (run.saveT += dt) > 30) { run.saveT = 0; saveNight(true); }
+    // alle 10 Sekunden still speichern, falls die Seite neu lädt oder der Browser abstürzt
+    if (!P.dead && !run.won && (run.saveT += dt) > 10) { run.saveT = 0; saveNight(true); }
     const k = 1 - Math.exp(-dt * 7);
     cam.x += (P.x - cam.x) * k; cam.y += (P.y - cam.y) * k;
     if (run.pending > 0 && !P.dead && !run.won) openLevelUp();
@@ -2426,7 +2426,9 @@ span.ab { cursor: default; }
     E('hpFill').style.width = (Math.max(0, P.hp / P.maxHp) * 100).toFixed(1) + '%';
     setText('hpTxt', `${Math.ceil(Math.max(0, P.hp))} / ${P.maxHp}`);
     setText('lvTxt', tf('lvShort', { n: run.lv }));
-    setText('clock', fmtClock(Math.min(run.t, RUN_LEN)));
+    // bei schnellerem Spieltempo steht das Tempo neben der Uhr, damit klar ist, warum sie schneller läuft
+    const tp = store.tempo || 1;
+    setText('clock', fmtClock(Math.min(run.t, RUN_LEN)) + (tp !== 1 ? ` · ${fmtNum(tp)}×` : ''));
     setText('killTxt', String(run.kills));
     setText('amberTxt', String(run.amber));
     const b = run.boss;
@@ -2921,8 +2923,17 @@ span.ab { cursor: default; }
   }
 
   // ---------- Ereignisse ----------
+  // Nur eine Spiel-Instanz pro Fenster. Spielt der Artifact-Viewer eine neue Version ein,
+  // hört die alte ganz auf (sonst liefen zwei Uhren und zwei Spiele gleichzeitig).
+  const life = new AbortController(), sig = { signal: life.signal };
+  let stopped = false;
+  try { if (typeof window.__lnStop === 'function') window.__lnStop(); } catch (e) { /* alte Instanz schon weg */ }
+  window.__lnStop = () => {
+    stopped = true; life.abort(); clearInterval(Music.timer); Music.on = false;
+    if (Snd.ctx) Snd.ctx.close().catch(() => {});
+  };
   document.querySelectorAll('[data-ico]').forEach(el => el.insertAdjacentHTML('afterbegin', icon(el.dataset.ico)));
-  const on = (id, fn) => E(id).addEventListener('click', () => { Snd.init(); Snd.play('click'); fn(); });
+  const on = (id, fn) => E(id).addEventListener('click', () => { Snd.init(); Snd.play('click'); fn(); }, sig);
   on('playBtn', startRun);
   on('contBtn', resumeNight);
   on('shopBtn', () => openShop('menu'));
@@ -2937,20 +2948,20 @@ span.ab { cursor: default; }
   const toggleTempo = () => { store.tempo = { 1: 1.5, 1.5: 2 }[store.tempo || 1] || 1; persist(); updateToggles(); };
   on('tempoBtn', toggleTempo); on('tempoBtn2', toggleTempo);
   on('importBtn', doImport);
-  E('importCode').addEventListener('input', () => { if (importArmed) { importArmed = false; renderSlots(); note(''); } });
+  E('importCode').addEventListener('input', () => { if (importArmed) { importArmed = false; renderSlots(); note(''); } }, sig);
   E('copyBtn').addEventListener('click', () => {
     const ta = E('exportCode');
     const manual = () => { ta.focus(); ta.select(); note(T('copyManual')); };
     try { navigator.clipboard.writeText(ta.value).then(() => note(T('copied')), manual); } catch (e) { manual(); }
-  });
+  }, sig);
   on('pauseBtn', pause);
   on('resumeBtn', resume);
   on('saveQuitBtn', () => { saveNight(); Platform.gameplayStop(); toMenu(); });
   on('quitBtn', () => endRun(false));
   // Fähigkeiten per Knopf (pointerdown reagiert auf dem Handy sofort)
   for (const [id, fn] of [['abDash', () => doDash()], ['abBeacon', () => doBeacon()], ['abSlow', () => doSlow()], ['abGale', () => doGale()]]) {
-    E(id).addEventListener('pointerdown', e => { e.preventDefault(); fn(); });
-    E(id).addEventListener('click', fn);
+    E(id).addEventListener('pointerdown', e => { e.preventDefault(); fn(); }, sig);
+    E(id).addEventListener('click', fn, sig);
   }
   // Sternkarte: anklicken wählt einen Stern, mit der Maus ziehen verschiebt die Karte
   E('tree').addEventListener('click', e => {
@@ -2960,23 +2971,23 @@ span.ab { cursor: default; }
     E('tree').querySelectorAll('.node.sel').forEach(n => n.classList.remove('sel'));
     b.classList.add('sel');
     renderNodeInfo();
-  });
+  }, sig);
   E('treeWrap').addEventListener('pointerdown', e => {
     if (e.pointerType !== 'mouse' || e.button !== 0) return;
     const w = E('treeWrap');
     treeDrag = { x: e.clientX, y: e.clientY, l: w.scrollLeft, t: w.scrollTop }; treeMoved = false;
-  });
+  }, sig);
   addEventListener('pointermove', e => {
     if (!treeDrag) return;
     const w = E('treeWrap'), dx = e.clientX - treeDrag.x, dy = e.clientY - treeDrag.y;
     if (!treeMoved && Math.hypot(dx, dy) > 5) { treeMoved = true; w.classList.add('dragging'); }
     if (treeMoved) { w.scrollLeft = treeDrag.l - dx; w.scrollTop = treeDrag.t - dy; }
-  });
+  }, sig);
   addEventListener('pointerup', () => {
     if (!treeDrag) return;
     treeDrag = null; E('treeWrap').classList.remove('dragging');
     setTimeout(() => { treeMoved = false; }, 0);
-  });
+  }, sig);
   on('againBtn', () => Platform.breakAd(startRun));
   on('overShop', () => openShop('over'));
   on('overMenu', toMenu);
@@ -2989,8 +3000,8 @@ span.ab { cursor: default; }
 
   // Ton erst nach der ersten Berührung (Browser-Regel)
   const firstGesture = () => { Snd.init(); Music.start(); };
-  addEventListener('pointerdown', firstGesture, { once: true });
-  addEventListener('keydown', firstGesture, { once: true });
+  addEventListener('pointerdown', firstGesture, { once: true, signal: life.signal });
+  addEventListener('keydown', firstGesture, { once: true, signal: life.signal });
 
   addEventListener('keydown', e => {
     const k = e.key.toLowerCase();
@@ -3007,16 +3018,16 @@ span.ab { cursor: default; }
       if (k >= '1' && k <= '4' && run.choices[+k - 1]) pick(run.choices[+k - 1]);
       if (k === 'r') reroll();
     }
-  });
-  addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
-  addEventListener('blur', () => { for (const k in keys) keys[k] = false; pause(); });
+  }, sig);
+  addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; }, sig);
+  addEventListener('blur', () => { for (const k in keys) keys[k] = false; pause(); }, sig);
   // beim Verlassen der Seite die laufende Nacht still sichern
   const autoSave = () => { if (run && (state === 'play' || state === 'pause' || state === 'levelup')) saveNight(true); };
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) { autoSave(); pause(); if (Snd.ctx) Snd.ctx.suspend().catch(() => {}); }
     else if (Snd.ctx) Snd.ctx.resume().catch(() => {});
-  });
-  addEventListener('pagehide', autoSave);
+  }, sig);
+  addEventListener('pagehide', autoSave, sig);
 
   // Maus: Klick lenkt die Sterne. Finger: ziehen = laufen, kurz tippen = Sterne lenken.
   const taps = new Map();
@@ -3026,7 +3037,7 @@ span.ab { cursor: default; }
     taps.set(e.pointerId, { x: e.clientX, y: e.clientY, t: performance.now(), moved: false });
     if (!joy.active) { joy.active = true; joy.id = e.pointerId; joy.ox = e.clientX; joy.oy = e.clientY; joy.dx = joy.dy = 0; }
     try { cv.setPointerCapture(e.pointerId); } catch (err) { /* egal */ }
-  });
+  }, sig);
   cv.addEventListener('pointermove', e => {
     const tp = taps.get(e.pointerId);
     if (tp && Math.hypot(e.clientX - tp.x, e.clientY - tp.y) > 14) tp.moved = true;
@@ -3036,21 +3047,22 @@ span.ab { cursor: default; }
     const d = Math.hypot(dx, dy);
     if (d > R) { joy.ox += dx * (1 - R / d); joy.oy += dy * (1 - R / d); dx = e.clientX - joy.ox; dy = e.clientY - joy.oy; }
     joy.dx = d < 6 ? 0 : dx / R; joy.dy = d < 6 ? 0 : dy / R;
-  });
+  }, sig);
   const endJoy = e => {
     const tp = taps.get(e.pointerId);
     taps.delete(e.pointerId);
     if (tp && !tp.moved && e.type === 'pointerup' && performance.now() - tp.t < 300) starClick(tp.x, tp.y);
     if (e.pointerId === joy.id) { joy.active = false; joy.dx = joy.dy = 0; }
   };
-  cv.addEventListener('pointerup', endJoy);
-  cv.addEventListener('pointercancel', endJoy);
-  cv.addEventListener('contextmenu', e => e.preventDefault());
-  addEventListener('resize', () => { resize(); if (state === 'shop') renderShop(); });
+  cv.addEventListener('pointerup', endJoy, sig);
+  cv.addEventListener('pointercancel', endJoy, sig);
+  cv.addEventListener('contextmenu', e => e.preventDefault(), sig);
+  addEventListener('resize', () => { resize(); if (state === 'shop') renderShop(); }, sig);
 
   // ---------- Hauptschleife ----------
   let last = performance.now(), slow = 0;
   function frame(now) {
+    if (stopped) return;   // eine neuere Version hat übernommen
     const raw = (now - last) / 1000;
     last = now;
     const dt = Math.min(0.05, raw);
@@ -3069,15 +3081,23 @@ span.ab { cursor: default; }
     requestAnimationFrame(frame);
   }
 
+  let booted = false;
   function boot(data) {
+    if (booted) return;   // nie eine zweite Hauptschleife starten
+    booted = true;
     if (!storageOk && data && data.store) {
       store = data.store; fixStore(); save = store.slots[store.cur];
       if (store.lang) lang = store.lang;
     }
     resize(); recalc(); applyLang(); showScreen('menu');
+    // Nach einem Update im Artifact-Viewer geht die Nacht genau dort weiter, wo sie war (pausiert)
+    if (data && data.live && data.live.run) { save.night = data.live; resumeNight(); pause(); }
     requestAnimationFrame(t => { last = t; frame(t); });
   }
-  try { window.claude?.hot?.snapshot?.(() => ({ store })); } catch (e) { /* nur im Artifact-Viewer */ }
+  // Schnappschuss für den Artifact-Viewer: Spielstände plus die gerade laufende Nacht
+  try {
+    window.claude?.hot?.snapshot?.(() => ({ store, live: run && !P.dead && !run.won && state !== 'over' ? packNight() : null }));
+  } catch (e) { /* nur im Artifact-Viewer */ }
   if (window.claude?.hot?.ready) window.claude.hot.ready(boot);
   else boot(window.claude?.hot?.data ?? {});
 
