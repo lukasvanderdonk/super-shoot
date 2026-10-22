@@ -177,6 +177,23 @@ h2 { margin: 0; font-family: var(--f-display); font-weight: 800; font-size: clam
 .legend i { width: 14px; height: 14px; border: 2px solid var(--ink-dim); border-radius: 50%; }
 .legend i.sq { border-radius: 30%; }
 
+/* Gabenliste (Prioritäten) */
+#prioScr .panel { width: min(480px, 100%); }
+.prio { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.pr { display: flex; align-items: center; gap: 10px; padding: 6px 8px; border-radius: 6px; border: 1px solid rgba(239, 230, 207, .1); background: rgba(255, 255, 255, .03); }
+.pr.in { border-color: rgba(255, 159, 208, .5); background: rgba(255, 159, 208, .08); }
+.pr .pn { width: 22px; text-align: center; font: 700 1rem var(--f-num); color: #ff9fd0; font-variant-numeric: tabular-nums; }
+.pr:not(.in) .pn { color: var(--ink-dim); }
+.pr > .ico { flex: none; width: 22px; height: 22px; color: var(--amber); }
+.pr.pas > .ico { color: var(--moon); }
+.pr .pname { flex: 1; min-width: 0; font-weight: 700; }
+.pr:not(.in) .pname { font-weight: 500; color: var(--ink-dim); }
+.btn.mv { min-width: 38px; min-height: 34px; padding: 4px 8px; }
+.pr-cut { padding-top: 6px; margin-top: 2px; border-top: 1px dashed rgba(239, 230, 207, .25); text-align: center; font: 700 .74rem var(--f-num); letter-spacing: .1em; text-transform: uppercase; color: var(--ink-dim); }
+.ni-act { display: flex; flex-direction: column; gap: 8px; }
+.card.autosel { border-color: var(--moon); box-shadow: 0 0 0 2px var(--moon), 0 0 30px rgba(159, 208, 255, .3); }
+.card.autosel::after { content: 'AUTO'; position: absolute; top: 10px; right: 42px; font: 700 .72rem/1.4 var(--f-num); letter-spacing: .1em; color: var(--moon); }
+
 /* Spielstände */
 .slots { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
 @media (max-width: 760px) { .slots { grid-template-columns: minmax(0, 1fr); } }
@@ -425,6 +442,15 @@ span.ab { cursor: default; }
     </div>
   </section>
 
+  <section id="prioScr" class="screen dim" hidden>
+    <div class="panel">
+      <h2 data-t="prioTitle"></h2>
+      <p class="sub" id="prioSub"></p>
+      <ol class="prio" id="prioList"></ol>
+      <div class="row"><button class="btn primary" id="prioBack" type="button" data-t="back"></button></div>
+    </div>
+  </section>
+
   <section id="worldScr" class="screen dim" hidden>
     <div class="panel">
       <h2 data-t="worlds"></h2>
@@ -471,6 +497,7 @@ span.ab { cursor: default; }
         <button class="btn small" id="sfxBtn2" type="button"></button>
         <button class="btn small" id="tempoBtn2" type="button"></button>
         <div class="col" id="autoList" hidden></div>
+        <button class="btn small" id="prioBtn2" type="button" data-t="prioEdit" hidden></button>
         <button class="btn small" id="quitBtn" type="button" data-t="giveUp"></button>
       </div>
     </div>
@@ -529,6 +556,7 @@ span.ab { cursor: default; }
   const newSlot = (name = '') => ({
     name, amber: 0, best: 0, wins: 0, runs: 0, up: {}, night: null, played: 0,
     shards: 0, comp: { fox: 1 }, compSel: ['fox'], world: 'wald', worldWins: {}, ap: 0, arenaBest: 0, auto: {},
+    prio: ['fireflies', 'pulse', 'stars', 'spark', 'ember', 'feather', 'cloak', 'tea', 'lure', 'boots', 'wick', 'clover'],
   });
   let store = { v: 2, cur: 0, slots: [null, null, null], music: true, sfx: true, lang: null, tempo: 1 };
   let storageOk = false;
@@ -601,6 +629,8 @@ span.ab { cursor: default; }
       arenaLocked: 'Entzünde zuerst das Arena-Tor in der Werkstatt.', arenaEndless: 'Arena · endlose Nacht', arenaShort: 'endlos',
       arenaOver: 'Die Arena-Nacht endet', arenaSub: 'Du hast {t} Minuten in der Arena durchgehalten.', survivedArena: 'Durchgehalten', recordArena: 'Neue längste Arena-Nacht',
       auto: 'Automatik', tagAuto: 'Automatik',
+      prioTitle: 'Gabenliste', prioSub: 'Die obersten {n} Gaben werden bei der automatischen Wahl bevorzugt. Mit den Pfeilen änderst du die Reihenfolge.',
+      prioCut: 'ab hier nicht in der Liste', prioEdit: 'Gabenliste bearbeiten', moveUp: '{n} nach oben', moveDown: '{n} nach unten', autoPicked: 'Gabe gewählt: {n}',
     },
     en: {
       eyebrow: 'One night in the woods · 10 pm to 6 am',
@@ -644,6 +674,8 @@ span.ab { cursor: default; }
       arenaLocked: 'First light the Arena Gate in the workshop.', arenaEndless: 'Arena · endless night', arenaShort: 'endless',
       arenaOver: 'The arena night ends', arenaSub: 'You held out for {t} minutes in the arena.', survivedArena: 'Held out', recordArena: 'New longest arena night',
       auto: 'Auto', tagAuto: 'Automation',
+      prioTitle: 'Gift list', prioSub: 'The top {n} gifts are preferred by the automatic pick. Use the arrows to change the order.',
+      prioCut: 'not in the list from here', prioEdit: 'Edit gift list', moveUp: 'Move {n} up', moveDown: 'Move {n} down', autoPicked: 'Gift picked: {n}',
     },
   };
   let lang = store.lang || ((navigator.language || 'en').toLowerCase().startsWith('de') ? 'de' : 'en');
@@ -769,6 +801,7 @@ span.ab { cursor: default; }
     mond: { c: '#dfe8ff', de: 'Mond', en: 'Moon', x: 600, y: 42 },
     wind: { c: '#9ff0d8', de: 'Wind', en: 'Wind', x: 600, y: 780 },
     arena: { c: '#ff8a5c', de: 'Arena', en: 'Arena', x: 1400, y: 160, right: true },
+    wahl: { c: '#ff9fd0', de: 'Wahl', en: 'Choice', x: 1400, y: 800, right: true },
   };
   const mk = (id, br, p, x, y, icon, cost, de, en, dde, den, act = false) => ({ id, br, p, x, y, icon, cost, max: cost.length, name: { de, en }, d: { de: dde, en: den }, act });
   const ap = n => Object.assign(n, { cur: 'ap' });   // kostet Arenapunkte statt Bernstein
@@ -859,6 +892,18 @@ span.ab { cursor: default; }
     au(mk('autoSlow', 'mond', 'fullmoon', 390, 45, 'hourglass', [220], 'Mondwache', 'Moon Watch',
       'Automatik: Mondruhe startet von selbst, wenn es richtig eng wird, ein Boss nah ist oder du wenig Leben hast.',
       'Automation: Moon Calm starts on its own when things get really crowded, a boss is close or your health is low.', true), 'slow'),
+    // Wahl: Gaben beim Stufenaufstieg automatisch wählen, nach deiner Prioritätenliste
+    au(mk('autopick', 'wahl', 'fourth', 985, 525, 'cards', [120], 'Gabenwahl', 'Gift Picker',
+      'Automatik: Beim Stufenaufstieg wird eine Gabe von selbst gewählt, zuerst Waffen, dann Talente. Ein- und ausschaltbar.',
+      'Automation: on level-up a gift is picked for you, weapons first, then talents. Can be switched on and off.', true), 'pick'),
+    mk('prio', 'wahl', 'autopick', 1080, 595, 'dice', [80, 140, 220], 'Prioritätenliste', 'Priority List',
+      'Lege selbst fest, welche Gaben zuerst gewählt werden: 3 Plätze, auf Stufe 2 sechs, auf Stufe 3 alle Gaben.',
+      'Decide which gifts get picked first: 3 slots, 6 at level 2, every gift at level 3.'),
+    mk('quickpick', 'wahl', 'prio', 1170, 665, 'bolt', [150], 'Schnellwahl', 'Quick Pick',
+      'Die automatische Wahl passiert sofort, ohne dass das Spiel anhält.', 'The automatic pick happens instantly, without pausing the game.'),
+    mk('wisepick', 'wahl', 'quickpick', 1265, 735, 'eye', [180], 'Weise Wahl', 'Wise Choice',
+      'Steht nichts von deiner Liste zur Wahl, wird zuerst einmal neu gewürfelt (wenn du noch Würfe hast).',
+      'If nothing from your list is offered, it rerolls once first (if you have rerolls left).'),
     au(mk('autoGale', 'wind', 'windheart', 450, 795, 'gale', [220], 'Windgeist', 'Wind Spirit',
       'Automatik: Der Sturmlauf startet von selbst, wenn du umzingelt bist oder wenig Leben hast.',
       'Automation: Gale Run starts on its own when you are surrounded or your health is low.', true), 'gale'),
@@ -2805,7 +2850,7 @@ span.ab { cursor: default; }
   function setText(id, v) { if (txt[id] !== v) { txt[id] = v; E(id).textContent = v; } }
 
   function showScreen(id) {
-    for (const s of ['menu', 'shop', 'slotsScr', 'worldScr', 'compScr', 'lvl', 'pause', 'over']) E(s).hidden = s !== id;
+    for (const s of ['menu', 'shop', 'slotsScr', 'worldScr', 'compScr', 'prioScr', 'lvl', 'pause', 'over']) E(s).hidden = s !== id;
     E('hud').hidden = !(state === 'play' || state === 'levelup' || state === 'pause');
   }
   let bannerTimer = 0;
@@ -2895,10 +2940,40 @@ span.ab { cursor: default; }
     if (!out.length) out.push('berries');
     return out;
   }
+  // ---------- Automatische Gabenwahl (Pfad „Wahl“) ----------
+  const DEFAULT_PRIO = ['fireflies', 'pulse', 'stars', 'spark', 'ember', 'feather', 'cloak', 'tea', 'lure', 'boots', 'wick', 'clover'];
+  const prioSlots = () => [0, 3, 6, 12][U('prio')] || 0;
+  const pickAutoOn = () => U('autopick') > 0 && save.auto.pick !== false;
+  // gespeicherte Reihenfolge, um fehlende Gaben ergänzt
+  function prioList() {
+    const l = (save.prio || []).filter(id => ITEMS[id]);
+    for (const id of DEFAULT_PRIO) if (!l.includes(id)) l.push(id);
+    return l;
+  }
+  // erst deine Liste, sonst die Standard-Reihenfolge (Waffen vor Talenten)
+  function autoChoice(choices) {
+    const mine = prioList().slice(0, prioSlots());
+    return mine.find(x => choices.includes(x)) || DEFAULT_PRIO.find(x => choices.includes(x)) || choices[0];
+  }
+  // Weise Wahl: steht nichts von der Liste zur Wahl, einmal neu würfeln
+  function wiseReroll() {
+    if (!pickAutoOn() || !U('wisepick') || run.rerolls <= 0) return;
+    const mine = prioList().slice(0, prioSlots());
+    if (!mine.length || run.choices.some(x => mine.includes(x))) return;
+    run.rerolls--; run.choices = rollChoices();
+  }
+
   function openLevelUp() {
+    if (pickAutoOn() && U('quickpick')) {
+      // Schnellwahl: alle offenen Stufen sofort wählen, das Spiel läuft weiter
+      Snd.play('level');
+      while (run.pending > 0) { run.choices = rollChoices(); wiseReroll(); applyPick(autoChoice(run.choices), true); }
+      return;
+    }
     state = 'levelup'; joy.active = false;
     Snd.play('level');
     run.choices = rollChoices();
+    wiseReroll();
     renderCards();
     showScreen('lvl');
   }
@@ -2929,9 +3004,14 @@ span.ab { cursor: default; }
     // kurze Sperre, damit ein Tipp vom Steuern nicht versehentlich wählt
     run.lvLock = performance.now() + 380;
     setTimeout(() => box.querySelectorAll('.card').forEach(c => c.classList.remove('locked')), 380);
+    // Gabenwahl ohne Schnellwahl: die gewählte Karte leuchtet und wird nach einer Sekunde genommen
+    run.autoPick = null;
+    if (pickAutoOn()) {
+      const aid = autoChoice(run.choices), i = run.choices.indexOf(aid);
+      if (i >= 0) { box.children[i].classList.add('autosel'); run.autoPick = { id: aid, t: 1 }; }
+    }
   }
-  function pick(id) {
-    if (state !== 'levelup' || performance.now() < run.lvLock) return;
+  function applyPick(id, quick) {
     if (id === 'berries') { P.hp = Math.min(P.maxHp, P.hp + 30); run.amber += 5; }
     else {
       run.items[id] = (run.items[id] || 0) + 1;
@@ -2939,9 +3019,15 @@ span.ab { cursor: default; }
       if (id === 'cloak') P.hp = Math.min(P.maxHp, P.hp + 20);
     }
     run.pending--;
-    Snd.play('click');
     updateInv();
-    if (run.pending > 0) { run.choices = rollChoices(); renderCards(); }
+    if (quick) toast(tf('autoPicked', { n: id === 'berries' ? T('berriesName') : ITEMS[id].name[lang] }));
+  }
+  function pick(id) {
+    if (state !== 'levelup' || performance.now() < run.lvLock) return;
+    run.autoPick = null;
+    applyPick(id, false);
+    Snd.play('click');
+    if (run.pending > 0) { run.choices = rollChoices(); wiseReroll(); renderCards(); }
     else { state = 'play'; showScreen(null); updateHud(); }
   }
   function reroll() {
@@ -2963,6 +3049,13 @@ span.ab { cursor: default; }
   function renderAutoList() {
     const box = E('autoList');
     box.innerHTML = '';
+    if (U('autopick')) {
+      const onP = save.auto.pick !== false;
+      const b = makeBtn(`${T('auto')} ${NODE.autopick.name[lang]}: ${T(onP ? 'on' : 'off')}`, 'btn small' + (onP ? ' on' : ''), () => { save.auto.pick = !onP; persist(); renderAutoList(); });
+      b.setAttribute('aria-pressed', String(onP));
+      box.appendChild(b);
+    }
+    E('prioBtn2').hidden = !U('prio');
     for (const k in AUTO_NODE) {
       if (!U(AUTO_NODE[k]) || !U(AUTO_ABIL[k])) continue;
       const onA = save.auto[k] !== false;
@@ -2971,6 +3064,41 @@ span.ab { cursor: default; }
       box.appendChild(b);
     }
     box.hidden = !box.childElementCount;
+  }
+  // ---------- Gabenliste bearbeiten ----------
+  let prioFrom = 'shop';
+  function openPrio(from) { prioFrom = from; state = 'prio'; renderPrio(); showScreen('prioScr'); }
+  function closePrio() {
+    state = prioFrom;
+    if (prioFrom === 'shop') { showScreen('shop'); renderNodeInfo(); } else { showScreen('pause'); renderAutoList(); }
+  }
+  function renderPrio(focusAt, focusDir) {
+    const list = prioList(), n = prioSlots(), box = E('prioList');
+    E('prioSub').textContent = tf('prioSub', { n });
+    box.innerHTML = '';
+    list.forEach((id, i) => {
+      const it = ITEMS[id], li = document.createElement('li');
+      li.className = 'pr' + (i < n ? ' in' : '') + (it.kind === 'p' ? ' pas' : '');
+      li.innerHTML = `<span class="pn">${i < n ? i + 1 : '·'}</span>${icon(it.icon)}<span class="pname">${it.name[lang]}</span>`;
+      const up = makeBtn('▲', 'btn small mv', () => movePrio(i, -1)), dn = makeBtn('▼', 'btn small mv', () => movePrio(i, 1));
+      up.disabled = i === 0; dn.disabled = i === list.length - 1;
+      up.setAttribute('aria-label', tf('moveUp', { n: it.name[lang] })); dn.setAttribute('aria-label', tf('moveDown', { n: it.name[lang] }));
+      li.append(up, dn);
+      box.appendChild(li);
+      if (i === n - 1 && n < list.length) box.insertAdjacentHTML('beforeend', `<li class="pr-cut">${T('prioCut')}</li>`);
+    });
+    // nach dem Verschieben bleibt der Fokus auf demselben Pfeil des verschobenen Eintrags
+    if (focusAt !== undefined) {
+      const btns = box.querySelectorAll('li.pr')[focusAt]?.querySelectorAll('.mv');
+      const b = btns && btns[focusDir < 0 ? 0 : 1];
+      if (b && !b.disabled) b.focus();
+    }
+  }
+  function movePrio(i, d) {
+    const l = prioList(), j = i + d;
+    if (j < 0 || j >= l.length) return;
+    [l[i], l[j]] = [l[j], l[i]];
+    save.prio = l; persist(); renderPrio(j, d);
   }
   function updatePauseRemain() {
     if (run) E('pauseRemain').textContent = run.endless ? T('arenaEndless') : tf('remainPause', { t: fmtLeft((RUN_LEN - run.t) / (store.tempo || 1)) });
@@ -3095,9 +3223,12 @@ span.ab { cursor: default; }
         action = `<button class="btn primary buy" id="buyBtn" type="button"${have < cost ? ' disabled' : ''} aria-label="${T('buyFor')}: ${t.name[lang]}, ${cost} ${T(isAp ? 'ap' : 'amber')}">${T('buyFor')} · ${cost}${icon(isAp ? 'trophy' : 'amber')}</button>`;
       }
     }
-    box.innerHTML = `${icon(t.icon)}<div class="ni-body">${tag}<h3>${t.name[lang]}</h3><p>${t.d[lang]}</p>${pips}</div>${action}`;
+    if (t.id === 'prio' && lv > 0) action += `<button class="btn small" id="prioEditBtn" type="button">${T('prioEdit')}</button>`;
+    box.innerHTML = `${icon(t.icon)}<div class="ni-body">${tag}<h3>${t.name[lang]}</h3><p>${t.d[lang]}</p>${pips}</div>${action ? `<div class="ni-act">${action}</div>` : ''}`;
     const bb = $('buyBtn');
     if (bb) bb.addEventListener('click', () => buyNode(t.id));
+    const pe = $('prioEditBtn');
+    if (pe) pe.addEventListener('click', () => { Snd.play('click'); openPrio('shop'); });
     const ab = $('autoBtn');
     if (ab) ab.addEventListener('click', () => { save.auto[t.auto] = save.auto[t.auto] === false; persist(); Snd.play('click'); renderNodeInfo(); });
   }
@@ -3238,6 +3369,7 @@ span.ab { cursor: default; }
         wins: Math.max(0, o.wins | 0), runs: Math.max(0, o.runs | 0), up, shards: Math.max(0, o.shards | 0), comp, compSel, worldWins,
         ap: Math.max(0, o.ap | 0), arenaBest: Math.max(0, +o.arenaBest || 0),
         auto: Object.fromEntries(Object.entries(o.auto || {}).filter(([, v]) => typeof v === 'boolean')),
+        ...(Array.isArray(o.prio) ? { prio: o.prio.filter(id => ITEMS[id]) } : {}),
         world: WORLDS.some(w => w.id === o.world) ? o.world : 'wald',
       };
     } catch (e) { return null; }
@@ -3394,6 +3526,8 @@ span.ab { cursor: default; }
   on('worldBack', backToMenu);
   on('compBtn', openComps);
   on('compBack', backToMenu);
+  on('prioBack', closePrio);
+  on('prioBtn2', () => openPrio('pause'));
   // Spieltempo: 1× → 1,5× → 2×
   const toggleTempo = () => { store.tempo = { 1: 1.5, 1.5: 2 }[store.tempo || 1] || 1; persist(); updateToggles(); updatePauseRemain(); };
   on('tempoBtn', toggleTempo); on('tempoBtn2', toggleTempo);
@@ -3526,6 +3660,8 @@ span.ab { cursor: default; }
       for (let i = 0; i < n && state === 'play'; i++) step((dt * ts) / n);
     }
     else if (!run) menuStep(dt);
+    // automatische Gabenwahl: nach kurzer Zeit die leuchtende Karte nehmen
+    if (state === 'levelup' && run && run.autoPick && (run.autoPick.t -= dt) <= 0) { const id = run.autoPick.id; run.lvLock = 0; pick(id); }
     shakeAmt = Math.max(0, shakeAmt - dt * 22);
     render(now / 1000);
     requestAnimationFrame(frame);
