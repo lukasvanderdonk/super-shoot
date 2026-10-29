@@ -1,0 +1,31 @@
+name: Spielräume aufräumen
+
+# Mehrspieler-Räume der Spiele-App sind Issues "room: <spiel>/<code>". Das Spiel schließt sie selbst am Ende.
+# Hier werden liegengebliebene Räume (App abgestürzt, Handy aus) nach 6 Stunden geschlossen.
+on:
+  schedule:
+    - cron: '23 * * * *'
+  workflow_dispatch:
+
+permissions:
+  issues: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const cutoff = Date.now() - 6 * 3600 * 1000;
+            const issues = await github.paginate(github.rest.issues.listForRepo, {
+              owner: context.repo.owner, repo: context.repo.repo, state: 'open', creator: context.repo.owner, per_page: 100,
+            });
+            let closed = 0;
+            for (const i of issues) {
+              if (i.pull_request || !i.title.startsWith('room:')) continue;
+              if (new Date(i.created_at).getTime() > cutoff) continue;
+              await github.rest.issues.update({ owner: context.repo.owner, repo: context.repo.repo, issue_number: i.number, state: 'closed', state_reason: 'not_planned' });
+              closed++;
+            }
+            core.info('Geschlossene Räume: ' + closed);

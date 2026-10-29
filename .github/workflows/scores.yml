@@ -7,12 +7,6 @@ on:
     types: [opened]
   workflow_dispatch:
 
-# Immer nur ein Durchlauf gleichzeitig. Jeder Durchlauf arbeitet alle offenen score-Issues ab,
-# darum geht nichts verloren, auch wenn ein wartender Durchlauf ersetzt wird.
-concurrency:
-  group: scores
-  cancel-in-progress: false
-
 permissions:
   contents: write
   issues: write
@@ -22,6 +16,12 @@ jobs:
   scores:
     # Nur Issues vom Besitzer (der Schlüssel in der App gehört ihm) mit dem richtigen Titel
     if: github.event_name == 'workflow_dispatch' || (github.event.issue.user.login == github.repository_owner && startsWith(github.event.issue.title, 'score:'))
+    # Immer nur ein Durchlauf gleichzeitig. Jeder Durchlauf arbeitet alle offenen score-Issues ab, darum geht nichts
+    # verloren, auch wenn ein wartender Durchlauf ersetzt wird. (Auf Job-Ebene, damit übersprungene Durchläufe für
+    # andere Issues, zum Beispiel "room:", keinen wartenden score-Durchlauf verdrängen.)
+    concurrency:
+      group: scores
+      cancel-in-progress: false
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
