@@ -14,7 +14,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const GAMES = ['solitaer', 'labyrinth', 'strand', 'leukas', 'room', 'lantern', 'rpg', 'handel', 'kreuz', 'vier', 'tron'];
+const GAMES = ['solitaer', 'labyrinth', 'strand', 'leukas', 'room', 'lantern', 'rpg', 'handel', 'kreuz', 'vier', 'tron', 'sudoku'];
 const TOP = 100;                // so viele Plätze pro Liste werden gespeichert
 const MAX_BOARDS = 30;          // so viele Listen pro Spiel (Schutz gegen Müll)
 
